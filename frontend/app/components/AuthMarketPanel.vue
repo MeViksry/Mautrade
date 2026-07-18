@@ -16,10 +16,10 @@ const panel = computed(() => {
         { value: '12', label: 'History Rows', detail: 'Trading records ready to review' }
       ],
       mark: '"',
-      body: 'Mautrade makes it easy to check my active layers, exchange status, gas fee balance, and trading history before I make the next move.',
+      body: 'Mautrade gives me the kind of control I wanted from a serious trading dashboard. I can see every layer, every exchange connection, and every fee movement without losing focus.',
       badge: 'MR',
-      user: 'Mika R.',
-      userMeta: 'Mautrade dashboard user',
+      user: 'Mika Reinhart',
+      userMeta: 'Multi-exchange trader',
       headline: 'Continue your dashboard.',
       headlineAccent: 'Keep every layer visible.',
       note: 'Your dashboard opens directly into account metrics, exchange status, gas fee controls, and recent trading activity.'
@@ -35,10 +35,10 @@ const panel = computed(() => {
       { value: '500', label: 'Minimum Gas Fee', detail: 'USDT required before dashboard', glow: true }
     ],
     mark: '"',
-    body: 'The setup felt clear: create the account, verify the OTP, choose my country and exchanges, then fund gas fee before opening the dashboard.',
+    body: 'Mautrade feels built for traders who care about precision. The dashboard looks clean, the exchange flow feels premium, and the gas fee tracking makes the whole system feel reliable from day one.',
     badge: 'NA',
-    user: 'Nadia A.',
-    userMeta: 'New Mautrade user',
+    user: 'Nadia Alvarez',
+    userMeta: 'Automation-focused trader',
     headline: 'Create your account.',
     headlineAccent: 'Prepare it before trading.',
     note: 'Mautrade uses onboarding data to prepare Active Layers, Exchange Bindings, Gas Fee, and Trading History for the user account.'
