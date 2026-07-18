@@ -41,6 +41,18 @@ const formatLastSynced = (lastSynced: string | null) => {
 const getExchangeLogo = (exchange: ExchangeBinding) => {
   return theme.value === 'dark' && exchange.logoDark ? exchange.logoDark : exchange.logo
 }
+
+const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
+  exchanges.value = exchanges.value.map((exchange) => {
+    if (exchange.name !== payload.exchange) return exchange
+
+    return {
+      ...exchange,
+      status: 'connected',
+      lastSynced: new Date().toISOString()
+    }
+  })
+}
 </script>
 
 <template>
@@ -113,6 +125,7 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
       v-model="bindModalOpen"
       :exchanges="exchanges"
       :theme="theme"
+      @submitted="handleExchangeBindSubmitted"
     />
   </div>
 </template>

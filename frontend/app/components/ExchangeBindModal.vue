@@ -109,6 +109,10 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
   return props.theme === 'dark' && exchange.logoDark ? exchange.logoDark : exchange.logo
 }
 
+const isExchangeBound = (exchange: ExchangeBinding) => {
+  return exchange.status === 'connected'
+}
+
 const selectedConfig = computed(() => {
   if (!selectedExchange.value) return { extraFields: [] }
 
@@ -116,6 +120,8 @@ const selectedConfig = computed(() => {
 })
 
 const selectExchange = (exchange: ExchangeBinding) => {
+  if (isExchangeBound(exchange)) return
+
   selectedExchange.value = exchange
   bindStep.value = 'credentials'
   submitAttempted.value = false
@@ -144,7 +150,7 @@ const fieldErrors = computed(() => {
 })
 
 const formBlocked = computed(() => {
-  return Object.values(fieldErrors.value).some(Boolean)
+  return submitted.value || Object.values(fieldErrors.value).some(Boolean)
 })
 
 const triggerFieldShake = (key: string) => {
@@ -236,7 +242,9 @@ const submitBindExchange = () => {
           v-for="exchange in exchanges"
           :key="exchange.id"
           class="exchange-option"
+          :class="{ 'is-bound': isExchangeBound(exchange) }"
           type="button"
+          :disabled="isExchangeBound(exchange)"
           @click="selectExchange(exchange)"
         >
           <span class="exchange-option__logo-shell">
@@ -253,7 +261,7 @@ const submitBindExchange = () => {
             {{ exchange.status }}
           </span>
           <UIcon
-            name="lucide:chevron-right"
+            :name="isExchangeBound(exchange) ? 'lucide:lock' : 'lucide:chevron-right'"
             class="exchange-option__arrow"
           />
         </button>
@@ -516,6 +524,16 @@ const submitBindExchange = () => {
 .exchange-option:hover {
   border-color: var(--accent);
   background: rgba(255, 90, 0, 0.08);
+}
+
+.exchange-option.is-bound {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.exchange-option.is-bound:hover {
+  border-color: var(--line);
+  background: var(--charcoal);
 }
 
 .exchange-option__logo-shell {
