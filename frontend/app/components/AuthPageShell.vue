@@ -40,7 +40,7 @@ defineProps<{
       <slot />
     </section>
 
-    <AuthMarketPanel />
+    <AuthMarketPanel :active-tab="activeTab" />
   </main>
 </template>
 

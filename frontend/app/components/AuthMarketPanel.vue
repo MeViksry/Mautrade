@@ -1,50 +1,88 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = defineProps<{
+  activeTab: 'login' | 'register'
+}>()
+
+const panel = computed(() => {
+  if (props.activeTab === 'login') {
+    return {
+      status: 'Mautrade Dashboard Access',
+      metrics: [
+        { value: '6', label: 'Active Layer View', detail: 'Latest running layers' },
+        { value: '4', label: 'Bound Exchanges', detail: 'Connection status at a glance' },
+        { value: '$1.6K', label: 'Gas Fee Balance', detail: 'Deposit and usage tracking', glow: true },
+        { value: '12', label: 'History Rows', detail: 'Trading records ready to review' }
+      ],
+      mark: '"',
+      body: 'Mautrade makes it easy to check my active layers, exchange status, gas fee balance, and trading history before I make the next move.',
+      badge: 'MR',
+      user: 'Mika R.',
+      userMeta: 'Mautrade dashboard user',
+      headline: 'Continue your dashboard.',
+      headlineAccent: 'Keep every layer visible.',
+      note: 'Your dashboard opens directly into account metrics, exchange status, gas fee controls, and recent trading activity.'
+    }
+  }
+
+  return {
+    status: 'Mautrade Account Setup',
+    metrics: [
+      { value: 'OTP', label: 'Email Verification', detail: 'Required after registration' },
+      { value: 'ALL', label: 'Country Profiles', detail: 'Flags and timezone support' },
+      { value: '4+', label: 'Exchange Preference', detail: 'Pick exchanges during onboarding' },
+      { value: '500', label: 'Minimum Gas Fee', detail: 'USDT required before dashboard', glow: true }
+    ],
+    mark: '"',
+    body: 'The setup felt clear: create the account, verify the OTP, choose my country and exchanges, then fund gas fee before opening the dashboard.',
+    badge: 'NA',
+    user: 'Nadia A.',
+    userMeta: 'New Mautrade user',
+    headline: 'Create your account.',
+    headlineAccent: 'Prepare it before trading.',
+    note: 'Mautrade uses onboarding data to prepare Active Layers, Exchange Bindings, Gas Fee, and Trading History for the user account.'
+  }
+})
+</script>
+
 <template>
   <aside class="auth-market">
     <div class="auth-market__status">
       <span />
-      Mautrade Account Flow
+      {{ panel.status }}
     </div>
 
     <div class="auth-market__metrics">
-      <div class="metric-box">
-        <strong>6</strong>
-        <span>Overview Layers</span>
-        <em>Active layer preview</em>
-      </div>
-      <div class="metric-box">
-        <strong>4</strong>
-        <span>Exchange Bindings</span>
-        <em>Binance / OKX / Bybit / Tokocrypto</em>
-      </div>
-      <div class="metric-box metric-box--glow">
-        <strong>500</strong>
-        <span>Minimum Gas Fee</span>
-        <em>USDT required before dashboard</em>
-      </div>
-      <div class="metric-box">
-        <strong>OTP</strong>
-        <span>Email Verification</span>
-        <em>Required after register</em>
+      <div
+        v-for="metric in panel.metrics"
+        :key="`${metric.value}-${metric.label}`"
+        class="metric-box"
+        :class="{ 'metric-box--glow': metric.glow }"
+      >
+        <strong>{{ metric.value }}</strong>
+        <span>{{ metric.label }}</span>
+        <em>{{ metric.detail }}</em>
       </div>
     </div>
 
     <div class="auth-market__quote">
       <div class="quote-mark">
-        MAUTRADE FLOW
+        {{ panel.mark }}
       </div>
-      <p>Register with email, verify OTP, complete onboarding, then enter the user dashboard with country, exchange, and gas fee data already prepared.</p>
+      <p>{{ panel.body }}</p>
       <div class="quote-user">
-        <div>ID</div>
+        <div>{{ panel.badge }}</div>
         <span>
-          <strong>User Account</strong>
-          <small>Ready for dashboard sync</small>
+          <strong>{{ panel.user }}</strong>
+          <small>{{ panel.userMeta }}</small>
         </span>
       </div>
     </div>
 
     <div class="auth-market__headline">
-      <h2>Mautrade dashboard.<br><span>Ready before trading.</span></h2>
-      <p>Onboarding data feeds Active Layers, Exchange Bindings, Gas Fee, and Trading History so the account starts from the right profile.</p>
+      <h2>{{ panel.headline }}<br><span>{{ panel.headlineAccent }}</span></h2>
+      <p>{{ panel.note }}</p>
     </div>
   </aside>
 </template>
