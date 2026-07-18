@@ -6,7 +6,7 @@ export const useDashboardData = () => {
       totalBalance: 12450.75,
       realizedProfit: 3240.50,
       totalGasFeePaid: 1620.25,
-      activeLayersCount: 12
+      activeLayersCount: 18
     }
   }
 
@@ -164,6 +164,78 @@ export const useDashboardData = () => {
         unrealizedPnlPct: 1.97,
         status: 'open',
         openedAt: '2026-07-18T13:35:00Z'
+      },
+      {
+        id: 'L-113',
+        pair: 'ATOM/USDT',
+        entryPrice: 7.20,
+        currentPrice: 7.06,
+        allocationPct: 4,
+        allocatedUsdt: 498.03,
+        unrealizedPnl: -9.69, // USDT
+        unrealizedPnlPct: -1.94,
+        status: 'open',
+        openedAt: '2026-07-18T14:10:00Z'
+      },
+      {
+        id: 'L-114',
+        pair: 'UNI/USDT',
+        entryPrice: 9.85,
+        currentPrice: 10.22,
+        allocationPct: 6,
+        allocatedUsdt: 747.05,
+        unrealizedPnl: 28.07, // USDT
+        unrealizedPnlPct: 3.76,
+        status: 'open',
+        openedAt: '2026-07-18T14:45:00Z'
+      },
+      {
+        id: 'L-115',
+        pair: 'NEAR/USDT',
+        entryPrice: 5.45,
+        currentPrice: 5.61,
+        allocationPct: 7,
+        allocatedUsdt: 871.55,
+        unrealizedPnl: 25.58, // USDT
+        unrealizedPnlPct: 2.94,
+        status: 'open',
+        openedAt: '2026-07-18T15:20:00Z'
+      },
+      {
+        id: 'L-116',
+        pair: 'APT/USDT',
+        entryPrice: 8.30,
+        currentPrice: 8.05,
+        allocationPct: 5,
+        allocatedUsdt: 622.54,
+        unrealizedPnl: -18.75, // USDT
+        unrealizedPnlPct: -3.01,
+        status: 'open',
+        openedAt: '2026-07-18T15:55:00Z'
+      },
+      {
+        id: 'L-117',
+        pair: 'ARB/USDT',
+        entryPrice: 1.28,
+        currentPrice: 1.34,
+        allocationPct: 4,
+        allocatedUsdt: 498.03,
+        unrealizedPnl: 23.34, // USDT
+        unrealizedPnlPct: 4.69,
+        status: 'open',
+        openedAt: '2026-07-18T16:30:00Z'
+      },
+      {
+        id: 'L-118',
+        pair: 'OP/USDT',
+        entryPrice: 2.05,
+        currentPrice: 2.11,
+        allocationPct: 3,
+        allocatedUsdt: 373.52,
+        unrealizedPnl: 10.93, // USDT
+        unrealizedPnlPct: 2.93,
+        status: 'open',
+        openedAt: '2026-07-18T17:05:00Z'
       }
     ]
   }
