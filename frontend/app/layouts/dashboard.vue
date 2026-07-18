@@ -20,17 +20,14 @@ import DashboardHeader from '~/components/DashboardHeader.vue'
 <style scoped>
 .dashboard-layout {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   background: var(--bg);
-  overflow: hidden;
 }
 
 .dashboard-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .dashboard-content {
