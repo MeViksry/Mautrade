@@ -1,6 +1,26 @@
 <script setup>
 const title = 'Mautrade'
 const description = 'Mautrade is a crypto trading dashboard for active layers, exchange bindings, gas fee tracking, and trading history.'
+const theme = useState('dashboard-theme', () => 'dark')
+
+const applyTheme = (value) => {
+  document.documentElement.dataset.theme = value
+}
+
+onMounted(() => {
+  const savedTheme = localStorage.getItem('dashboard-theme')
+
+  if (savedTheme === 'light' || savedTheme === 'dark') {
+    theme.value = savedTheme
+  }
+
+  applyTheme(theme.value)
+
+  watch(theme, (value) => {
+    applyTheme(value)
+    localStorage.setItem('dashboard-theme', value)
+  })
+})
 
 useHead({
   htmlAttrs: { lang: 'en' },

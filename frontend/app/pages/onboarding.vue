@@ -577,8 +577,8 @@ const submitOnboarding = async () => {
   padding: 3rem;
   border-left: 1px solid var(--line);
   background:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
     var(--bg-elevated);
   background-size: 52px 52px;
 }
