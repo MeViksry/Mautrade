@@ -827,9 +827,15 @@ const submitDeposit = () => {
   width: min(520px, 100%);
   max-height: min(760px, calc(100vh - 4rem));
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   background: var(--bg-elevated);
   border: 1px solid var(--line);
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+}
+
+.deposit-modal__box::-webkit-scrollbar {
+  display: none;
 }
 
 .deposit-modal__header {
