@@ -1,5 +1,12 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 const isSidebarOpen = useState('sidebar-open', () => true)
+
+onMounted(() => {
+  if (window.innerWidth <= 768) {
+    isSidebarOpen.value = false
+  }
+})
 
 const navItems = [
   { label: 'Overview', to: '/dashboard', icon: 'lucide:layout-dashboard' },
@@ -11,6 +18,12 @@ const navItems = [
 </script>
 
 <template>
+  <div 
+    v-if="isSidebarOpen" 
+    class="sidebar-overlay" 
+    @click="isSidebarOpen = false"
+  ></div>
+
   <aside
     class="sidebar"
     :class="{ 'sidebar--closed': !isSidebarOpen }"
@@ -67,6 +80,31 @@ const navItems = [
 
 .sidebar--closed {
   margin-left: -260px;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 30;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    z-index: 40;
+    height: 100dvh; /* For mobile browsers */
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
 }
 
 .sidebar__logo {

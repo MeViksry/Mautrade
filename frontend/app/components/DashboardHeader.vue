@@ -133,4 +133,14 @@ const toggleSidebar = () => {
   font-size: 10px;
   color: var(--text-mute);
 }
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 0 1.5rem;
+  }
+  
+  .user-name {
+    display: none;
+  }
+}
 </style>
