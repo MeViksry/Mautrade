@@ -57,7 +57,10 @@ const navItems = [
 }
 
 .sidebar__logo {
-  padding: 2rem;
+  height: 72px;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
   font-size: 20px;
