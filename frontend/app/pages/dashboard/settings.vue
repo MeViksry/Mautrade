@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 definePageMeta({
   layout: 'dashboard'
@@ -10,13 +10,147 @@ const activeTab = ref('profile')
 const profileForm = ref({
   fullName: 'User Account',
   email: 'user@mautrade.com',
-  timezone: 'UTC+07:00 (Jakarta)'
+  timezone: 'Asia/Jakarta'
 })
+
+const profilePhoto = ref<string | null>(null)
+const profilePhotoInput = ref<HTMLInputElement | null>(null)
+const timezoneSearch = ref('')
+const timezoneDropdownOpen = ref(false)
+const timezoneSelectRef = ref<HTMLElement | null>(null)
 
 const notifSettings = ref({
   emailNewTrade: true,
   emailDailyReport: false,
   telegramAlerts: true
+})
+
+const openProfilePhotoPicker = () => {
+  profilePhotoInput.value?.click()
+}
+
+const handleProfilePhotoChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    profilePhoto.value = typeof reader.result === 'string' ? reader.result : null
+  }
+  reader.readAsDataURL(file)
+}
+
+const deleteProfilePhoto = () => {
+  profilePhoto.value = null
+
+  if (profilePhotoInput.value) {
+    profilePhotoInput.value.value = ''
+  }
+}
+
+const fallbackTimezones = [
+  'Africa/Cairo',
+  'Africa/Johannesburg',
+  'America/Argentina/Buenos_Aires',
+  'America/Chicago',
+  'America/Los_Angeles',
+  'America/Mexico_City',
+  'America/New_York',
+  'America/Sao_Paulo',
+  'Asia/Dubai',
+  'Asia/Hong_Kong',
+  'Asia/Jakarta',
+  'Asia/Kolkata',
+  'Asia/Seoul',
+  'Asia/Shanghai',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Australia/Sydney',
+  'Europe/Amsterdam',
+  'Europe/Berlin',
+  'Europe/London',
+  'Europe/Madrid',
+  'Europe/Paris',
+  'Europe/Rome',
+  'Pacific/Auckland'
+]
+
+const browserTimezones = () => {
+  const intlWithTimezones = Intl as typeof Intl & {
+    supportedValuesOf?: (key: 'timeZone') => string[]
+  }
+
+  return intlWithTimezones.supportedValuesOf?.('timeZone') ?? fallbackTimezones
+}
+
+const formatTimezoneName = (timezone: string) => {
+  return timezone.replaceAll('_', ' ')
+}
+
+const formatTimezoneOffset = (timezone: string) => {
+  const timeZoneName = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    timeZoneName: 'shortOffset'
+  }).formatToParts(new Date()).find((part) => part.type === 'timeZoneName')?.value ?? 'GMT'
+
+  if (timeZoneName === 'GMT') return 'UTC+00:00'
+
+  const offset = timeZoneName.replace('GMT', '')
+  const sign = offset.startsWith('-') ? '-' : '+'
+  const [hours = '0', minutes = '0'] = offset.replace(/[+-]/, '').split(':')
+
+  return `UTC${sign}${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
+}
+
+const timezoneOptions = computed(() => {
+  return browserTimezones().map((timezone) => {
+    const offset = formatTimezoneOffset(timezone)
+    const label = formatTimezoneName(timezone)
+
+    return {
+      value: timezone,
+      label,
+      offset,
+      searchText: `${timezone} ${label} ${offset}`.toLowerCase()
+    }
+  })
+})
+
+const selectedTimezone = computed(() => {
+  return timezoneOptions.value.find((timezone) => timezone.value === profileForm.value.timezone)
+})
+
+const timezoneSearchTerm = computed(() => timezoneSearch.value.trim().toLowerCase())
+
+const filteredTimezones = computed(() => {
+  if (!timezoneSearchTerm.value) return timezoneOptions.value
+
+  return timezoneOptions.value.filter((timezone) => timezone.searchText.includes(timezoneSearchTerm.value))
+})
+
+const openTimezoneDropdown = () => {
+  timezoneDropdownOpen.value = true
+}
+
+const selectTimezone = (timezone: string) => {
+  profileForm.value.timezone = timezone
+  timezoneSearch.value = ''
+  timezoneDropdownOpen.value = false
+}
+
+const handleSettingsClickOutside = (event: MouseEvent) => {
+  if (!timezoneSelectRef.value?.contains(event.target as Node)) {
+    timezoneDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleSettingsClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleSettingsClickOutside)
 })
 </script>
 
@@ -82,6 +216,48 @@ const notifSettings = ref({
             class="settings-form"
             @submit.prevent
           >
+            <div class="profile-photo-field">
+              <div class="profile-photo-preview">
+                <img
+                  v-if="profilePhoto"
+                  :src="profilePhoto"
+                  alt="Profile photo"
+                >
+                <UIcon
+                  v-else
+                  name="lucide:user"
+                  class="profile-photo-preview__icon"
+                />
+              </div>
+
+              <div class="profile-photo-actions">
+                <input
+                  ref="profilePhotoInput"
+                  class="profile-photo-input"
+                  type="file"
+                  accept="image/*"
+                  @change="handleProfilePhotoChange"
+                >
+                <button
+                  class="btn-photo"
+                  type="button"
+                  @click="openProfilePhotoPicker"
+                >
+                  <UIcon name="lucide:image-plus" />
+                  <span>Upload Photo</span>
+                </button>
+                <button
+                  class="btn-photo btn-photo--danger"
+                  type="button"
+                  :disabled="!profilePhoto"
+                  @click="deleteProfilePhoto"
+                >
+                  <UIcon name="lucide:trash-2" />
+                  <span>Delete Photo</span>
+                </button>
+              </div>
+            </div>
+
             <div class="form-group">
               <label>Full Name</label>
               <input
@@ -104,20 +280,58 @@ const notifSettings = ref({
 
             <div class="form-group">
               <label>Timezone</label>
-              <select
-                v-model="profileForm.timezone"
-                class="form-input"
+              <div
+                ref="timezoneSelectRef"
+                class="timezone-select"
               >
-                <option value="UTC+07:00 (Jakarta)">
-                  UTC+07:00 (Jakarta)
-                </option>
-                <option value="UTC+00:00 (London)">
-                  UTC+00:00 (London)
-                </option>
-                <option value="UTC-05:00 (New York)">
-                  UTC-05:00 (New York)
-                </option>
-              </select>
+                <button
+                  class="timezone-select__trigger"
+                  type="button"
+                  @click="timezoneDropdownOpen = !timezoneDropdownOpen"
+                >
+                  <span>
+                    <strong>{{ selectedTimezone?.offset }}</strong>
+                    {{ selectedTimezone?.label }}
+                  </span>
+                  <UIcon name="lucide:chevrons-up-down" />
+                </button>
+
+                <div
+                  v-if="timezoneDropdownOpen"
+                  class="timezone-select__dropdown"
+                >
+                  <div class="timezone-select__search">
+                    <UIcon name="lucide:search" />
+                    <input
+                      v-model="timezoneSearch"
+                      type="text"
+                      placeholder="Search timezone"
+                      autocomplete="off"
+                      @focus="openTimezoneDropdown"
+                    >
+                  </div>
+
+                  <div class="timezone-select__list">
+                    <button
+                      v-for="timezone in filteredTimezones"
+                      :key="timezone.value"
+                      class="timezone-option"
+                      :class="{ 'is-selected': timezone.value === profileForm.timezone }"
+                      type="button"
+                      @click="selectTimezone(timezone.value)"
+                    >
+                      <span>{{ timezone.label }}</span>
+                      <strong>{{ timezone.offset }}</strong>
+                    </button>
+                    <div
+                      v-if="filteredTimezones.length === 0"
+                      class="timezone-empty"
+                    >
+                      No timezone found.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="form-actions">
@@ -340,6 +554,97 @@ const notifSettings = ref({
   gap: 2rem;
 }
 
+.profile-photo-field {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px dashed var(--line);
+}
+
+.profile-photo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--charcoal);
+}
+
+.profile-photo-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-preview__icon {
+  width: 34px;
+  height: 34px;
+  color: var(--text-mute);
+}
+
+.profile-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.profile-photo-input {
+  display: none;
+}
+
+.btn-photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 220ms var(--ease-quiet), border-color 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
+}
+
+.btn-photo:hover:not(:disabled) {
+  background: #ff7324;
+  border-color: #ff7324;
+}
+
+.btn-photo--danger {
+  background: transparent;
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.btn-photo--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: #ef4444;
+  color: #ff6b6b;
+}
+
+.btn-photo:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.btn-photo svg {
+  width: 14px;
+  height: 14px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -372,6 +677,160 @@ const notifSettings = ref({
 .form-input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.timezone-select {
+  position: relative;
+}
+
+.timezone-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0.8rem 1rem;
+  text-align: left;
+  transition: border-color 0.2s ease;
+}
+
+.timezone-select__trigger:hover,
+.timezone-select__trigger:focus {
+  border-color: var(--accent);
+}
+
+.timezone-select__trigger span {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.timezone-select__trigger strong {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.timezone-select__trigger svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--text-mute);
+}
+
+.timezone-select__dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+}
+
+.timezone-select__search {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--charcoal);
+}
+
+.timezone-select__search svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-mute);
+}
+
+.timezone-select__search input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.timezone-select__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-color: var(--accent) var(--charcoal);
+  scrollbar-width: thin;
+}
+
+.timezone-select__list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.timezone-select__list::-webkit-scrollbar-track {
+  background: var(--charcoal);
+  border-left: 1px solid var(--line);
+}
+
+.timezone-select__list::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border: 2px solid var(--charcoal);
+  border-radius: 999px;
+}
+
+.timezone-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--text);
+  text-align: left;
+  transition: background 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
+}
+
+.timezone-option:hover,
+.timezone-option.is-selected {
+  background: rgba(255, 90, 0, 0.1);
+  color: var(--accent);
+}
+
+.timezone-option span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timezone-option strong {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: inherit;
+}
+
+.timezone-empty {
+  padding: 1rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .input-help {
