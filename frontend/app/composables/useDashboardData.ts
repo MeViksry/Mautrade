@@ -257,6 +257,134 @@ export const useDashboardData = () => {
         pnl: -20.00,
         gasFee: -10.00, // rebate
         closedAt: '2026-07-15T09:30:00Z'
+      },
+      {
+        id: 'L-097',
+        pair: 'BTC/USDT',
+        exitPrice: 62120.50,
+        pnl: 88.75,
+        gasFee: 42.10,
+        closedAt: '2026-07-14T16:45:00Z'
+      },
+      {
+        id: 'L-096',
+        pair: 'ETH/USDT',
+        exitPrice: 3525.40,
+        pnl: 64.20,
+        gasFee: 30.35,
+        closedAt: '2026-07-14T12:15:00Z'
+      },
+      {
+        id: 'L-095',
+        pair: 'SOL/USDT',
+        exitPrice: 148.80,
+        pnl: -12.45,
+        gasFee: 18.80,
+        closedAt: '2026-07-13T18:20:00Z'
+      },
+      {
+        id: 'L-094',
+        pair: 'XRP/USDT',
+        exitPrice: 0.61,
+        pnl: 31.10,
+        gasFee: 9.45,
+        closedAt: '2026-07-13T10:05:00Z'
+      },
+      {
+        id: 'L-093',
+        pair: 'DOGE/USDT',
+        exitPrice: 0.13,
+        pnl: 17.65,
+        gasFee: 7.20,
+        closedAt: '2026-07-12T21:40:00Z'
+      },
+      {
+        id: 'L-092',
+        pair: 'AVAX/USDT',
+        exitPrice: 32.05,
+        pnl: -28.90,
+        gasFee: 16.75,
+        closedAt: '2026-07-12T14:25:00Z'
+      },
+      {
+        id: 'L-091',
+        pair: 'LINK/USDT',
+        exitPrice: 15.05,
+        pnl: 39.80,
+        gasFee: 12.35,
+        closedAt: '2026-07-11T19:10:00Z'
+      },
+      {
+        id: 'L-090',
+        pair: 'DOT/USDT',
+        exitPrice: 6.28,
+        pnl: 11.25,
+        gasFee: 8.90,
+        closedAt: '2026-07-11T08:35:00Z'
+      },
+      {
+        id: 'L-089',
+        pair: 'LTC/USDT',
+        exitPrice: 84.95,
+        pnl: -15.70,
+        gasFee: 14.45,
+        closedAt: '2026-07-10T17:55:00Z'
+      },
+      {
+        id: 'L-088',
+        pair: 'ATOM/USDT',
+        exitPrice: 7.34,
+        pnl: 22.40,
+        gasFee: 6.30,
+        closedAt: '2026-07-10T11:20:00Z'
+      },
+      {
+        id: 'L-087',
+        pair: 'UNI/USDT',
+        exitPrice: 9.62,
+        pnl: -9.35,
+        gasFee: 5.85,
+        closedAt: '2026-07-09T20:15:00Z'
+      },
+      {
+        id: 'L-086',
+        pair: 'NEAR/USDT',
+        exitPrice: 5.72,
+        pnl: 36.65,
+        gasFee: 10.20,
+        closedAt: '2026-07-09T13:45:00Z'
+      },
+      {
+        id: 'L-085',
+        pair: 'APT/USDT',
+        exitPrice: 8.11,
+        pnl: -18.10,
+        gasFee: 11.75,
+        closedAt: '2026-07-08T18:05:00Z'
+      },
+      {
+        id: 'L-084',
+        pair: 'ARB/USDT',
+        exitPrice: 1.31,
+        pnl: 14.95,
+        gasFee: 4.60,
+        closedAt: '2026-07-08T09:30:00Z'
+      },
+      {
+        id: 'L-083',
+        pair: 'OP/USDT',
+        exitPrice: 2.18,
+        pnl: 19.55,
+        gasFee: 5.15,
+        closedAt: '2026-07-07T22:50:00Z'
+      },
+      {
+        id: 'L-082',
+        pair: 'MATIC/USDT',
+        exitPrice: 0.75,
+        pnl: 12.70,
+        gasFee: 3.90,
+        closedAt: '2026-07-07T15:10:00Z'
       }
     ]
   }

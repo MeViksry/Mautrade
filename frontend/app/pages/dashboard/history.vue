@@ -102,11 +102,36 @@ onMounted(async () => {
   background: var(--bg-elevated);
   border: 1px solid var(--line);
   border-radius: 4px;
+  overflow: hidden;
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
+  max-height: calc(6.45rem * 12);
+  overflow-y: auto;
+  scrollbar-color: var(--accent) var(--charcoal);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: var(--charcoal);
+  border-left: 1px solid var(--line);
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border: 2px solid var(--charcoal);
+  border-radius: 999px;
+}
+
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: #ff7324;
 }
 
 .empty-state {
