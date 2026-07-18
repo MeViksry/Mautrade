@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import ExchangeBindModal from '~/components/ExchangeBindModal.vue'
 import { useDashboardData } from '~/composables/useDashboardData'
 
 definePageMeta({
@@ -20,6 +21,7 @@ const { getExchangeBindings } = useDashboardData()
 const exchanges = ref<ExchangeBinding[]>([])
 const loading = ref(true)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
+const bindModalOpen = ref(false)
 
 onMounted(async () => {
   loading.value = true
@@ -47,7 +49,11 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
       <h2 class="page-title">
         API Keys (Exchanges)
       </h2>
-      <button class="btn-primary">
+      <button
+        class="btn-primary"
+        type="button"
+        @click="bindModalOpen = true"
+      >
         + Bind New Exchange
       </button>
     </div>
@@ -102,6 +108,12 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
         </div>
       </div>
     </div>
+
+    <ExchangeBindModal
+      v-model="bindModalOpen"
+      :exchanges="exchanges"
+      :theme="theme"
+    />
   </div>
 </template>
 
