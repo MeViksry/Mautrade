@@ -2,17 +2,27 @@
 const title = 'Mautrade'
 const description = 'Mautrade is a crypto trading dashboard for active layers, exchange bindings, gas fee tracking, and trading history.'
 const theme = useState('dashboard-theme', () => 'dark')
+const themeBootstrapScript = `;(function(){try{var saved=localStorage.getItem('dashboard-theme');var system=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';var theme=(saved==='light'||saved==='dark')?saved:system;document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;}catch(error){document.documentElement.dataset.theme='dark';document.documentElement.style.colorScheme='dark';}})();`
 
 const applyTheme = (value) => {
   document.documentElement.dataset.theme = value
+  document.documentElement.style.colorScheme = value
+}
+
+const getSystemTheme = () => {
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+}
+
+const getSavedTheme = () => {
+  const savedTheme = localStorage.getItem('dashboard-theme')
+  return savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : null
 }
 
 onMounted(() => {
-  const savedTheme = localStorage.getItem('dashboard-theme')
-
-  if (savedTheme === 'light' || savedTheme === 'dark') {
-    theme.value = savedTheme
-  }
+  const currentTheme = document.documentElement.dataset.theme
+  theme.value = currentTheme === 'light' || currentTheme === 'dark'
+    ? currentTheme
+    : getSavedTheme() || getSystemTheme()
 
   applyTheme(theme.value)
 
@@ -20,10 +30,22 @@ onMounted(() => {
     applyTheme(value)
     localStorage.setItem('dashboard-theme', value)
   })
+
+  const systemTheme = window.matchMedia?.('(prefers-color-scheme: light)')
+  systemTheme?.addEventListener('change', () => {
+    if (getSavedTheme()) return
+    theme.value = getSystemTheme()
+  })
 })
 
 useHead({
   htmlAttrs: { lang: 'en' },
+  script: [
+    {
+      innerHTML: themeBootstrapScript,
+      tagPosition: 'head'
+    }
+  ],
   link: [
     { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
     { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },

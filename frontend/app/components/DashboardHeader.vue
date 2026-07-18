@@ -7,28 +7,9 @@ const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
 }
 
-const applyTheme = (value: 'dark' | 'light') => {
-  document.documentElement.dataset.theme = value
-}
-
 const toggleTheme = () => {
   theme.value = isLightMode.value ? 'dark' : 'light'
 }
-
-onMounted(() => {
-  const savedTheme = localStorage.getItem('dashboard-theme')
-
-  if (savedTheme === 'light' || savedTheme === 'dark') {
-    theme.value = savedTheme
-  }
-
-  applyTheme(theme.value)
-
-  watch(theme, (value) => {
-    applyTheme(value)
-    localStorage.setItem('dashboard-theme', value)
-  })
-})
 </script>
 
 <template>
