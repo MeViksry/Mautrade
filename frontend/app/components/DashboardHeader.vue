@@ -138,7 +138,7 @@ const toggleSidebar = () => {
   .dashboard-header {
     padding: 0 1.5rem;
   }
-  
+
   .user-name {
     display: none;
   }

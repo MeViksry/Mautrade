@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+
 const isSidebarOpen = useState('sidebar-open', () => true)
 
 onMounted(() => {
@@ -18,11 +19,11 @@ const navItems = [
 </script>
 
 <template>
-  <div 
-    v-if="isSidebarOpen" 
-    class="sidebar-overlay" 
+  <div
+    v-if="isSidebarOpen"
+    class="sidebar-overlay"
     @click="isSidebarOpen = false"
-  ></div>
+  />
 
   <aside
     class="sidebar"
