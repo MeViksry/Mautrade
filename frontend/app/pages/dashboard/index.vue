@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import StatCard from '~/components/StatCard.vue'
 import LayerRow from '~/components/LayerRow.vue'
 import { useDashboardData } from '~/composables/useDashboardData'
@@ -45,6 +45,14 @@ const exchanges = ref<ExchangeBinding[]>([])
 const layers = ref<Layer[]>([])
 const loading = ref(true)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
+const layersContainer = ref<HTMLElement | null>(null)
+const exchangeListHeight = ref<number | null>(null)
+let layersResizeObserver: ResizeObserver | null = null
+
+const syncExchangeListHeight = () => {
+  if (!layersContainer.value) return
+  exchangeListHeight.value = Math.round(layersContainer.value.getBoundingClientRect().height)
+}
 
 onMounted(async () => {
   loading.value = true
@@ -61,7 +69,21 @@ onMounted(async () => {
     console.error('Error fetching dashboard data:', error)
   } finally {
     loading.value = false
+    await nextTick()
+    syncExchangeListHeight()
+
+    if (layersContainer.value && 'ResizeObserver' in window) {
+      layersResizeObserver = new ResizeObserver(syncExchangeListHeight)
+      layersResizeObserver.observe(layersContainer.value)
+    }
+
+    window.addEventListener('resize', syncExchangeListHeight)
   }
+})
+
+onBeforeUnmount(() => {
+  layersResizeObserver?.disconnect()
+  window.removeEventListener('resize', syncExchangeListHeight)
 })
 
 const formatLastSynced = (lastSynced: string | null) => {
@@ -71,6 +93,10 @@ const formatLastSynced = (lastSynced: string | null) => {
 const getExchangeLogo = (exchange: ExchangeBinding) => {
   return theme.value === 'dark' && exchange.logoDark ? exchange.logoDark : exchange.logo
 }
+
+const exchangeListStyle = computed(() => {
+  return exchangeListHeight.value ? { height: `${exchangeListHeight.value}px` } : undefined
+})
 </script>
 
 <template>
@@ -125,7 +151,10 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
             >View All →</NuxtLink>
           </div>
 
-          <div class="layers-container">
+          <div
+            ref="layersContainer"
+            class="layers-container"
+          >
             <LayerRow
               v-for="layer in layers"
               :key="layer.id"
@@ -150,7 +179,10 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
             >Manage →</NuxtLink>
           </div>
 
-          <div class="exchange-list">
+          <div
+            class="exchange-list"
+            :style="exchangeListStyle"
+          >
             <div
               v-for="exchange in exchanges"
               :key="exchange.id"
@@ -224,8 +256,26 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 2rem;
+  grid-template-rows: auto 1fr;
+  column-gap: 2rem;
+  row-gap: 2rem;
   margin-top: 2.5rem;
+  align-items: stretch;
+}
+
+.main-column,
+.side-column {
+  display: contents;
+}
+
+.main-column > .section-header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.side-column > .section-header {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .section-header {
@@ -233,7 +283,7 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   padding-bottom: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -262,6 +312,9 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
 .layers-container {
   display: flex;
   flex-direction: column;
+  grid-column: 1;
+  grid-row: 2;
+  align-self: stretch;
   border: 1px solid var(--line);
 }
 
@@ -275,8 +328,11 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
 }
 
 .exchange-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-column: 2;
+  grid-row: 2;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  align-self: stretch;
   gap: 1rem;
 }
 
@@ -285,6 +341,10 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
   border: 1px solid var(--line);
   padding: 1.5rem;
   transition: border-color 300ms var(--ease-quiet);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 0;
 }
 .exchange-card:hover {
   border-color: var(--accent);
