@@ -7,10 +7,7 @@ import DashboardHeader from '~/components/DashboardHeader.vue'
   <div class="dashboard-layout">
     <DashboardSidebar />
 
-    <main
-      class="dashboard-main"
-      data-lenis-prevent
-    >
+    <main class="dashboard-main">
       <DashboardHeader class="dashboard-header-fixed" />
 
       <div class="dashboard-content">

@@ -1,16 +1,9 @@
+<script setup lang="ts">
+definePageMeta({
+  redirect: '/dashboard'
+})
+</script>
+
 <template>
-  <div>
-    <HomeHeroSection />
-    <HomeExplainerSection />
-    <HomeThesisSection />
-    <HomeHowSection />
-    <HomeFeesSection />
-    <HomeSafetySection />
-    <HomeFeaturesSection />
-    <HomeLifecycleSection />
-    <HomePerformanceSection />
-    <HomeExchangesSection />
-    <HomeStoriesSection />
-    <HomeCtaSection />
-  </div>
+  <div />
 </template>

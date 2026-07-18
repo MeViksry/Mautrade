@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   routeRules: {
-    '/': { prerender: true }
+    '/': { redirect: { to: '/dashboard', statusCode: 302 } }
   },
 
   compatibilityDate: '2026-06-30',
