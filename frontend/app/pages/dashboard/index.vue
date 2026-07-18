@@ -73,7 +73,9 @@ onMounted(async () => {
 
     <div v-else-if="stats">
       <div class="page-header">
-        <h2 class="page-title">Overview</h2>
+        <h2 class="page-title">
+          Overview
+        </h2>
       </div>
 
       <!-- Stats Row -->
