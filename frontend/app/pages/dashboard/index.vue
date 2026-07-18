@@ -151,7 +151,11 @@ const formatLastSynced = (lastSynced: string | null) => {
               class="exchange-card"
             >
               <div class="exchange-card__header">
-                <span class="exchange-name">{{ exchange.name }}</span>
+                <img
+                  class="exchange-logo"
+                  :src="exchange.logo"
+                  :alt="`${exchange.name} logo`"
+                >
                 <span
                   class="exchange-status"
                   :class="exchange.status === 'connected' ? 'status-active' : 'status-inactive'"
@@ -287,11 +291,12 @@ const formatLastSynced = (lastSynced: string | null) => {
   margin-bottom: 1.5rem;
 }
 
-.exchange-name {
-  font-family: 'Oswald', sans-serif;
-  font-size: 1.2rem;
-  color: var(--text);
-  letter-spacing: 0.05em;
+.exchange-logo {
+  display: block;
+  width: 118px;
+  height: 30px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .exchange-status {
