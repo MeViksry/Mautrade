@@ -5,6 +5,18 @@ definePageMeta({
   layout: 'default'
 })
 
+const seoTitle = 'Sign In | Mautrade'
+const seoDescription = 'Sign in to Mautrade to access Active Layers, Exchange Bindings, Gas Fee, and Trading History.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)

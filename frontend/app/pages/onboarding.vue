@@ -6,6 +6,18 @@ definePageMeta({
   layout: 'default'
 })
 
+const seoTitle = 'Onboarding | Mautrade'
+const seoDescription = 'Complete Mautrade onboarding with country profile, age, exchange preference, and initial gas fee deposit.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 const { countries } = useCountries()
 
 const countrySearch = ref('')

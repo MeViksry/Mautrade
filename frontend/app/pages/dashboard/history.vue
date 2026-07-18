@@ -7,6 +7,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+const seoTitle = 'Trading History | Mautrade Dashboard'
+const seoDescription = 'Review Mautrade trading history with closed layers, exit prices, gas fees, and realized PNL.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 interface TradeHistory {
   id: string
   pair: string

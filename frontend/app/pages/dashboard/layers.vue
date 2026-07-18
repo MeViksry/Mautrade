@@ -7,6 +7,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+const seoTitle = 'Active Layers | Mautrade Dashboard'
+const seoDescription = 'View active Mautrade trading layers, entries, allocations, current prices, and unrealized PNL.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 interface Layer {
   id: string
   pair: string

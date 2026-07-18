@@ -5,6 +5,18 @@ definePageMeta({
   layout: 'default'
 })
 
+const seoTitle = 'Create Account | Mautrade'
+const seoDescription = 'Create your Mautrade account with name, email, password confirmation, and email OTP verification.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 const registerStep = ref<'credentials' | 'otp'>('credentials')
 const fullName = ref('')
 const email = ref('')

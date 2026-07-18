@@ -1,6 +1,6 @@
 <script setup>
-const title = 'Mautrade Dashboard'
-const description = 'User dashboard for monitoring balances, active layers, exchange bindings, and trading history.'
+const title = 'Mautrade'
+const description = 'Mautrade is a crypto trading dashboard for active layers, exchange bindings, gas fee tracking, and trading history.'
 
 useHead({
   htmlAttrs: { lang: 'en' },
@@ -16,6 +16,8 @@ useSeoMeta({
   description,
   ogTitle: title,
   ogDescription: description,
+  twitterTitle: title,
+  twitterDescription: description,
   twitterCard: 'summary_large_image'
 })
 </script>

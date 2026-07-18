@@ -8,6 +8,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+const seoTitle = 'API Keys | Mautrade Dashboard'
+const seoDescription = 'Manage Mautrade exchange API keys, connection status, API deletion, and exchange credential verification.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 interface ExchangeBinding {
   id: number
   name: string

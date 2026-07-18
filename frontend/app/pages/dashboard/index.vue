@@ -8,6 +8,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+const seoTitle = 'Overview | Mautrade Dashboard'
+const seoDescription = 'Monitor Mautrade account balance, active layers, exchange bindings, realized profit, and gas fee balance.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 interface UserStats {
   totalBalance: number
   realizedProfit: number

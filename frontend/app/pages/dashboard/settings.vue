@@ -5,6 +5,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+const seoTitle = 'Settings | Mautrade Dashboard'
+const seoDescription = 'Update Mautrade profile information, profile photo, timezone, notification preferences, and account security.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 const activeTab = ref('profile')
 
 const profileForm = ref({

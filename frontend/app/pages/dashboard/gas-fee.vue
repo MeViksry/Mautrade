@@ -8,6 +8,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+const seoTitle = 'Gas Fee | Mautrade Dashboard'
+const seoDescription = 'Track Mautrade gas fee balance, deposits, rebates, trading gas fees, and gas fee metric trends.'
+
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription
+})
+
 interface UserStats {
   totalBalance: number
   realizedProfit: number
