@@ -22,6 +22,11 @@ const password = ref('')
 const rememberMe = ref(false)
 const passwordVisible = ref(false)
 
+const unlockReadonlyInput = (event: Event) => {
+  const input = event.currentTarget as HTMLInputElement
+  input.readOnly = false
+}
+
 const submitLogin = async () => {
   await navigateTo('/dashboard')
 }
@@ -49,7 +54,10 @@ const submitLogin = async () => {
           autocomplete="off"
           autocapitalize="none"
           autocorrect="off"
+          readonly
           spellcheck="false"
+          @focus="unlockReadonlyInput"
+          @pointerdown="unlockReadonlyInput"
         >
       </div>
 
@@ -62,6 +70,9 @@ const submitLogin = async () => {
             :type="passwordVisible ? 'text' : 'password'"
             placeholder="Enter Mautrade password"
             autocomplete="current-password"
+            readonly
+            @focus="unlockReadonlyInput"
+            @pointerdown="unlockReadonlyInput"
           >
           <button
             type="button"

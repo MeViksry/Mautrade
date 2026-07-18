@@ -200,14 +200,56 @@ defineProps<{
 :deep(.auth-check) {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.65rem;
   color: var(--text-mute);
+  line-height: 1;
+  cursor: pointer;
 }
 
 :deep(.auth-check input) {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--accent);
+  position: relative;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: background 180ms var(--ease-quiet), border-color 180ms var(--ease-quiet), box-shadow 180ms var(--ease-quiet);
+}
+
+:deep(.auth-check input::after) {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 4px;
+  height: 8px;
+  border: solid #050505;
+  border-width: 0 2px 2px 0;
+  opacity: 0;
+  transform: rotate(45deg) scale(0.75);
+  transition: opacity 160ms var(--ease-quiet), transform 160ms var(--ease-quiet);
+}
+
+:deep(.auth-check input:checked) {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+:deep(.auth-check input:checked::after) {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}
+
+:deep(.auth-check input:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 90, 0, 0.18);
+}
+
+:deep(.auth-check:hover input) {
+  border-color: var(--accent);
 }
 
 :deep(.auth-link) {

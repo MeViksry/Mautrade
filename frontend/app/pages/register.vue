@@ -36,6 +36,11 @@ const confirmPasswordInvalid = computed(() => confirmPassword.value !== password
 const registerInvalid = computed(() => fullNameInvalid.value || emailInvalid.value || passwordInvalid.value || confirmPasswordInvalid.value)
 const otpInvalid = computed(() => otp.value.trim().length !== 6)
 
+const unlockReadonlyInput = (event: Event) => {
+  const input = event.currentTarget as HTMLInputElement
+  input.readOnly = false
+}
+
 const submitRegister = () => {
   submitAttempted.value = true
 
@@ -94,6 +99,9 @@ const verifyOtp = async () => {
           type="text"
           placeholder="Enter full name"
           autocomplete="name"
+          readonly
+          @focus="unlockReadonlyInput"
+          @pointerdown="unlockReadonlyInput"
         >
         <small
           v-if="submitAttempted && fullNameInvalid"
@@ -115,7 +123,10 @@ const verifyOtp = async () => {
           autocomplete="off"
           autocapitalize="none"
           autocorrect="off"
+          readonly
           spellcheck="false"
+          @focus="unlockReadonlyInput"
+          @pointerdown="unlockReadonlyInput"
         >
         <small
           v-if="submitAttempted && emailInvalid"
@@ -135,6 +146,9 @@ const verifyOtp = async () => {
             :type="passwordVisible ? 'text' : 'password'"
             placeholder="Create Mautrade password"
             autocomplete="new-password"
+            readonly
+            @focus="unlockReadonlyInput"
+            @pointerdown="unlockReadonlyInput"
           >
           <button
             type="button"
@@ -162,6 +176,9 @@ const verifyOtp = async () => {
             :type="confirmPasswordVisible ? 'text' : 'password'"
             placeholder="Confirm Mautrade password"
             autocomplete="new-password"
+            readonly
+            @focus="unlockReadonlyInput"
+            @pointerdown="unlockReadonlyInput"
           >
           <button
             type="button"
