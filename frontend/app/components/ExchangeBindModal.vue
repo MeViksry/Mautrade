@@ -9,6 +9,7 @@ interface ExchangeBinding {
   status: string
   lastSynced: string | null
   balance: number
+  hasApi?: boolean
 }
 
 interface ExtraFieldConfig {
@@ -110,7 +111,7 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
 }
 
 const isExchangeBound = (exchange: ExchangeBinding) => {
-  return exchange.status === 'connected'
+  return exchange.hasApi ?? exchange.status === 'connected'
 }
 
 const selectedConfig = computed(() => {

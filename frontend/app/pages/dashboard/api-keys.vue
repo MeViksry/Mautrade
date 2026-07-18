@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import ExchangeBindModal from '~/components/ExchangeBindModal.vue'
+import ExchangeManageKeysModal from '~/components/ExchangeManageKeysModal.vue'
 import { useDashboardData } from '~/composables/useDashboardData'
 
 definePageMeta({
@@ -15,6 +16,7 @@ interface ExchangeBinding {
   status: string
   lastSynced: string | null
   balance: number
+  hasApi?: boolean
 }
 
 const { getExchangeBindings } = useDashboardData()
@@ -22,6 +24,9 @@ const exchanges = ref<ExchangeBinding[]>([])
 const loading = ref(true)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const bindModalOpen = ref(false)
+const manageModalOpen = ref(false)
+const managedExchange = ref<ExchangeBinding | null>(null)
+const googleAuthenticatorEnabled = ref(true)
 
 onMounted(async () => {
   loading.value = true
@@ -49,9 +54,51 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
     return {
       ...exchange,
       status: 'connected',
-      lastSynced: new Date().toISOString()
+      lastSynced: new Date().toISOString(),
+      hasApi: true
     }
   })
+}
+
+const handleDeleteApi = (exchangeId: number) => {
+  exchanges.value = exchanges.value.map((exchange) => {
+    if (exchange.id !== exchangeId) return exchange
+
+    return {
+      ...exchange,
+      status: 'disconnected',
+      lastSynced: null,
+      balance: 0,
+      hasApi: false
+    }
+  })
+
+  if (managedExchange.value?.id === exchangeId) {
+    manageModalOpen.value = false
+    managedExchange.value = null
+  }
+}
+
+const openManageKeys = (exchange: ExchangeBinding) => {
+  if (exchange.hasApi === false) return
+
+  managedExchange.value = exchange
+  manageModalOpen.value = true
+}
+
+const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'connected' | 'disconnected' }) => {
+  exchanges.value = exchanges.value.map((exchange) => {
+    if (exchange.id !== payload.exchangeId) return exchange
+
+    return {
+      ...exchange,
+      status: payload.status,
+      lastSynced: payload.status === 'connected' ? new Date().toISOString() : exchange.lastSynced,
+      hasApi: true
+    }
+  })
+
+  managedExchange.value = exchanges.value.find((exchange) => exchange.id === payload.exchangeId) ?? null
 }
 </script>
 
@@ -114,8 +161,21 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
         </div>
 
         <div class="exchange-card__footer">
-          <button class="btn-secondary">
+          <button
+            class="btn-secondary"
+            type="button"
+            :disabled="exchange.hasApi === false"
+            @click="openManageKeys(exchange)"
+          >
             Manage Keys
+          </button>
+          <button
+            class="btn-danger"
+            type="button"
+            :disabled="exchange.hasApi === false"
+            @click="handleDeleteApi(exchange.id)"
+          >
+            Delete Api
           </button>
         </div>
       </div>
@@ -126,6 +186,13 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
       :exchanges="exchanges"
       :theme="theme"
       @submitted="handleExchangeBindSubmitted"
+    />
+    <ExchangeManageKeysModal
+      v-model="manageModalOpen"
+      :exchange="managedExchange"
+      :theme="theme"
+      :google-authenticator-enabled="googleAuthenticatorEnabled"
+      @status-change="handleExchangeStatusChange"
     />
   </div>
 </template>
@@ -175,7 +242,7 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
   display: flex;
   flex-direction: column;
 }
-.exchange-card:hover:not(:has(.btn-secondary:hover)) {
+.exchange-card:hover:not(:has(.exchange-card__footer button:hover)) {
   border-color: var(--accent);
 }
 
@@ -260,6 +327,9 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
 .exchange-card__footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .btn-primary {
@@ -278,7 +348,8 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
   background: #ff7324;
 }
 
-.btn-secondary {
+.btn-secondary,
+.btn-danger {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--line);
@@ -290,8 +361,25 @@ const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
   cursor: pointer;
   transition: all 0.3s ease;
 }
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.btn-danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ff6b6b;
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 </style>

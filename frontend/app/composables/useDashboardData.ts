@@ -12,10 +12,10 @@ export const useDashboardData = () => {
 
   const getExchangeBindings = async () => {
     return [
-      { id: 1, name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 8450.75 },
-      { id: 2, name: 'OKX', logo: '/UserDashboard/OKX_logo.svg', logoDark: '/UserDashboard/OKX_logo_dark.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 4000.00 },
-      { id: 3, name: 'Bybit', logo: '/UserDashboard/Bybit_logo.svg', logoDark: '/UserDashboard/Bybit_logo_dark.svg', status: 'disconnected', lastSynced: '2026-07-01T08:00:00Z', balance: 0.00 },
-      { id: 4, name: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg', status: 'disconnected', lastSynced: null, balance: 0.00 }
+      { id: 1, name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 8450.75, hasApi: true },
+      { id: 2, name: 'OKX', logo: '/UserDashboard/OKX_logo.svg', logoDark: '/UserDashboard/OKX_logo_dark.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 4000.00, hasApi: true },
+      { id: 3, name: 'Bybit', logo: '/UserDashboard/Bybit_logo.svg', logoDark: '/UserDashboard/Bybit_logo_dark.svg', status: 'disconnected', lastSynced: '2026-07-01T08:00:00Z', balance: 0.00, hasApi: true },
+      { id: 4, name: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg', status: 'disconnected', lastSynced: null, balance: 0.00, hasApi: true }
     ]
   }
 
