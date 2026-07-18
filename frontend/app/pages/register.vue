@@ -109,9 +109,13 @@ const verifyOtp = async () => {
           v-model="email"
           class="auth-input"
           :class="{ 'is-invalid': submitAttempted && emailInvalid }"
-          type="email"
+          type="text"
+          inputmode="email"
           placeholder="Enter Mautrade email"
-          autocomplete="email"
+          autocomplete="off"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
         >
         <small
           v-if="submitAttempted && emailInvalid"

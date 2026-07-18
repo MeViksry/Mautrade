@@ -43,9 +43,13 @@ const submitLogin = async () => {
         <input
           v-model="email"
           class="auth-input"
-          type="email"
+          type="text"
+          inputmode="email"
           placeholder="Enter Mautrade email"
-          autocomplete="email"
+          autocomplete="off"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
         >
       </div>
 

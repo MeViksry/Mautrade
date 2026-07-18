@@ -161,6 +161,8 @@ defineProps<{
   border-radius: 4px;
   background: var(--bg-elevated);
   color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  appearance: none;
   outline: none;
   padding: 0 1rem;
   transition: border-color 220ms var(--ease-quiet), background 220ms var(--ease-quiet);
@@ -169,6 +171,23 @@ defineProps<{
 :deep(.auth-input:focus) {
   border-color: var(--accent);
   background: var(--charcoal);
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+
+:deep(.auth-input:-webkit-autofill),
+:deep(.auth-input:-webkit-autofill:hover),
+:deep(.auth-input:-webkit-autofill:focus),
+:deep(.auth-input:-webkit-autofill:active) {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-elevated) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  border-color: var(--line) !important;
+  caret-color: var(--text);
+}
+
+:deep(.auth-input:-webkit-autofill:focus) {
+  -webkit-box-shadow: 0 0 0 1000px var(--charcoal) inset !important;
+  border-color: var(--accent) !important;
 }
 
 :deep(.auth-row) {
