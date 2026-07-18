@@ -193,39 +193,37 @@ const goToNextActiveLayerPage = () => {
             >
               No active layers. Waiting for Master Signal.
             </div>
-          </div>
 
-          <div
-            v-if="layers.length > activeLayersPerPage"
-            class="layer-pagination"
-            aria-label="Active layers pagination"
-          >
-            <button
-              class="layer-pagination__nav"
-              type="button"
-              :disabled="activeLayerPage === 1"
-              aria-label="Previous active layers page"
-              @click="goToPreviousActiveLayerPage"
+            <div
+              v-if="layers.length > activeLayersPerPage"
+              class="layer-pagination"
+              aria-label="Active layers pagination"
             >
-              <svg
-                width="100%"
-                height="100%"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
+              <button
+                class="layer-pagination__nav"
+                type="button"
+                :disabled="activeLayerPage === 1"
+                aria-label="Previous active layers page"
+                @click="goToPreviousActiveLayerPage"
               >
-                <path
-                  d="M20.6621 17C18.933 19.989 15.7013 22 11.9999 22C6.47703 22 1.99988 17.5228 1.99988 12C1.99988 6.47715 6.47703 2 11.9999 2C15.7013 2 18.933 4.01099 20.6621 7M11.9999 8L7.99995 12M7.99995 12L11.9999 16M7.99995 12H21.9999"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
+                <svg
+                  width="100%"
+                  height="100%"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M20.6621 17C18.933 19.989 15.7013 22 11.9999 22C6.47703 22 1.99988 17.5228 1.99988 12C1.99988 6.47715 6.47703 2 11.9999 2C15.7013 2 18.933 4.01099 20.6621 7M11.9999 8L7.99995 12M7.99995 12L11.9999 16M7.99995 12H21.9999"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
 
-            <div class="layer-pagination__pages">
               <button
                 v-for="page in activeLayerPages"
                 :key="page"
@@ -237,32 +235,32 @@ const goToNextActiveLayerPage = () => {
               >
                 {{ page }}
               </button>
-            </div>
 
-            <button
-              class="layer-pagination__nav"
-              type="button"
-              :disabled="activeLayerPage === totalActiveLayerPages"
-              aria-label="Next active layers page"
-              @click="goToNextActiveLayerPage"
-            >
-              <svg
-                width="100%"
-                height="100%"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
+              <button
+                class="layer-pagination__nav"
+                type="button"
+                :disabled="activeLayerPage === totalActiveLayerPages"
+                aria-label="Next active layers page"
+                @click="goToNextActiveLayerPage"
               >
-                <path
-                  d="M3.33789 7C5.06694 4.01099 8.29866 2 12.0001 2C17.5229 2 22.0001 6.47715 22.0001 12C22.0001 17.5228 17.5229 22 12.0001 22C8.29866 22 5.06694 19.989 3.33789 17M12 16L16 12M16 12L12 8M16 12H2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
+                <svg
+                  width="100%"
+                  height="100%"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3.33789 7C5.06694 4.01099 8.29866 2 12.0001 2C17.5229 2 22.0001 6.47715 22.0001 12C22.0001 17.5228 17.5229 22 12.0001 22C8.29866 22 5.06694 19.989 3.33789 17M12 16L16 12M16 12L12 8M16 12H2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -426,12 +424,12 @@ const goToNextActiveLayerPage = () => {
 
 .layer-pagination {
   display: flex;
-  grid-column: 1;
-  grid-row: 3;
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  margin-top: -0.5rem;
+  min-height: 42px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-elevated);
 }
 
 .layer-pagination__nav,
@@ -447,9 +445,9 @@ const goToNextActiveLayerPage = () => {
 }
 
 .layer-pagination__nav {
-  width: 36px;
-  height: 36px;
-  padding: 0.45rem;
+  width: 28px;
+  height: 28px;
+  padding: 0.35rem;
 }
 
 .layer-pagination__nav:hover:not(:disabled) {
@@ -462,15 +460,9 @@ const goToNextActiveLayerPage = () => {
   opacity: 0.35;
 }
 
-.layer-pagination__pages {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 .layer-pagination__page {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   font-family: var(--mono);
   font-size: 12px;
