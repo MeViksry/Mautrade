@@ -72,6 +72,10 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="stats">
+      <div class="page-header">
+        <h2 class="page-title">Overview</h2>
+      </div>
+
       <!-- Stats Row -->
       <div class="stats-grid">
         <StatCard
@@ -170,7 +174,21 @@ onMounted(async () => {
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: 2rem;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 300;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: 0.05em;
 }
 
 .loading-state {
