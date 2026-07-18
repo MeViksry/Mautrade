@@ -19,6 +19,7 @@ interface ExchangeBinding {
   id: number
   name: string
   logo: string
+  logoDark?: string
   status: string
   lastSynced: string | null
   balance: number
@@ -43,6 +44,7 @@ const stats = ref<UserStats | null>(null)
 const exchanges = ref<ExchangeBinding[]>([])
 const layers = ref<Layer[]>([])
 const loading = ref(true)
+const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 
 onMounted(async () => {
   loading.value = true
@@ -64,6 +66,10 @@ onMounted(async () => {
 
 const formatLastSynced = (lastSynced: string | null) => {
   return lastSynced ? new Date(lastSynced).toLocaleString() : 'Never'
+}
+
+const getExchangeLogo = (exchange: ExchangeBinding) => {
+  return theme.value === 'dark' && exchange.logoDark ? exchange.logoDark : exchange.logo
 }
 </script>
 
@@ -153,7 +159,7 @@ const formatLastSynced = (lastSynced: string | null) => {
               <div class="exchange-card__header">
                 <img
                   class="exchange-logo"
-                  :src="exchange.logo"
+                  :src="getExchangeLogo(exchange)"
                   :alt="`${exchange.name} logo`"
                 >
                 <span
