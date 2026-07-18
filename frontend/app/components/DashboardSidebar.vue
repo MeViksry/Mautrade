@@ -33,13 +33,6 @@ const navItems = [
     </nav>
 
     <div class="sidebar__bottom">
-      <div class="user-profile">
-        <div class="user-avatar" />
-        <div class="user-info">
-          <span class="user-name">User Account</span>
-          <span class="user-id">UID: 88472910</span>
-        </div>
-      </div>
       <button class="sidebar__logout">
         <UIcon
           name="lucide:log-out"
@@ -123,41 +116,6 @@ const navItems = [
 .sidebar__bottom {
   padding: 2rem;
   border-top: 1px solid var(--line);
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent) 0%, #ff8a4c 100%);
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.user-id {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text-mute);
 }
 
 .sidebar__logout {

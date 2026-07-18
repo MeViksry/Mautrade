@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DashboardSidebar from '~/components/DashboardSidebar.vue'
+import DashboardHeader from '~/components/DashboardHeader.vue'
 </script>
 
 <template>
@@ -7,6 +8,7 @@ import DashboardSidebar from '~/components/DashboardSidebar.vue'
     <DashboardSidebar />
 
     <main class="dashboard-main">
+      <DashboardHeader />
 
       <div class="dashboard-content">
         <slot />
@@ -28,7 +30,6 @@ import DashboardSidebar from '~/components/DashboardSidebar.vue'
   flex-direction: column;
   overflow-x: hidden;
 }
-
 
 .dashboard-content {
   padding: 3rem;
