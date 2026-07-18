@@ -86,8 +86,8 @@ onMounted(() => {
 <template>
   <div>
     <div class="noise-overlay" />
-    <Navbar />
-    <NuxtPage />
-    <Footer />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </div>
 </template>
