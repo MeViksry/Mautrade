@@ -150,7 +150,7 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
   display: flex;
   flex-direction: column;
 }
-.exchange-card:hover {
+.exchange-card:hover:not(:has(.btn-secondary:hover)) {
   border-color: var(--accent);
 }
 
@@ -266,6 +266,7 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
   transition: all 0.3s ease;
 }
 .btn-secondary:hover {
-  border-color: var(--text);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 </style>
