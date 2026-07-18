@@ -202,9 +202,9 @@ onMounted(() => {
 
 .theme-toggle__track {
   position: relative;
+  display: block;
   width: 58px;
   height: 34px;
-  padding: 4px;
   background: var(--charcoal);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -216,6 +216,9 @@ onMounted(() => {
 }
 
 .theme-toggle__thumb {
+  position: absolute;
+  top: 50%;
+  left: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -225,17 +228,21 @@ onMounted(() => {
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 50%;
+  line-height: 1;
+  transform: translateY(-50%);
   transition: transform 220ms var(--ease-quiet), color 220ms var(--ease-quiet), background 220ms var(--ease-quiet);
 }
 
 .theme-toggle__thumb--light {
   color: var(--accent);
-  transform: translateX(24px);
+  transform: translate(24px, -50%);
 }
 
 .theme-toggle__icon {
-  width: 15px;
-  height: 15px;
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .user-profile {
