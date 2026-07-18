@@ -14,8 +14,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav id="nav" class="nav" :class="{ 'nav--scrolled': isScrolled }">
-    <a href="#" class="nav__logo">MAU<span class="dot" />TRADE</a>
+  <nav
+    id="nav"
+    class="nav"
+    :class="{ 'nav--scrolled': isScrolled }"
+  >
+    <a
+      href="#"
+      class="nav__logo"
+    >MAU<span class="dot" />TRADE</a>
     <ul class="nav__links">
       <li><a href="#explainer">What this is</a></li>
       <li><a href="#how">How it works</a></li>
@@ -23,6 +30,9 @@ onMounted(() => {
       <li><a href="#safety">Safety</a></li>
       <li><a href="#stories">Clients</a></li>
     </ul>
-    <a href="#cta" class="nav__cta">Request access</a>
+    <a
+      href="#cta"
+      class="nav__cta"
+    >Request access</a>
   </nav>
 </template>

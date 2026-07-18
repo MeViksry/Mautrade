@@ -1,7 +1,7 @@
 <script setup>
 onMounted(() => {
   const revealIO = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
         entry.target.classList.add('is-in')
         revealIO.unobserve(entry.target)
@@ -14,12 +14,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <section id="safety" class="safety">
+  <section
+    id="safety"
+    class="safety"
+  >
     <div class="container reveal">
-      <div class="eyebrow">Safety — 005</div>
+      <div class="eyebrow">
+        Safety — 005
+      </div>
       <div class="section-head">
-        <h2 class="section-head__title">An API key<br>that can <em>trade</em>. Nothing else.</h2>
-        <p class="section-head__sub">Connecting Mautrade to your exchange account means handing over an API key. We built the platform around one rule for that key: it can place orders, and it can do nothing else. Here's exactly what that means in practice — and what we've deliberately left out, even when it would be convenient.</p>
+        <h2 class="section-head__title">
+          An API key<br>that can <em>trade</em>. Nothing else.
+        </h2>
+        <p class="section-head__sub">
+          Connecting Mautrade to your exchange account means handing over an API key. We built the platform around one rule for that key: it can place orders, and it can do nothing else. Here's exactly what that means in practice — and what we've deliberately left out, even when it would be convenient.
+        </p>
       </div>
 
       <div class="safety__grid">

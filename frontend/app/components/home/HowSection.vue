@@ -1,7 +1,7 @@
 <script setup>
 onMounted(() => {
   const revealIO = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
         entry.target.classList.add('is-in')
         revealIO.unobserve(entry.target)
@@ -88,28 +88,54 @@ onMounted(() => {
 </script>
 
 <template>
-  <section id="how" class="how">
+  <section
+    id="how"
+    class="how"
+  >
     <div class="container how__intro reveal">
-      <div class="eyebrow">How it works — 003</div>
+      <div class="eyebrow">
+        How it works — 003
+      </div>
       <div class="section-head">
-        <h2 class="section-head__title">From one signal<br>to a <em>closed</em> Layer.</h2>
-        <p class="section-head__sub">Scroll to walk through the four stages of a single Master Signal: how it reaches every connected account, how each position is tracked separately as a Layer, how the system verifies your real balance before touching it, and how the Gas Fee is calculated. Every stage is built around one principle — your money is calculated exactly and never touched by human hands.</p>
+        <h2 class="section-head__title">
+          From one signal<br>to a <em>closed</em> Layer.
+        </h2>
+        <p class="section-head__sub">
+          Scroll to walk through the four stages of a single Master Signal: how it reaches every connected account, how each position is tracked separately as a Layer, how the system verifies your real balance before touching it, and how the Gas Fee is calculated. Every stage is built around one principle — your money is calculated exactly and never touched by human hands.
+        </p>
       </div>
     </div>
 
-    <div id="cardstack" class="cardstack">
-      <div id="cardstack-pin" class="cardstack__pin">
+    <div
+      id="cardstack"
+      class="cardstack"
+    >
+      <div
+        id="cardstack-pin"
+        class="cardstack__pin"
+      >
         <!-- Card 1 -->
         <article class="cardstack__card">
           <div class="cardstack__card-bg">
-            <div class="cardstack__card-bg-label">Stage 01 — The Signal</div>
-            <img src="https://picsum.photos/seed/mautrade-signal-fanout-dashboard/1200/900" alt="">
+            <div class="cardstack__card-bg-label">
+              Stage 01 — The Signal
+            </div>
+            <img
+              src="https://picsum.photos/seed/mautrade-signal-fanout-dashboard/1200/900"
+              alt=""
+            >
           </div>
           <div class="cardstack__card-content">
             <div>
-              <div class="cardstack__card-num">STAGE 01 — ONE DASHBOARD, ONE DECISION</div>
-              <h3 class="cardstack__card-title">The admin<br>makes <em>one</em> move.</h3>
-              <p class="cardstack__card-desc">An admin creates a Master Signal on the Mautrade dashboard — buy or sell, one symbol, one percentage. From that single action, the system builds a personal order for every connected account and dispatches them in parallel.</p>
+              <div class="cardstack__card-num">
+                STAGE 01 — ONE DASHBOARD, ONE DECISION
+              </div>
+              <h3 class="cardstack__card-title">
+                The admin<br>makes <em>one</em> move.
+              </h3>
+              <p class="cardstack__card-desc">
+                An admin creates a Master Signal on the Mautrade dashboard — buy or sell, one symbol, one percentage. From that single action, the system builds a personal order for every connected account and dispatches them in parallel.
+              </p>
               <ol class="cardstack__card-steps">
                 <li>The admin issues a signal: <strong>"Buy BTC/USDT, 10% of available USDT"</strong></li>
                 <li>Mautrade pulls every account with an active, verified Exchange Binding</li>
@@ -121,16 +147,28 @@ onMounted(() => {
             </div>
             <div class="cardstack__card-meta">
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Speed</div>
-                <div class="cardstack__card-meta-value accent">Under 5 seconds</div>
+                <div class="cardstack__card-meta-label">
+                  Speed
+                </div>
+                <div class="cardstack__card-meta-value accent">
+                  Under 5 seconds
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Sizing</div>
-                <div class="cardstack__card-meta-value">Your own balance</div>
+                <div class="cardstack__card-meta-label">
+                  Sizing
+                </div>
+                <div class="cardstack__card-meta-value">
+                  Your own balance
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Your control</div>
-                <div class="cardstack__card-meta-value">Stop anytime</div>
+                <div class="cardstack__card-meta-label">
+                  Your control
+                </div>
+                <div class="cardstack__card-meta-value">
+                  Stop anytime
+                </div>
               </div>
             </div>
           </div>
@@ -139,14 +177,25 @@ onMounted(() => {
         <!-- Card 2 -->
         <article class="cardstack__card">
           <div class="cardstack__card-bg">
-            <div class="cardstack__card-bg-label">Stage 02 — The Layer</div>
-            <img src="https://picsum.photos/seed/mautrade-layer-isolation-ledger/1200/900" alt="">
+            <div class="cardstack__card-bg-label">
+              Stage 02 — The Layer
+            </div>
+            <img
+              src="https://picsum.photos/seed/mautrade-layer-isolation-ledger/1200/900"
+              alt=""
+            >
           </div>
           <div class="cardstack__card-content">
             <div>
-              <div class="cardstack__card-num">STAGE 02 — INDEPENDENT LAYERS</div>
-              <h3 class="cardstack__card-title">Every buy opens<br>its <em>own</em> Layer.</h3>
-              <p class="cardstack__card-desc">Mautrade doesn't track "your BTC" as one blended number. Every buy signal opens a distinct Layer — its own entry price, its own quantity, its own status — inside a ledger the exchange never sees.</p>
+              <div class="cardstack__card-num">
+                STAGE 02 — INDEPENDENT LAYERS
+              </div>
+              <h3 class="cardstack__card-title">
+                Every buy opens<br>its <em>own</em> Layer.
+              </h3>
+              <p class="cardstack__card-desc">
+                Mautrade doesn't track "your BTC" as one blended number. Every buy signal opens a distinct Layer — its own entry price, its own quantity, its own status — inside a ledger the exchange never sees.
+              </p>
               <ol class="cardstack__card-steps">
                 <li>Each buy signal creates a new Layer, numbered in the order it opened</li>
                 <li>Layer 1, Layer 2, Layer 3 — same coin, three separately tracked positions</li>
@@ -158,16 +207,28 @@ onMounted(() => {
             </div>
             <div class="cardstack__card-meta">
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Tracking</div>
-                <div class="cardstack__card-meta-value accent">Per Layer</div>
+                <div class="cardstack__card-meta-label">
+                  Tracking
+                </div>
+                <div class="cardstack__card-meta-value accent">
+                  Per Layer
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Method</div>
-                <div class="cardstack__card-meta-value">Specific-lot ID</div>
+                <div class="cardstack__card-meta-label">
+                  Method
+                </div>
+                <div class="cardstack__card-meta-value">
+                  Specific-lot ID
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Cross-Layer effect</div>
-                <div class="cardstack__card-meta-value">None</div>
+                <div class="cardstack__card-meta-label">
+                  Cross-Layer effect
+                </div>
+                <div class="cardstack__card-meta-value">
+                  None
+                </div>
               </div>
             </div>
           </div>
@@ -176,14 +237,25 @@ onMounted(() => {
         <!-- Card 3 -->
         <article class="cardstack__card">
           <div class="cardstack__card-bg">
-            <div class="cardstack__card-bg-label">Stage 03 — The Verification</div>
-            <img src="https://picsum.photos/seed/mautrade-reconciliation-check-engine/1200/900" alt="">
+            <div class="cardstack__card-bg-label">
+              Stage 03 — The Verification
+            </div>
+            <img
+              src="https://picsum.photos/seed/mautrade-reconciliation-check-engine/1200/900"
+              alt=""
+            >
           </div>
           <div class="cardstack__card-content">
             <div>
-              <div class="cardstack__card-num">STAGE 03 — RECONCILIATION FIRST</div>
-              <h3 class="cardstack__card-title">Checked first.<br><em>Then</em> executed.</h3>
-              <p class="cardstack__card-desc">Before a single order reaches your exchange, Mautrade reads your actual balance and compares it to what the Layer Ledger expects. Withdraw funds manually, rotate your API key, switch exchanges — the system catches it before it trades on stale information.</p>
+              <div class="cardstack__card-num">
+                STAGE 03 — RECONCILIATION FIRST
+              </div>
+              <h3 class="cardstack__card-title">
+                Checked first.<br><em>Then</em> executed.
+              </h3>
+              <p class="cardstack__card-desc">
+                Before a single order reaches your exchange, Mautrade reads your actual balance and compares it to what the Layer Ledger expects. Withdraw funds manually, rotate your API key, switch exchanges — the system catches it before it trades on stale information.
+              </p>
               <ol class="cardstack__card-steps">
                 <li>The system reads your <strong>live exchange balance</strong> right before the trade</li>
                 <li>That balance is compared against the quantity the Layer Ledger has on record</li>
@@ -195,16 +267,28 @@ onMounted(() => {
             </div>
             <div class="cardstack__card-meta">
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">When</div>
-                <div class="cardstack__card-meta-value accent">Before every trade</div>
+                <div class="cardstack__card-meta-label">
+                  When
+                </div>
+                <div class="cardstack__card-meta-value accent">
+                  Before every trade
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">On mismatch</div>
-                <div class="cardstack__card-meta-value">Hold + notify</div>
+                <div class="cardstack__card-meta-label">
+                  On mismatch
+                </div>
+                <div class="cardstack__card-meta-value">
+                  Hold + notify
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Wrong-Layer sells</div>
-                <div class="cardstack__card-meta-value">Prevented by design</div>
+                <div class="cardstack__card-meta-label">
+                  Wrong-Layer sells
+                </div>
+                <div class="cardstack__card-meta-value">
+                  Prevented by design
+                </div>
               </div>
             </div>
           </div>
@@ -213,14 +297,25 @@ onMounted(() => {
         <!-- Card 4 -->
         <article class="cardstack__card">
           <div class="cardstack__card-bg">
-            <div class="cardstack__card-bg-label">Stage 04 — The Fee</div>
-            <img src="https://picsum.photos/seed/mautrade-gas-fee-calculation-engine/1200/900" alt="">
+            <div class="cardstack__card-bg-label">
+              Stage 04 — The Fee
+            </div>
+            <img
+              src="https://picsum.photos/seed/mautrade-gas-fee-calculation-engine/1200/900"
+              alt=""
+            >
           </div>
           <div class="cardstack__card-content">
             <div>
-              <div class="cardstack__card-num">STAGE 04 — GAS FEE, TO THE DECIMAL</div>
-              <h3 class="cardstack__card-title">Half of every<br><em>outcome</em>, exactly.</h3>
-              <p class="cardstack__card-desc">Closing a Layer triggers one calculation: the Gas Fee. Profit is split 50/50 in your favor after the fee; loss is split 50/50 with the platform absorbing half. No subscription, no entry cost — the fee only exists at the moment a Layer closes.</p>
+              <div class="cardstack__card-num">
+                STAGE 04 — GAS FEE, TO THE DECIMAL
+              </div>
+              <h3 class="cardstack__card-title">
+                Half of every<br><em>outcome</em>, exactly.
+              </h3>
+              <p class="cardstack__card-desc">
+                Closing a Layer triggers one calculation: the Gas Fee. Profit is split 50/50 in your favor after the fee; loss is split 50/50 with the platform absorbing half. No subscription, no entry cost — the fee only exists at the moment a Layer closes.
+              </p>
               <ol class="cardstack__card-steps">
                 <li>When a Layer closes, realized profit or loss is calculated first</li>
                 <li>Profit: <strong>Gas Fee = 50% of the profit</strong>, credited to the platform; you keep the rest</li>
@@ -232,16 +327,28 @@ onMounted(() => {
             </div>
             <div class="cardstack__card-meta">
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">On profit</div>
-                <div class="cardstack__card-meta-value accent">Gas Fee = 50%</div>
+                <div class="cardstack__card-meta-label">
+                  On profit
+                </div>
+                <div class="cardstack__card-meta-value accent">
+                  Gas Fee = 50%
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">On loss</div>
-                <div class="cardstack__card-meta-value">50% rebated</div>
+                <div class="cardstack__card-meta-label">
+                  On loss
+                </div>
+                <div class="cardstack__card-meta-value">
+                  50% rebated
+                </div>
               </div>
               <div class="cardstack__card-meta-item">
-                <div class="cardstack__card-meta-label">Calculation</div>
-                <div class="cardstack__card-meta-value">Fixed-point decimal</div>
+                <div class="cardstack__card-meta-label">
+                  Calculation
+                </div>
+                <div class="cardstack__card-meta-value">
+                  Fixed-point decimal
+                </div>
               </div>
             </div>
           </div>

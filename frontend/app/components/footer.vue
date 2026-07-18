@@ -2,8 +2,12 @@
   <footer>
     <div class="footer__grid">
       <div class="footer__brand-col">
-        <div class="footer__brand">MAU<span class="dot" />TRADE</div>
-        <p class="footer__tagline">Spot DCA Layering copy trading, built to the decimal. One Master Signal reaches every account at once, sized to your own balance. Every Layer tracked on its own. Every Gas Fee split 50/50. Your API key can trade — it can never withdraw.</p>
+        <div class="footer__brand">
+          MAU<span class="dot" />TRADE
+        </div>
+        <p class="footer__tagline">
+          Spot DCA Layering copy trading, built to the decimal. One Master Signal reaches every account at once, sized to your own balance. Every Layer tracked on its own. Every Gas Fee split 50/50. Your API key can trade — it can never withdraw.
+        </p>
         <div class="footer__social">
           <a href="#">X</a>
           <a href="#">TG</a>
