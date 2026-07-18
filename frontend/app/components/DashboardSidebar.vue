@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Overview', to: '/dashboard', icon: 'lucide:layout-dashboard' },
   { label: 'Active Layers', to: '/dashboard/layers', icon: 'lucide:layers' },
   { label: 'History', to: '/dashboard/history', icon: 'lucide:history' },
+  { label: 'Gas Fee', to: '/dashboard/gas-fee', icon: 'lucide:fuel' },
   { label: 'API Keys', to: '/dashboard/api-keys', icon: 'lucide:key' },
   { label: 'Settings', to: '/dashboard/settings', icon: 'lucide:settings' }
 ]
