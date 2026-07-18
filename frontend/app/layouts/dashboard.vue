@@ -7,8 +7,11 @@ import DashboardHeader from '~/components/DashboardHeader.vue'
   <div class="dashboard-layout">
     <DashboardSidebar />
 
-    <main class="dashboard-main">
-      <DashboardHeader />
+    <main
+      class="dashboard-main"
+      data-lenis-prevent
+    >
+      <DashboardHeader class="dashboard-header-fixed" />
 
       <div class="dashboard-content">
         <slot />
@@ -20,18 +23,26 @@ import DashboardHeader from '~/components/DashboardHeader.vue'
 <style scoped>
 .dashboard-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .dashboard-main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.dashboard-header-fixed {
+  flex-shrink: 0;
 }
 
 .dashboard-content {
   padding: 3rem;
-  flex: 1;
+  flex: 1 0 auto;
 }
 </style>
