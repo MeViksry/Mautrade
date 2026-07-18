@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const isSidebarOpen = useState('sidebar-open', () => true)
+
 const navItems = [
   { label: 'Overview', to: '/dashboard', icon: 'lucide:layout-dashboard' },
   { label: 'Active Layers', to: '/dashboard/layers', icon: 'lucide:layers' },
@@ -9,9 +11,12 @@ const navItems = [
 </script>
 
 <template>
-  <aside class="sidebar">
+  <aside
+    class="sidebar"
+    :class="{ 'sidebar--closed': !isSidebarOpen }"
+  >
     <div class="sidebar__logo">
-      <NuxtLink to="/">
+      <NuxtLink to="/dashboard">
         MAUTRADE<span class="dot" />
       </NuxtLink>
     </div>
@@ -54,6 +59,14 @@ const navItems = [
   height: 100vh;
   position: sticky;
   top: 0;
+  flex-shrink: 0;
+  margin-left: 0;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar--closed {
+  margin-left: -260px;
 }
 
 .sidebar__logo {
