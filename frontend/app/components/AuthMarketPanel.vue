@@ -260,9 +260,9 @@ const panel = computed(() => {
   }
 }
 
-@media (max-width: 640px) {
-  .auth-market__metrics {
-    grid-template-columns: 1fr;
+@media (max-width: 767px) {
+  .auth-market {
+    display: none;
   }
 }
 </style>
