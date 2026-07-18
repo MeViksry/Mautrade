@@ -108,7 +108,7 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
           :trend="12.4"
         />
         <StatCard
-          title="Total Gas Fee Paid"
+          title="Gas Fee Balance"
           :value="stats.totalGasFeePaid.toLocaleString()"
           unit="USDT"
         />

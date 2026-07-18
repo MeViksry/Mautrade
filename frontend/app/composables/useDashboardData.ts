@@ -6,7 +6,7 @@ export const useDashboardData = () => {
       totalBalance: 12450.75,
       realizedProfit: 3240.50,
       totalGasFeePaid: 1620.25,
-      activeLayersCount: 3
+      activeLayersCount: 6
     }
   }
 
@@ -56,6 +56,42 @@ export const useDashboardData = () => {
         unrealizedPnlPct: 3.91,
         status: 'open',
         openedAt: '2026-07-17T14:20:00Z'
+      },
+      {
+        id: 'L-104',
+        pair: 'BNB/USDT',
+        entryPrice: 580.00,
+        currentPrice: 592.35,
+        allocationPct: 8,
+        allocatedUsdt: 996.06,
+        unrealizedPnl: 21.22, // USDT
+        unrealizedPnlPct: 2.13,
+        status: 'open',
+        openedAt: '2026-07-17T18:45:00Z'
+      },
+      {
+        id: 'L-105',
+        pair: 'XRP/USDT',
+        entryPrice: 0.58,
+        currentPrice: 0.56,
+        allocationPct: 4,
+        allocatedUsdt: 498.03,
+        unrealizedPnl: -17.17, // USDT
+        unrealizedPnlPct: -3.45,
+        status: 'open',
+        openedAt: '2026-07-18T06:20:00Z'
+      },
+      {
+        id: 'L-106',
+        pair: 'DOGE/USDT',
+        entryPrice: 0.12,
+        currentPrice: 0.13,
+        allocationPct: 6,
+        allocatedUsdt: 747.05,
+        unrealizedPnl: 62.25, // USDT
+        unrealizedPnlPct: 8.33,
+        status: 'open',
+        openedAt: '2026-07-18T10:05:00Z'
       }
     ]
   }
