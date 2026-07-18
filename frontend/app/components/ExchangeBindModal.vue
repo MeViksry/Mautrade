@@ -63,6 +63,10 @@ const apiKey = ref('')
 const apiSecret = ref('')
 const extras = reactive<Record<string, string>>({})
 const visibleFields = reactive<Record<string, boolean>>({})
+const autofillLocked = reactive<Record<string, boolean>>({
+  apiKey: true,
+  apiSecret: true
+})
 const submitAttempted = ref(false)
 const submitted = ref(false)
 const fieldShake = reactive<Record<string, boolean>>({})
@@ -81,6 +85,11 @@ const resetBindState = () => {
   Object.keys(visibleFields).forEach((key) => {
     delete visibleFields[key]
   })
+  Object.keys(autofillLocked).forEach((key) => {
+    delete autofillLocked[key]
+  })
+  autofillLocked.apiKey = true
+  autofillLocked.apiSecret = true
   Object.keys(fieldShake).forEach((key) => {
     delete fieldShake[key]
   })
@@ -115,6 +124,7 @@ const selectExchange = (exchange: ExchangeBinding) => {
   selectedConfig.value.extraFields.forEach((field) => {
     extras[field.key] = ''
     visibleFields[field.key] = false
+    autofillLocked[field.key] = true
   })
 }
 
@@ -146,6 +156,10 @@ const triggerFieldShake = (key: string) => {
 
 const toggleFieldVisibility = (key: string) => {
   visibleFields[key] = !visibleFields[key]
+}
+
+const unlockAutofillField = (key: string) => {
+  autofillLocked[key] = false
 }
 
 watch([apiKey, apiSecret], () => {
@@ -248,6 +262,8 @@ const submitBindExchange = () => {
       <form
         v-else
         class="bind-form"
+        autocomplete="off"
+        data-form-type="other"
         @submit.prevent="submitBindExchange"
       >
         <div
@@ -267,9 +283,19 @@ const submitBindExchange = () => {
           <input
             v-model="apiKey"
             :class="{ 'is-invalid': submitAttempted && fieldErrors.apiKey, 'is-shaking': fieldShake.apiKey }"
+            :readonly="autofillLocked.apiKey"
             type="text"
+            name="mautrade-exchange-api-key"
             placeholder="Enter API key"
-            autocomplete="off"
+            autocomplete="new-password"
+            autocapitalize="off"
+            autocorrect="off"
+            inputmode="text"
+            :spellcheck="false"
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
+            @focus="unlockAutofillField('apiKey')"
             @animationend="fieldShake.apiKey = false"
           >
         </label>
@@ -284,8 +310,18 @@ const submitBindExchange = () => {
             <input
               v-model="apiSecret"
               :type="visibleFields.apiSecret ? 'text' : 'password'"
+              :readonly="autofillLocked.apiSecret"
+              name="mautrade-exchange-api-secret"
               placeholder="Enter API secret"
-              autocomplete="off"
+              autocomplete="new-password"
+              autocapitalize="off"
+              autocorrect="off"
+              inputmode="text"
+              :spellcheck="false"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
+              @focus="unlockAutofillField('apiSecret')"
             >
             <button
               type="button"
@@ -312,8 +348,18 @@ const submitBindExchange = () => {
             <input
               v-model="extras[field.key]"
               :type="visibleFields[field.key] ? 'text' : 'password'"
+              :readonly="autofillLocked[field.key]"
+              :name="`mautrade-exchange-${field.key}`"
               :placeholder="field.placeholder"
-              autocomplete="off"
+              autocomplete="new-password"
+              autocapitalize="off"
+              autocorrect="off"
+              inputmode="text"
+              :spellcheck="false"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
+              @focus="unlockAutofillField(field.key)"
             >
             <button
               type="button"
@@ -327,9 +373,19 @@ const submitBindExchange = () => {
             v-else
             v-model="extras[field.key]"
             :class="{ 'is-invalid': submitAttempted && fieldErrors[field.key], 'is-shaking': fieldShake[field.key] }"
+            :readonly="autofillLocked[field.key]"
             :type="field.type"
+            :name="`mautrade-exchange-${field.key}`"
             :placeholder="field.placeholder"
-            autocomplete="off"
+            autocomplete="new-password"
+            autocapitalize="off"
+            autocorrect="off"
+            inputmode="text"
+            :spellcheck="false"
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
+            @focus="unlockAutofillField(field.key)"
             @animationend="fieldShake[field.key] = false"
           >
         </label>
