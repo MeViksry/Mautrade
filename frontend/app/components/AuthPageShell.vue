@@ -88,7 +88,7 @@ defineProps<{
   margin-top: -2.2rem;
   padding: 0.25rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--bg-elevated);
 }
 
@@ -97,11 +97,12 @@ defineProps<{
   align-items: center;
   justify-content: center;
   min-height: 38px;
-  border-radius: 999px;
+  border-radius: 3px;
   color: var(--text-mute);
   font-family: var(--mono);
   font-size: 12px;
   font-weight: 700;
+  transition: background 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
 }
 
 .auth-tab.active {
