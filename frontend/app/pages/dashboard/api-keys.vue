@@ -9,8 +9,9 @@ definePageMeta({
 interface ExchangeBinding {
   id: number
   name: string
+  logo: string
   status: string
-  lastSynced: string
+  lastSynced: string | null
   balance: number
 }
 
@@ -28,6 +29,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const formatLastSynced = (lastSynced: string | null) => {
+  return lastSynced ? new Date(lastSynced).toLocaleString() : 'Never'
+}
 </script>
 
 <template>
@@ -58,7 +63,13 @@ onMounted(async () => {
         class="exchange-card"
       >
         <div class="exchange-card__header">
-          <span class="exchange-name">{{ exchange.name }}</span>
+          <div class="exchange-logo-shell">
+            <img
+              class="exchange-logo"
+              :src="exchange.logo"
+              :alt="`${exchange.name} logo`"
+            >
+          </div>
           <span
             class="exchange-status"
             :class="exchange.status === 'connected' ? 'status-active' : 'status-inactive'"
@@ -74,7 +85,7 @@ onMounted(async () => {
           </div>
           <div class="exchange-stat">
             <span class="exchange-stat__label">Last Synced</span>
-            <span class="exchange-stat__val-time">{{ new Date(exchange.lastSynced).toLocaleString() }}</span>
+            <span class="exchange-stat__val-time">{{ formatLastSynced(exchange.lastSynced) }}</span>
           </div>
         </div>
 
@@ -144,11 +155,19 @@ onMounted(async () => {
   margin-bottom: 2rem;
 }
 
-.exchange-name {
-  font-family: 'Oswald', sans-serif;
-  font-size: 1.5rem;
-  color: var(--text);
-  letter-spacing: 0.05em;
+.exchange-logo-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 52px;
+}
+
+.exchange-logo {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .exchange-status {

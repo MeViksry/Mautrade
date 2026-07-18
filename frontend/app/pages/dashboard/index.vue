@@ -18,8 +18,9 @@ interface UserStats {
 interface ExchangeBinding {
   id: number
   name: string
+  logo: string
   status: string
-  lastSynced: string
+  lastSynced: string | null
   balance: number
 }
 
@@ -60,6 +61,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const formatLastSynced = (lastSynced: string | null) => {
+  return lastSynced ? new Date(lastSynced).toLocaleString() : 'Never'
+}
 </script>
 
 <template>
@@ -161,7 +166,7 @@ onMounted(async () => {
                 </div>
                 <div class="exchange-stat">
                   <span class="exchange-stat__label">Last Synced</span>
-                  <span class="exchange-stat__val-time">{{ new Date(exchange.lastSynced).toLocaleString() }}</span>
+                  <span class="exchange-stat__val-time">{{ formatLastSynced(exchange.lastSynced) }}</span>
                 </div>
               </div>
             </div>
