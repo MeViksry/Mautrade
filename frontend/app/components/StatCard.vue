@@ -4,6 +4,12 @@ defineProps<{
   value: string | number
   unit?: string
   trend?: number // positive or negative percentage
+  actionLabel?: string
+  actionIcon?: string
+}>()
+
+const emit = defineEmits<{
+  action: []
 }>()
 </script>
 
@@ -31,6 +37,19 @@ defineProps<{
         {{ Math.abs(trend) }}%
       </div>
     </div>
+    <button
+      v-if="actionLabel"
+      class="stat-card__action"
+      type="button"
+      @click.stop="emit('action')"
+    >
+      <UIcon
+        v-if="actionIcon"
+        :name="actionIcon"
+        class="stat-card__action-icon"
+      />
+      <span>{{ actionLabel }}</span>
+    </button>
   </div>
 </template>
 
@@ -44,7 +63,7 @@ defineProps<{
   gap: 0.8rem;
   transition: border-color 300ms var(--ease-quiet);
 }
-.stat-card:hover {
+.stat-card:hover:not(:has(.stat-card__action:hover)) {
   border-color: var(--accent);
 }
 .stat-card__label {
@@ -79,5 +98,33 @@ defineProps<{
   align-items: center;
   font-family: var(--mono);
   font-size: 11px;
+}
+.stat-card__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 220ms var(--ease-quiet), border-color 220ms var(--ease-quiet), transform 220ms var(--ease-quiet);
+}
+.stat-card__action:hover {
+  background: #ff7324;
+  border-color: #ff7324;
+  transform: translateY(-1px);
+}
+.stat-card__action-icon {
+  width: 14px;
+  height: 14px;
 }
 </style>

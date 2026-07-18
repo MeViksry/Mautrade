@@ -164,6 +164,8 @@ const goToNextActiveLayerPage = () => {
           title="Gas Fee Balance"
           :value="stats.totalGasFeePaid.toLocaleString()"
           unit="USDT"
+          action-label="Deposit"
+          action-icon="lucide:plus"
         />
       </div>
 
