@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import StatCard from '~/components/StatCard.vue'
 import LayerRow from '~/components/LayerRow.vue'
 import { useDashboardData } from '~/composables/useDashboardData'
@@ -49,6 +49,14 @@ const layersContainer = ref<HTMLElement | null>(null)
 const exchangeListHeight = ref<number | null>(null)
 const activeLayerPage = ref(1)
 const activeLayersPerPage = 6
+const depositModalOpen = ref(false)
+const depositStep = ref<'methods' | 'deposit'>('methods')
+const depositAmount = ref(500)
+const depositTxId = ref('')
+const walletCopied = ref(false)
+const depositAmountShake = ref(false)
+const depositSubmitted = ref(false)
+const depositWalletAddress = '0x8F34B7C59A5D4E21F6C789DAB0132E45C67F9012'
 let layersResizeObserver: ResizeObserver | null = null
 
 const syncExchangeListHeight = () => {
@@ -124,6 +132,58 @@ const goToPreviousActiveLayerPage = () => {
 const goToNextActiveLayerPage = () => {
   void setActiveLayerPage(activeLayerPage.value + 1)
 }
+
+const openDepositModal = () => {
+  depositStep.value = 'methods'
+  depositModalOpen.value = true
+}
+
+const closeDepositModal = () => {
+  depositModalOpen.value = false
+}
+
+const selectDepositMethod = () => {
+  depositStep.value = 'deposit'
+  depositSubmitted.value = false
+}
+
+const copyDepositAddress = async () => {
+  await navigator.clipboard.writeText(depositWalletAddress)
+  walletCopied.value = true
+  window.setTimeout(() => {
+    walletCopied.value = false
+  }, 1400)
+}
+
+const depositQrSvg = computed(() => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><rect width="240" height="240" fill="#f8fafc"/><rect x="20" y="20" width="54" height="54" fill="#111"/><rect x="32" y="32" width="30" height="30" fill="#f8fafc"/><rect x="42" y="42" width="10" height="10" fill="#111"/><rect x="166" y="20" width="54" height="54" fill="#111"/><rect x="178" y="32" width="30" height="30" fill="#f8fafc"/><rect x="188" y="42" width="10" height="10" fill="#111"/><rect x="20" y="166" width="54" height="54" fill="#111"/><rect x="32" y="178" width="30" height="30" fill="#f8fafc"/><rect x="42" y="188" width="10" height="10" fill="#111"/><rect x="92" y="24" width="12" height="12" fill="#111"/><rect x="116" y="24" width="24" height="12" fill="#111"/><rect x="92" y="48" width="36" height="12" fill="#111"/><rect x="140" y="48" width="12" height="12" fill="#111"/><rect x="92" y="84" width="12" height="24" fill="#111"/><rect x="116" y="84" width="12" height="12" fill="#111"/><rect x="152" y="84" width="36" height="12" fill="#111"/><rect x="200" y="96" width="12" height="24" fill="#111"/><rect x="84" y="120" width="24" height="12" fill="#111"/><rect x="120" y="120" width="12" height="36" fill="#111"/><rect x="144" y="120" width="24" height="12" fill="#111"/><rect x="180" y="132" width="36" height="12" fill="#111"/><rect x="88" y="164" width="12" height="12" fill="#111"/><rect x="112" y="164" width="48" height="12" fill="#111"/><rect x="184" y="164" width="12" height="12" fill="#111"/><rect x="92" y="188" width="24" height="12" fill="#111"/><rect x="140" y="188" width="12" height="24" fill="#111"/><rect x="164" y="188" width="48" height="12" fill="#111"/><rect x="104" y="212" width="12" height="12" fill="#111"/><rect x="128" y="212" width="36" height="12" fill="#111"/><rect x="188" y="212" width="12" height="12" fill="#111"/></svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+})
+
+const depositAmountInvalid = computed(() => Number(depositAmount.value) < 500)
+
+const triggerDepositAmountShake = () => {
+  depositAmountShake.value = false
+  window.requestAnimationFrame(() => {
+    depositAmountShake.value = true
+  })
+}
+
+watch(depositAmount, () => {
+  depositSubmitted.value = false
+  if (depositAmountInvalid.value) {
+    triggerDepositAmountShake()
+  }
+})
+
+const submitDeposit = () => {
+  if (depositAmountInvalid.value) {
+    triggerDepositAmountShake()
+    return
+  }
+
+  depositSubmitted.value = true
+}
 </script>
 
 <template>
@@ -166,6 +226,7 @@ const goToNextActiveLayerPage = () => {
           unit="USDT"
           action-label="Deposit"
           action-icon="lucide:plus"
+          @action="openDepositModal"
         />
       </div>
 
@@ -310,6 +371,153 @@ const goToNextActiveLayerPage = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="depositModalOpen"
+      class="deposit-modal"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="depositStep === 'methods' ? 'Deposit Methods' : 'Deposit'"
+      @click.self="closeDepositModal"
+    >
+      <div class="deposit-modal__box">
+        <div class="deposit-modal__header">
+          <button
+            v-if="depositStep === 'deposit'"
+            class="deposit-modal__icon-btn"
+            type="button"
+            aria-label="Back to deposit methods"
+            @click="depositStep = 'methods'"
+          >
+            <UIcon name="lucide:arrow-left" />
+          </button>
+          <span
+            v-else
+            class="deposit-modal__spacer"
+          />
+          <h3>{{ depositStep === 'methods' ? 'Deposit Methods' : 'Deposit' }}</h3>
+          <button
+            class="deposit-modal__icon-btn"
+            type="button"
+            aria-label="Close deposit modal"
+            @click="closeDepositModal"
+          >
+            <UIcon name="lucide:x" />
+          </button>
+        </div>
+
+        <div
+          v-if="depositStep === 'methods'"
+          class="deposit-methods"
+        >
+          <button
+            class="deposit-method"
+            type="button"
+            @click="selectDepositMethod"
+          >
+            <span class="deposit-method__icon">
+              <UIcon name="lucide:wallet" />
+            </span>
+            <span class="deposit-method__content">
+              <span class="deposit-method__title">USDT Gas Fee Wallet</span>
+              <span class="deposit-method__meta">Minimum deposit 500 USDT</span>
+            </span>
+            <UIcon
+              name="lucide:chevron-right"
+              class="deposit-method__arrow"
+            />
+          </button>
+        </div>
+
+        <div
+          v-else
+          class="deposit-form"
+        >
+          <div class="deposit-qr">
+            <img
+              :src="depositQrSvg"
+              alt="USDT gas fee deposit QR code"
+            >
+          </div>
+
+          <a
+            class="deposit-download"
+            :href="depositQrSvg"
+            download="mautrade-gas-fee-deposit-qr.svg"
+          >
+            <UIcon name="lucide:download" />
+            <span>Download QR Code</span>
+          </a>
+
+          <label class="deposit-field">
+            <span>Wallet Address</span>
+            <div class="deposit-copy">
+              <input
+                :value="depositWalletAddress"
+                readonly
+              >
+              <button
+                type="button"
+                @click="copyDepositAddress"
+              >
+                <UIcon :name="walletCopied ? 'lucide:check' : 'lucide:copy'" />
+                <span>{{ walletCopied ? 'Copied' : 'Copy' }}</span>
+              </button>
+            </div>
+          </label>
+
+          <label class="deposit-field">
+            <span>Amount</span>
+            <div
+              class="deposit-amount"
+              :class="{ 'is-invalid': depositAmountInvalid, 'is-shaking': depositAmountShake }"
+              @animationend="depositAmountShake = false"
+            >
+              <input
+                v-model.number="depositAmount"
+                type="number"
+                min="500"
+                step="1"
+                aria-describedby="deposit-amount-error"
+              >
+              <span>USDT</span>
+            </div>
+            <p
+              v-if="depositAmountInvalid"
+              id="deposit-amount-error"
+              class="deposit-error"
+            >
+              Minimum deposit is 500 USDT
+            </p>
+          </label>
+
+          <label class="deposit-field">
+            <span>TX ID</span>
+            <input
+              v-model="depositTxId"
+              type="text"
+              placeholder="Paste transaction ID"
+            >
+          </label>
+
+          <button
+            class="deposit-submit"
+            type="button"
+            @click="submitDeposit"
+          >
+            <UIcon name="lucide:send" />
+            <span>Submit Deposit</span>
+          </button>
+
+          <p
+            v-if="depositSubmitted"
+            class="deposit-success"
+          >
+            Deposit submitted
+          </p>
         </div>
       </div>
     </div>
@@ -564,5 +772,323 @@ const goToNextActiveLayerPage = () => {
   font-family: var(--mono);
   font-size: 10px;
   color: var(--silver);
+}
+
+.deposit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.deposit-modal__box {
+  width: min(520px, 100%);
+  max-height: min(760px, calc(100vh - 4rem));
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+}
+
+.deposit-modal__header {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.deposit-modal__header h3 {
+  margin: 0;
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.deposit-modal__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
+}
+
+.deposit-modal__spacer {
+  width: 36px;
+  height: 36px;
+}
+
+.deposit-modal__icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.deposit-methods,
+.deposit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.deposit-method {
+  display: grid;
+  grid-template-columns: 44px 1fr 24px;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 220ms var(--ease-quiet), background 220ms var(--ease-quiet);
+}
+
+.deposit-method:hover {
+  border-color: var(--accent);
+  background: rgba(255, 90, 0, 0.08);
+}
+
+.deposit-method__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #000;
+}
+
+.deposit-method__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.deposit-method__title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.deposit-method__meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deposit-method__arrow {
+  color: var(--accent);
+}
+
+.deposit-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+}
+
+.deposit-qr img {
+  display: block;
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+}
+
+.deposit-download,
+.deposit-copy button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 220ms var(--ease-quiet), border-color 220ms var(--ease-quiet);
+}
+
+.deposit-download {
+  align-self: center;
+  padding: 0.65rem 1rem;
+}
+
+.deposit-download:hover,
+.deposit-copy button:hover {
+  background: #ff7324;
+  border-color: #ff7324;
+}
+
+.deposit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.deposit-field > span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.deposit-field input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+  padding: 0 0.85rem;
+}
+
+.deposit-field input:focus {
+  border-color: var(--accent);
+}
+
+.deposit-copy,
+.deposit-amount {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.deposit-copy button {
+  height: 42px;
+  padding: 0 0.85rem;
+  border-left: none;
+}
+
+.deposit-amount span {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-left: none;
+  background: var(--charcoal);
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.deposit-amount.is-invalid input,
+.deposit-amount.is-invalid span {
+  border-color: #ef4444;
+}
+
+.deposit-amount.is-shaking {
+  animation: deposit-shake 260ms ease-in-out;
+}
+
+.deposit-error,
+.deposit-success {
+  margin: -0.2rem 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deposit-error {
+  color: #ef4444;
+}
+
+.deposit-success {
+  color: #10b981;
+  text-align: center;
+}
+
+.deposit-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 220ms var(--ease-quiet), border-color 220ms var(--ease-quiet), transform 220ms var(--ease-quiet);
+}
+
+.deposit-submit:hover {
+  background: #ff7324;
+  border-color: #ff7324;
+  transform: translateY(-1px);
+}
+
+@keyframes deposit-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-7px);
+  }
+
+  40% {
+    transform: translateX(7px);
+  }
+
+  60% {
+    transform: translateX(-5px);
+  }
+
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@media (max-width: 640px) {
+  .deposit-modal {
+    padding: 1rem;
+  }
+
+  .deposit-copy {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .deposit-copy button {
+    border-left: 1px solid var(--accent);
+  }
 }
 </style>
