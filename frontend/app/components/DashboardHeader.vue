@@ -18,7 +18,7 @@
 
 <style scoped>
 .dashboard-header {
-  padding: 1.5rem 3rem;
+  padding: 0.75rem 2rem;
   display: flex;
   justify-content: flex-end;
   align-items: center;
