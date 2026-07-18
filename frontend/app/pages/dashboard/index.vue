@@ -55,6 +55,8 @@ const depositAmount = ref(500)
 const depositTxId = ref('')
 const walletCopied = ref(false)
 const depositAmountShake = ref(false)
+const depositTxIdShake = ref(false)
+const depositSubmitAttempted = ref(false)
 const depositSubmitted = ref(false)
 const depositWalletAddress = '0x8F34B7C59A5D4E21F6C789DAB0132E45C67F9012'
 let layersResizeObserver: ResizeObserver | null = null
@@ -144,6 +146,7 @@ const closeDepositModal = () => {
 
 const selectDepositMethod = () => {
   depositStep.value = 'deposit'
+  depositSubmitAttempted.value = false
   depositSubmitted.value = false
 }
 
@@ -161,11 +164,21 @@ const depositQrSvg = computed(() => {
 })
 
 const depositAmountInvalid = computed(() => Number(depositAmount.value) < 500)
+const depositTxIdInvalid = computed(() => depositTxId.value.trim().length === 0)
+const depositTxIdErrorVisible = computed(() => depositSubmitAttempted.value && depositTxIdInvalid.value)
+const depositFormBlocked = computed(() => depositAmountInvalid.value || depositTxIdInvalid.value)
 
 const triggerDepositAmountShake = () => {
   depositAmountShake.value = false
   window.requestAnimationFrame(() => {
     depositAmountShake.value = true
+  })
+}
+
+const triggerDepositTxIdShake = () => {
+  depositTxIdShake.value = false
+  window.requestAnimationFrame(() => {
+    depositTxIdShake.value = true
   })
 }
 
@@ -176,11 +189,22 @@ watch(depositAmount, () => {
   }
 })
 
+watch(depositTxId, () => {
+  depositSubmitted.value = false
+})
+
 const submitDeposit = () => {
+  depositSubmitAttempted.value = true
+
   if (depositAmountInvalid.value) {
     triggerDepositAmountShake()
-    return
   }
+
+  if (depositTxIdInvalid.value) {
+    triggerDepositTxIdShake()
+  }
+
+  if (depositFormBlocked.value) return
 
   depositSubmitted.value = true
 }
@@ -498,14 +522,27 @@ const submitDeposit = () => {
             <span>TX ID</span>
             <input
               v-model="depositTxId"
+              class="deposit-tx-input"
+              :class="{ 'is-invalid': depositTxIdErrorVisible, 'is-shaking': depositTxIdShake }"
               type="text"
               placeholder="Paste transaction ID"
+              aria-describedby="deposit-tx-error"
+              @animationend="depositTxIdShake = false"
             >
+            <p
+              v-if="depositTxIdErrorVisible"
+              id="deposit-tx-error"
+              class="deposit-error"
+            >
+              TX ID is required
+            </p>
           </label>
 
           <button
             class="deposit-submit"
+            :class="{ 'is-blocked': depositFormBlocked }"
             type="button"
+            :aria-disabled="depositFormBlocked"
             @click="submitDeposit"
           >
             <UIcon name="lucide:send" />
@@ -1008,7 +1045,12 @@ const submitDeposit = () => {
   border-color: #ef4444;
 }
 
-.deposit-amount.is-shaking {
+.deposit-tx-input.is-invalid {
+  border-color: #ef4444;
+}
+
+.deposit-amount.is-shaking,
+.deposit-tx-input.is-shaking {
   animation: deposit-shake 260ms ease-in-out;
 }
 
@@ -1053,6 +1095,10 @@ const submitDeposit = () => {
   background: #ff7324;
   border-color: #ff7324;
   transform: translateY(-1px);
+}
+
+.deposit-submit.is-blocked {
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.45);
 }
 
 @keyframes deposit-shake {
