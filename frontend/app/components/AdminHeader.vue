@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const isSidebarOpen = useState<boolean | null>('admin-sidebar-open', () => null)
-const theme = useState<'dark' | 'light'>('admin-theme', () => 'dark')
+const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
 
 const toggleSidebar = () => {

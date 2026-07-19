@@ -67,7 +67,10 @@ const closeCompactSidebar = () => {
     }"
   >
     <div class="sidebar__logo">
-      <NuxtLink to="/admin" class="logo-link">
+      <NuxtLink
+        to="/admin"
+        class="logo-link"
+      >
         <div class="logo-main">
           MAUTRADE<span class="dot" />
         </div>
