@@ -35,7 +35,15 @@ useSeoMeta({
 })
 
 const selectedCoin = ref('BTC/USDT')
-const coins = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
+const isCoinDropdownOpen = ref(false)
+const coinOptions = [
+  { symbol: 'BTC/USDT', name: 'Bitcoin', price: '64,718.00', change: '+1.09%' },
+  { symbol: 'ETH/USDT', name: 'Ethereum', price: '3,420.12', change: '+1.30%' },
+  { symbol: 'SOL/USDT', name: 'Solana', price: '182.33', change: '+2.57%' },
+  { symbol: 'BNB/USDT', name: 'BNB', price: '569.31', change: '+0.30%' },
+  { symbol: 'PEPE/USDT', name: 'Pepe', price: '0.00002028', change: '+5.69%' },
+  { symbol: 'XRP/USDT', name: 'XRP', price: '1.0967', change: '+0.65%' }
+]
 
 const orderType = ref<'limit' | 'market'>('limit')
 const orderSide = ref<'buy' | 'sell'>('buy')
@@ -48,6 +56,9 @@ const chartDataValues = ref(Array.from({ length: 50 }, () => 65000 + (Math.rando
 const currentPrice = computed(() => chartDataValues.value[chartDataValues.value.length - 1] ?? 65000)
 const baseAsset = computed(() => selectedCoin.value.split('/')[0] ?? 'BTC')
 const quoteAsset = computed(() => selectedCoin.value.split('/')[1] ?? 'USDT')
+const selectedCoinMeta = computed(() => {
+  return coinOptions.find(coin => coin.symbol === selectedCoin.value) ?? coinOptions[0]
+})
 
 const chartData = computed(() => ({
   labels: chartLabels.value,
@@ -198,6 +209,11 @@ const handleExecuteOrder = (side = orderSide.value) => {
   console.log(`Executing ${orderSide.value} ${orderType.value} for ${selectedCoin.value}`)
 }
 
+const selectCoin = (symbol: string) => {
+  selectedCoin.value = symbol
+  isCoinDropdownOpen.value = false
+}
+
 const cancelAllLayers = () => {
   if (confirm('Cancel all active master layers?')) {
     activeLayers.value = []
@@ -209,20 +225,52 @@ const cancelAllLayers = () => {
   <div class="execution-page">
     <section class="market-strip">
       <div class="market-identity">
-        <div class="pair-select">
-          <span class="pair-dot" />
-          <select
-            v-model="selectedCoin"
-            class="coin-select"
+        <div class="pair-dropdown">
+          <button
+            class="pair-trigger"
+            type="button"
+            :aria-expanded="isCoinDropdownOpen"
+            aria-haspopup="listbox"
+            @click="isCoinDropdownOpen = !isCoinDropdownOpen"
+            @keydown.escape="isCoinDropdownOpen = false"
           >
-            <option
-              v-for="coin in coins"
-              :key="coin"
-              :value="coin"
+            <span class="pair-dot" />
+            <span class="pair-trigger__main">
+              <strong>{{ selectedCoin }}</strong>
+              <small>{{ selectedCoinMeta?.name }}</small>
+            </span>
+            <UIcon
+              name="lucide:chevron-down"
+              class="pair-trigger__icon"
+              :class="{ 'pair-trigger__icon--open': isCoinDropdownOpen }"
+            />
+          </button>
+
+          <div
+            v-if="isCoinDropdownOpen"
+            class="pair-menu"
+            role="listbox"
+          >
+            <button
+              v-for="coin in coinOptions"
+              :key="coin.symbol"
+              class="pair-option"
+              :class="{ 'pair-option--active': coin.symbol === selectedCoin }"
+              type="button"
+              role="option"
+              :aria-selected="coin.symbol === selectedCoin"
+              @click="selectCoin(coin.symbol)"
             >
-              {{ coin }}
-            </option>
-          </select>
+              <span class="pair-option__asset">
+                <strong>{{ coin.symbol }}</strong>
+                <small>{{ coin.name }}</small>
+              </span>
+              <span class="pair-option__market">
+                <strong>{{ coin.price }}</strong>
+                <small>{{ coin.change }}</small>
+              </span>
+            </button>
+          </div>
         </div>
 
         <div class="market-price">
@@ -595,11 +643,134 @@ const cancelAllLayers = () => {
   min-width: 0;
 }
 
-.pair-select {
-  display: inline-flex;
+.pair-dropdown {
+  position: relative;
+  z-index: 8;
+  min-width: 220px;
+}
+
+.pair-trigger {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 0.8rem;
+  text-align: left;
+  transition: border-color 180ms var(--ease-quiet), background 180ms var(--ease-quiet);
+}
+
+.pair-trigger:hover,
+.pair-trigger[aria-expanded='true'] {
+  border-color: rgba(255, 90, 0, 0.55);
+  background: rgba(255, 90, 0, 0.08);
+}
+
+.pair-trigger__main {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.pair-trigger__main strong {
+  color: var(--text);
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.06rem;
+  font-weight: 500;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.pair-trigger__main small {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.pair-trigger__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-mute);
+  transition: transform 180ms var(--ease-quiet), color 180ms var(--ease-quiet);
+}
+
+.pair-trigger__icon--open {
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+
+.pair-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: min(340px, 84vw);
+  max-height: 306px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 90, 0, 0.32);
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
+  padding: 0.35rem;
+}
+
+.pair-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 0.65rem;
+  text-align: left;
+  transition: border-color 160ms var(--ease-quiet), background 160ms var(--ease-quiet);
+}
+
+.pair-option:hover,
+.pair-option--active {
+  border-color: rgba(255, 90, 0, 0.32);
+  background: rgba(255, 90, 0, 0.08);
+}
+
+.pair-option__asset,
+.pair-option__market {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pair-option__asset strong,
+.pair-option__market strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pair-option__asset small,
+.pair-option__market small {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+}
+
+.pair-option__market {
+  align-items: flex-end;
+}
+
+.pair-option__market small {
+  color: #00c087;
+  font-weight: 700;
 }
 
 .pair-dot {
@@ -607,19 +778,7 @@ const cancelAllLayers = () => {
   height: 9px;
   background: var(--accent);
   display: inline-block;
-}
-
-.coin-select {
-  min-width: 136px;
-  background: var(--charcoal);
-  border: 1px solid var(--line);
-  color: var(--text);
-  padding: 0.45rem 0.65rem;
-  border-radius: 4px;
-  font-family: 'Oswald', sans-serif;
-  font-size: 1rem;
-  cursor: pointer;
-  outline: none;
+  min-width: 0;
 }
 
 .market-price {
