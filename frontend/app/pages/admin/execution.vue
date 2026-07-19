@@ -11,6 +11,7 @@ import {
   Legend
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
+import CoinPairDropdown from '~/components/CoinPairDropdown.vue'
 import LayerRow from '~/components/LayerRow.vue'
 
 ChartJS.register(
@@ -35,14 +36,19 @@ useSeoMeta({
 })
 
 const selectedCoin = ref('BTC/USDT')
-const isCoinDropdownOpen = ref(false)
 const coinOptions = [
   { symbol: 'BTC/USDT', name: 'Bitcoin', price: '64,718.00', change: '+1.09%' },
   { symbol: 'ETH/USDT', name: 'Ethereum', price: '3,420.12', change: '+1.30%' },
   { symbol: 'SOL/USDT', name: 'Solana', price: '182.33', change: '+2.57%' },
   { symbol: 'BNB/USDT', name: 'BNB', price: '569.31', change: '+0.30%' },
   { symbol: 'PEPE/USDT', name: 'Pepe', price: '0.00002028', change: '+5.69%' },
-  { symbol: 'XRP/USDT', name: 'XRP', price: '1.0967', change: '+0.65%' }
+  { symbol: 'XRP/USDT', name: 'XRP', price: '1.0967', change: '+0.65%' },
+  { symbol: 'DOGE/USDT', name: 'Dogecoin', price: '0.07253', change: '+0.23%' },
+  { symbol: 'ADA/USDT', name: 'Cardano', price: '0.42', change: '+0.92%' },
+  { symbol: 'AVAX/USDT', name: 'Avalanche', price: '28.18', change: '-0.36%' },
+  { symbol: 'LINK/USDT', name: 'Chainlink', price: '14.52', change: '+1.82%' },
+  { symbol: 'DOT/USDT', name: 'Polkadot', price: '6.18', change: '+0.54%' },
+  { symbol: 'LTC/USDT', name: 'Litecoin', price: '83.40', change: '-0.12%' }
 ]
 
 const orderType = ref<'limit' | 'market'>('limit')
@@ -209,11 +215,6 @@ const handleExecuteOrder = (side = orderSide.value) => {
   console.log(`Executing ${orderSide.value} ${orderType.value} for ${selectedCoin.value}`)
 }
 
-const selectCoin = (symbol: string) => {
-  selectedCoin.value = symbol
-  isCoinDropdownOpen.value = false
-}
-
 const cancelAllLayers = () => {
   if (confirm('Cancel all active master layers?')) {
     activeLayers.value = []
@@ -225,53 +226,11 @@ const cancelAllLayers = () => {
   <div class="execution-page">
     <section class="market-strip">
       <div class="market-identity">
-        <div class="pair-dropdown">
-          <button
-            class="pair-trigger"
-            type="button"
-            :aria-expanded="isCoinDropdownOpen"
-            aria-haspopup="listbox"
-            @click="isCoinDropdownOpen = !isCoinDropdownOpen"
-            @keydown.escape="isCoinDropdownOpen = false"
-          >
-            <span class="pair-dot" />
-            <span class="pair-trigger__main">
-              <strong>{{ selectedCoin }}</strong>
-              <small>{{ selectedCoinMeta?.name }}</small>
-            </span>
-            <UIcon
-              name="lucide:chevron-down"
-              class="pair-trigger__icon"
-              :class="{ 'pair-trigger__icon--open': isCoinDropdownOpen }"
-            />
-          </button>
-
-          <div
-            v-if="isCoinDropdownOpen"
-            class="pair-menu"
-            role="listbox"
-          >
-            <button
-              v-for="coin in coinOptions"
-              :key="coin.symbol"
-              class="pair-option"
-              :class="{ 'pair-option--active': coin.symbol === selectedCoin }"
-              type="button"
-              role="option"
-              :aria-selected="coin.symbol === selectedCoin"
-              @click="selectCoin(coin.symbol)"
-            >
-              <span class="pair-option__asset">
-                <strong>{{ coin.symbol }}</strong>
-                <small>{{ coin.name }}</small>
-              </span>
-              <span class="pair-option__market">
-                <strong>{{ coin.price }}</strong>
-                <small>{{ coin.change }}</small>
-              </span>
-            </button>
-          </div>
-        </div>
+        <CoinPairDropdown
+          v-model="selectedCoin"
+          :options="coinOptions"
+          label="Select Coin"
+        />
 
         <div class="market-price">
           <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
@@ -351,16 +310,32 @@ const cancelAllLayers = () => {
         <section class="chart-panel terminal-panel">
           <div class="terminal-panel__header chart-header">
             <div class="chart-tabs">
-              <button class="active">Chart</button>
-              <button>Info</button>
-              <button>Data</button>
-              <button>Analysis</button>
+              <button class="active">
+                Chart
+              </button>
+              <button>
+                Info
+              </button>
+              <button>
+                Data
+              </button>
+              <button>
+                Analysis
+              </button>
             </div>
             <div class="timeframe-tabs">
-              <button>15m</button>
-              <button>1h</button>
-              <button class="active">1D</button>
-              <button>1W</button>
+              <button>
+                15m
+              </button>
+              <button>
+                1h
+              </button>
+              <button class="active">
+                1D
+              </button>
+              <button>
+                1W
+              </button>
             </div>
           </div>
 
@@ -380,22 +355,34 @@ const cancelAllLayers = () => {
         </section>
 
         <section class="order-entry terminal-panel">
-          <div class="order-entry__tabs">
-            <button
-              type="button"
-              :class="{ active: orderType === 'limit' }"
-              @click="orderType = 'limit'"
-            >
-              Limit
-            </button>
-            <button
-              type="button"
-              :class="{ active: orderType === 'market' }"
-              @click="orderType = 'market'"
-            >
-              Market
-            </button>
-            <button type="button">Stop Limit</button>
+          <div class="order-entry__bar">
+            <div class="order-entry__tabs">
+              <button
+                type="button"
+                :class="{ active: orderType === 'limit' }"
+                @click="orderType = 'limit'"
+              >
+                Limit
+              </button>
+              <button
+                type="button"
+                :class="{ active: orderType === 'market' }"
+                @click="orderType = 'market'"
+              >
+                Market
+              </button>
+              <button type="button">
+                Stop Limit
+              </button>
+            </div>
+
+            <CoinPairDropdown
+              v-model="selectedCoin"
+              :options="coinOptions"
+              label="Order Coin"
+              compact
+              class="order-entry__coin-select"
+            />
           </div>
 
           <div class="order-ticket-grid">
@@ -540,10 +527,18 @@ const cancelAllLayers = () => {
 
     <section class="bottom-desk terminal-panel">
       <div class="bottom-tabs">
-        <button class="active">Open Orders({{ openOrders.length }})</button>
-        <button>Active Layers({{ activeLayers.length }})</button>
-        <button>Completed History</button>
-        <button>Risk Queue</button>
+        <button class="active">
+          Open Orders({{ openOrders.length }})
+        </button>
+        <button>
+          Active Layers({{ activeLayers.length }})
+        </button>
+        <button>
+          Completed History
+        </button>
+        <button>
+          Risk Queue
+        </button>
         <div class="bottom-actions">
           <button
             type="button"
@@ -577,7 +572,9 @@ const cancelAllLayers = () => {
               <td>{{ order.id }}</td>
               <td>{{ order.pair }}</td>
               <td>{{ order.type }}</td>
-              <td :class="order.side === 'Buy' ? 'price-buy' : 'price-sell'">{{ order.side }}</td>
+              <td :class="order.side === 'Buy' ? 'price-buy' : 'price-sell'">
+                {{ order.side }}
+              </td>
               <td>{{ order.price }}</td>
               <td>{{ order.amount }}</td>
               <td>{{ order.filled }}</td>
@@ -677,6 +674,16 @@ const cancelAllLayers = () => {
   min-width: 0;
 }
 
+.pair-trigger__main > span {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .pair-trigger__main strong {
   color: var(--text);
   font-family: 'Oswald', sans-serif;
@@ -709,14 +716,48 @@ const cancelAllLayers = () => {
   position: absolute;
   top: calc(100% + 0.35rem);
   left: 0;
-  width: min(340px, 84vw);
-  max-height: 306px;
-  overflow-y: auto;
+  width: min(390px, 88vw);
+  overflow: hidden;
   border: 1px solid rgba(255, 90, 0, 0.32);
   background: var(--bg-elevated);
   border-radius: 4px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
-  padding: 0.35rem;
+  padding: 0.4rem;
+}
+
+.pair-menu__search {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+  min-height: 40px;
+  padding: 0 0.65rem;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+}
+
+.pair-menu__search svg {
+  color: var(--accent);
+}
+
+.pair-menu__search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  outline: none;
+}
+
+.pair-menu__list {
+  max-height: 322px;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+  scrollbar-color: var(--accent) var(--charcoal);
+  scrollbar-width: thin;
 }
 
 .pair-option {
@@ -771,6 +812,20 @@ const cancelAllLayers = () => {
 .pair-option__market small {
   color: #00c087;
   font-weight: 700;
+}
+
+.pair-option__market small.is-negative {
+  color: #f6465d;
+}
+
+.pair-menu__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.72rem;
 }
 
 .pair-dot {
@@ -1021,6 +1076,30 @@ const cancelAllLayers = () => {
   min-height: 214px;
 }
 
+.order-entry__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 58px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0.85rem;
+}
+
+.order-entry__bar .order-entry__tabs {
+  min-height: 58px;
+}
+
+.order-entry__coin-select {
+  flex: 0 1 300px;
+  z-index: 16;
+}
+
+.order-entry__coin-select :deep(.coin-pair-select__menu) {
+  right: 0;
+  left: auto;
+}
+
 .order-ticket-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1260,6 +1339,27 @@ const cancelAllLayers = () => {
   .market-rail,
   .order-ticket-grid {
     grid-template-columns: 1fr;
+  }
+
+  .order-entry__bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
+
+  .order-entry__bar .order-entry__tabs {
+    min-height: 42px;
+  }
+
+  .order-entry__coin-select {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .order-entry__coin-select :deep(.coin-pair-select__menu) {
+    right: auto;
+    left: 0;
   }
 
   .orderbook-panel {

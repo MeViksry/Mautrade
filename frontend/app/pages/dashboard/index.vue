@@ -64,6 +64,9 @@ const activeLayersPerPage = 6
 const depositModalOpen = ref(false)
 const depositStep = ref<'methods' | 'deposit'>('methods')
 const depositAmount = ref(500)
+const depositCoinDropdownOpen = ref(false)
+const depositCoinSelectRef = ref<HTMLElement | null>(null)
+const selectedDepositCoin = ref('USDT')
 const depositTxId = ref('')
 const walletCopied = ref(false)
 const depositAmountShake = ref(false)
@@ -71,6 +74,11 @@ const depositTxIdShake = ref(false)
 const depositSubmitAttempted = ref(false)
 const depositSubmitted = ref(false)
 const depositWalletAddress = '0x8F34B7C59A5D4E21F6C789DAB0132E45C67F9012'
+const depositCoinOptions = [
+  { code: 'USDT', name: 'Tether USD', network: 'TRC20 / ERC20 / BEP20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
+  { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
+  { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
+]
 let layersResizeObserver: ResizeObserver | null = null
 
 const syncExchangeListHeight = () => {
@@ -79,6 +87,8 @@ const syncExchangeListHeight = () => {
 }
 
 onMounted(async () => {
+  document.addEventListener('click', handleDepositCoinClickOutside)
+
   loading.value = true
   try {
     // Minimum loading time so skeleton shimmer is visible (remove when using real API)
@@ -111,6 +121,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   layersResizeObserver?.disconnect()
+  document.removeEventListener('click', handleDepositCoinClickOutside)
   window.removeEventListener('resize', syncExchangeListHeight)
 })
 
@@ -137,6 +148,10 @@ const exchangeListStyle = computed(() => {
   return exchangeListHeight.value ? { height: `${exchangeListHeight.value}px` } : undefined
 })
 
+const selectedDepositCoinData = computed(() => {
+  return depositCoinOptions.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions[0]
+})
+
 const setActiveLayerPage = async (page: number) => {
   activeLayerPage.value = Math.min(Math.max(page, 1), totalActiveLayerPages.value)
   await nextTick()
@@ -153,6 +168,8 @@ const goToNextActiveLayerPage = () => {
 
 const openDepositModal = () => {
   depositStep.value = 'methods'
+  selectedDepositCoin.value = 'USDT'
+  depositCoinDropdownOpen.value = false
   depositModalOpen.value = true
 }
 
@@ -164,6 +181,17 @@ const selectDepositMethod = () => {
   depositStep.value = 'deposit'
   depositSubmitAttempted.value = false
   depositSubmitted.value = false
+}
+
+const selectDepositCoin = (coinCode: string) => {
+  selectedDepositCoin.value = coinCode
+  depositCoinDropdownOpen.value = false
+}
+
+function handleDepositCoinClickOutside(event: MouseEvent) {
+  if (!depositCoinSelectRef.value?.contains(event.target as Node)) {
+    depositCoinDropdownOpen.value = false
+  }
 }
 
 const copyDepositAddress = async () => {
@@ -579,6 +607,65 @@ const submitDeposit = () => {
           </a>
 
           <label class="deposit-field">
+            <span>Deposit Coin</span>
+            <div
+              ref="depositCoinSelectRef"
+              class="deposit-coin-select"
+            >
+              <button
+                class="deposit-coin-select__trigger"
+                type="button"
+                :aria-expanded="depositCoinDropdownOpen"
+                aria-haspopup="listbox"
+                @click="depositCoinDropdownOpen = !depositCoinDropdownOpen"
+              >
+                <span class="deposit-coin-select__identity">
+                  <img
+                    v-if="selectedDepositCoinData?.icon"
+                    :src="selectedDepositCoinData.icon"
+                    :alt="`${selectedDepositCoinData.code} logo`"
+                  >
+                  <span>
+                    <strong>{{ selectedDepositCoinData?.code }}</strong>
+                    <small>{{ selectedDepositCoinData?.network }}</small>
+                  </span>
+                </span>
+                <UIcon name="lucide:chevrons-up-down" />
+              </button>
+
+              <div
+                v-if="depositCoinDropdownOpen"
+                class="deposit-coin-select__dropdown"
+                role="listbox"
+              >
+                <button
+                  v-for="coin in depositCoinOptions"
+                  :key="coin.code"
+                  class="deposit-coin-option"
+                  :class="{ 'is-selected': coin.code === selectedDepositCoin }"
+                  type="button"
+                  role="option"
+                  :aria-selected="coin.code === selectedDepositCoin"
+                  @click="selectDepositCoin(coin.code)"
+                >
+                  <span class="deposit-coin-option__identity">
+                    <img
+                      v-if="coin.icon"
+                      :src="coin.icon"
+                      :alt="`${coin.code} logo`"
+                    >
+                    <span>
+                      <strong>{{ coin.code }}</strong>
+                      <small>{{ coin.name }}</small>
+                    </span>
+                  </span>
+                  <em>Min {{ coin.min }}</em>
+                </button>
+              </div>
+            </div>
+          </label>
+
+          <label class="deposit-field">
             <span>Wallet Address</span>
             <div class="deposit-copy">
               <input
@@ -609,7 +696,7 @@ const submitDeposit = () => {
                 step="1"
                 aria-describedby="deposit-amount-error"
               >
-              <span>USDT</span>
+              <span>{{ selectedDepositCoin }}</span>
             </div>
             <p
               v-if="depositAmountInvalid"
@@ -1537,6 +1624,119 @@ const submitDeposit = () => {
 
 .deposit-field input:focus {
   border-color: var(--accent);
+}
+
+.deposit-coin-select {
+  position: relative;
+}
+
+.deposit-coin-select__trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  padding: 0 0.85rem;
+  text-align: left;
+  transition: border-color 220ms var(--ease-quiet), background 220ms var(--ease-quiet);
+}
+
+.deposit-coin-select__trigger:hover,
+.deposit-coin-select__trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+  background: rgba(255, 90, 0, 0.08);
+}
+
+.deposit-coin-select__trigger > svg {
+  color: var(--accent);
+}
+
+.deposit-coin-select__identity,
+.deposit-coin-option__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.deposit-coin-select__identity img,
+.deposit-coin-option__identity img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.deposit-coin-select__identity strong,
+.deposit-coin-option strong {
+  display: block;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.deposit-coin-select__identity small,
+.deposit-coin-option small {
+  display: block;
+  overflow: hidden;
+  max-width: 280px;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.deposit-coin-select__dropdown {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 90, 0, 0.34);
+  background: var(--bg-elevated);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.44);
+}
+
+.deposit-coin-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--text);
+  padding: 0 0.85rem;
+  text-align: left;
+}
+
+.deposit-coin-option:last-child {
+  border-bottom: none;
+}
+
+.deposit-coin-option:hover,
+.deposit-coin-option.is-selected {
+  background: rgba(255, 90, 0, 0.12);
+}
+
+.deposit-coin-option em {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .deposit-copy,

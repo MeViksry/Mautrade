@@ -26,6 +26,9 @@ const countrySelectRef = ref<HTMLElement | null>(null)
 const selectedCountry = ref('ID')
 const age = ref<number | null>(null)
 const depositAmount = ref(500)
+const depositCoinDropdownOpen = ref(false)
+const depositCoinSelectRef = ref<HTMLElement | null>(null)
+const selectedDepositCoin = ref('USDT')
 const selectedExchanges = ref<string[]>(['Binance'])
 const submitAttempted = ref(false)
 const depositShake = ref(false)
@@ -43,8 +46,18 @@ const exchangeOptions = [
   { id: 'Bitget', label: 'Bitget' }
 ]
 
+const depositCoinOptions = [
+  { code: 'USDT', name: 'Tether USD', network: 'TRC20 / ERC20 / BEP20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
+  { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
+  { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
+]
+
 const selectedCountryData = computed(() => {
   return countries.find(country => country.code === selectedCountry.value)
+})
+
+const selectedDepositCoinData = computed(() => {
+  return depositCoinOptions.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions[0]
 })
 
 const countrySearchTerm = computed(() => countrySearch.value.trim().toLowerCase())
@@ -100,9 +113,18 @@ const selectCountry = (countryCode: string) => {
   countryDropdownOpen.value = false
 }
 
+const selectDepositCoin = (coinCode: string) => {
+  selectedDepositCoin.value = coinCode
+  depositCoinDropdownOpen.value = false
+}
+
 const handleClickOutside = (event: MouseEvent) => {
   if (!countrySelectRef.value?.contains(event.target as Node)) {
     countryDropdownOpen.value = false
+  }
+
+  if (!depositCoinSelectRef.value?.contains(event.target as Node)) {
+    depositCoinDropdownOpen.value = false
   }
 }
 
@@ -234,18 +256,74 @@ const submitOnboarding = async () => {
 
         <div class="onboarding-field">
           <label>Initial Gas Fee Deposit</label>
-          <div
-            class="deposit-input"
-            :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
-            @animationend="depositShake = false"
-          >
-            <input
-              v-model.number="depositAmount"
-              type="number"
-              min="500"
-              step="1"
+          <div class="deposit-compose">
+            <div
+              class="deposit-input"
+              :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
+              @animationend="depositShake = false"
             >
-            <span>USDT</span>
+              <input
+                v-model.number="depositAmount"
+                type="number"
+                min="500"
+                step="1"
+              >
+              <span>{{ selectedDepositCoin }}</span>
+            </div>
+
+            <div
+              ref="depositCoinSelectRef"
+              class="coin-select"
+            >
+              <button
+                class="coin-select__trigger"
+                type="button"
+                :aria-expanded="depositCoinDropdownOpen"
+                aria-haspopup="listbox"
+                @click="depositCoinDropdownOpen = !depositCoinDropdownOpen"
+              >
+                <span class="coin-select__asset">
+                  <img
+                    v-if="selectedDepositCoinData?.icon"
+                    :src="selectedDepositCoinData.icon"
+                    :alt="`${selectedDepositCoinData.code} logo`"
+                  >
+                  <strong>{{ selectedDepositCoinData?.code }}</strong>
+                  <small>{{ selectedDepositCoinData?.network }}</small>
+                </span>
+                <UIcon name="lucide:chevrons-up-down" />
+              </button>
+
+              <div
+                v-if="depositCoinDropdownOpen"
+                class="coin-select__dropdown"
+                role="listbox"
+              >
+                <button
+                  v-for="coin in depositCoinOptions"
+                  :key="coin.code"
+                  class="coin-option"
+                  :class="{ 'is-selected': coin.code === selectedDepositCoin }"
+                  type="button"
+                  role="option"
+                  :aria-selected="coin.code === selectedDepositCoin"
+                  @click="selectDepositCoin(coin.code)"
+                >
+                  <span class="coin-option__identity">
+                    <img
+                      v-if="coin.icon"
+                      :src="coin.icon"
+                      :alt="`${coin.code} logo`"
+                    >
+                    <span>
+                      <strong>{{ coin.code }}</strong>
+                      <small>{{ coin.name }}</small>
+                    </span>
+                  </span>
+                  <em>Min {{ coin.min }}</em>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -515,6 +593,12 @@ const submitOnboarding = async () => {
   overflow: hidden;
 }
 
+.deposit-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
+  gap: 0.75rem;
+}
+
 .deposit-input input {
   width: 100%;
   min-width: 0;
@@ -534,6 +618,120 @@ const submitOnboarding = async () => {
   font-family: var(--mono);
   font-size: 12px;
   font-weight: 800;
+}
+
+.coin-select {
+  position: relative;
+  min-width: 0;
+}
+
+.coin-select__trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  padding: 0 0.85rem;
+  text-align: left;
+}
+
+.coin-select__trigger:hover,
+.coin-select__trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+  background: rgba(255, 90, 0, 0.08);
+}
+
+.coin-select__trigger svg {
+  color: var(--accent);
+}
+
+.coin-select__asset,
+.coin-option__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.coin-select__asset img,
+.coin-option__identity img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.coin-select__asset strong,
+.coin-option strong {
+  display: block;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.coin-select__asset small,
+.coin-option small {
+  display: block;
+  overflow: hidden;
+  max-width: 128px;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coin-select__dropdown {
+  position: absolute;
+  z-index: 32;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(320px, 84vw);
+  overflow: hidden;
+  border: 1px solid rgba(255, 90, 0, 0.34);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.coin-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 0.85rem;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--text);
+  text-align: left;
+}
+
+.coin-option:last-child {
+  border-bottom: none;
+}
+
+.coin-option:hover,
+.coin-option.is-selected {
+  background: rgba(255, 90, 0, 0.12);
+}
+
+.coin-option em {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .is-invalid {
@@ -650,6 +848,16 @@ const submitOnboarding = async () => {
 
   .exchange-choice-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .deposit-compose {
+    grid-template-columns: 1fr;
+  }
+
+  .coin-select__dropdown {
+    left: 0;
+    right: 0;
+    width: 100%;
   }
 }
 </style>

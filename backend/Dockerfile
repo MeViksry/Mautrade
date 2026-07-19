@@ -1,0 +1,15 @@
+FROM golang:1.24-bookworm AS build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/mautrade-api ./cmd/api
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+WORKDIR /
+COPY --from=build /out/mautrade-api /mautrade-api
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/mautrade-api"]

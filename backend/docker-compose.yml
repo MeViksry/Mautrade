@@ -1,0 +1,71 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: development
+      HTTP_ADDR: :8080
+      DATABASE_URL: postgres://mautrade:mautrade@postgres:5432/mautrade?sslmode=disable
+      NATS_URL: nats://nats:4222
+      GAS_FEE_SHARE_RATE: "0.5"
+      DEFAULT_CURRENCY: USDT
+      ALLOWED_CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      keydb:
+        condition: service_started
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: mautrade
+      POSTGRES_PASSWORD: mautrade
+      POSTGRES_DB: mautrade
+    ports:
+      - "5432:5432"
+    volumes:
+      - mautrade_postgres:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mautrade -d mautrade"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nats:
+    image: nats:2.12
+    command: ["-js", "-sd", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - mautrade_nats:/data
+
+  keydb:
+    image: eqalpha/keydb:x86_64_v6.3.4
+    command: ["keydb-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - mautrade_keydb:/data
+
+  questdb:
+    image: questdb/questdb:8.3.3
+    ports:
+      - "9000:9000"
+      - "8812:8812"
+      - "9009:9009"
+    volumes:
+      - mautrade_questdb:/var/lib/questdb
+
+volumes:
+  mautrade_postgres:
+  mautrade_nats:
+  mautrade_keydb:
+  mautrade_questdb:
