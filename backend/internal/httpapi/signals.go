@@ -29,6 +29,7 @@ type createAdminSignalResponse struct {
 	Status          string                 `json:"status"`
 	IdempotencyKey  string                 `json:"idempotencyKey"`
 	JobsCreated     int                    `json:"jobsCreated"`
+	JobsSkipped     int                    `json:"jobsSkipped"`
 	JobsPublished   int                    `json:"jobsPublished"`
 	QueueState      string                 `json:"queueState"`
 	PublishFailures []signalPublishFailure `json:"publishFailures,omitempty"`
@@ -44,6 +45,10 @@ func (s *Server) handleCreateAdminSignal(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusServiceUnavailable, "postgres is required to create admin signals")
 		return
 	}
+	admin, ok := s.requireAdmin(w, r)
+	if !ok {
+		return
+	}
 
 	var req createAdminSignalRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -51,7 +56,11 @@ func (s *Server) handleCreateAdminSignal(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	params, err := s.validateCreateAdminSignalRequest(r, req)
+	if !adminBodyMustMatchSession(w, req.AdminID, admin) {
+		return
+	}
+
+	params, err := s.validateCreateAdminSignalRequest(r, req, admin.ID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -78,17 +87,14 @@ func (s *Server) handleCreateAdminSignal(w http.ResponseWriter, r *http.Request)
 		Status:          dispatch.Status,
 		IdempotencyKey:  dispatch.IdempotencyKey,
 		JobsCreated:     dispatch.JobsCreated,
+		JobsSkipped:     dispatch.JobsSkipped,
 		JobsPublished:   published,
 		QueueState:      queueState,
 		PublishFailures: failures,
 	})
 }
 
-func (s *Server) validateCreateAdminSignalRequest(r *http.Request, req createAdminSignalRequest) (store.CreateSignalParams, error) {
-	adminID := strings.TrimSpace(req.AdminID)
-	if adminID == "" {
-		return store.CreateSignalParams{}, fmt.Errorf("admin_id is required")
-	}
+func (s *Server) validateCreateAdminSignalRequest(r *http.Request, req createAdminSignalRequest, adminID string) (store.CreateSignalParams, error) {
 	if _, err := id.Parse(adminID); err != nil {
 		return store.CreateSignalParams{}, fmt.Errorf("admin_id must be a canonical UUID")
 	}

@@ -11,11 +11,13 @@ import (
 )
 
 const (
-	ExecutionStreamName = "EXECUTION"
-	BuyRequestSubject   = "execution.buy.request"
-	SellRequestSubject  = "execution.sell.request"
-	ResultSubject       = "execution.result"
-	DeadLetterSubject   = "execution.dlq"
+	ExecutionStreamName       = "EXECUTION"
+	ExecutionResultStreamName = "EXECUTION_RESULTS"
+	ExecutionResultConsumer   = "mautrade-go-api-results"
+	BuyRequestSubject         = "execution.buy.request"
+	SellRequestSubject        = "execution.sell.request"
+	ResultSubject             = "execution.result"
+	DeadLetterSubject         = "execution.dlq"
 )
 
 type Client struct {
@@ -37,6 +39,10 @@ func Connect(ctx context.Context, url string) (*Client, error) {
 
 	client := &Client{conn: conn, js: js}
 	if err := client.EnsureExecutionStream(ctx); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := client.EnsureExecutionResultStream(ctx); err != nil {
 		conn.Close()
 		return nil, err
 	}
@@ -72,6 +78,27 @@ func (c *Client) EnsureExecutionStream(ctx context.Context) error {
 	return nil
 }
 
+func (c *Client) EnsureExecutionResultStream(ctx context.Context) error {
+	if c == nil {
+		return nil
+	}
+	_, err := c.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name: ExecutionResultStreamName,
+		Subjects: []string{
+			ResultSubject,
+			DeadLetterSubject,
+		},
+		Retention: jetstream.LimitsPolicy,
+		Storage:   jetstream.FileStorage,
+		Replicas:  1,
+		MaxAge:    14 * 24 * time.Hour,
+	})
+	if err != nil {
+		return fmt.Errorf("nats: ensure execution result stream: %w", err)
+	}
+	return nil
+}
+
 type ExecutionRequest struct {
 	ID             string `json:"id"`
 	IdempotencyKey string `json:"idempotency_key"`
@@ -87,8 +114,15 @@ type ExecutionRequest struct {
 }
 
 func (c *Client) PublishExecutionRequest(ctx context.Context, req ExecutionRequest) error {
+	return c.PublishExecutionRequestWithMsgID(ctx, req, req.IdempotencyKey)
+}
+
+func (c *Client) PublishExecutionRequestWithMsgID(ctx context.Context, req ExecutionRequest, msgID string) error {
 	if c == nil {
 		return nil
+	}
+	if msgID == "" {
+		msgID = req.IdempotencyKey
 	}
 	subject := BuyRequestSubject
 	if req.Side == "sell" {
@@ -98,8 +132,44 @@ func (c *Client) PublishExecutionRequest(ctx context.Context, req ExecutionReque
 	if err != nil {
 		return fmt.Errorf("nats: marshal execution request: %w", err)
 	}
-	if _, err := c.js.Publish(ctx, subject, payload, jetstream.WithMsgID(req.IdempotencyKey)); err != nil {
+	if _, err := c.js.Publish(ctx, subject, payload, jetstream.WithMsgID(msgID)); err != nil {
 		return fmt.Errorf("nats: publish execution request: %w", err)
 	}
 	return nil
+}
+
+type ExecutionResultHandler func(ctx context.Context, data []byte) error
+
+func (c *Client) ConsumeExecutionResults(ctx context.Context, handler ExecutionResultHandler) (func(), error) {
+	if c == nil {
+		return func() {}, nil
+	}
+	stream, err := c.js.Stream(ctx, ExecutionResultStreamName)
+	if err != nil {
+		return nil, fmt.Errorf("nats: open execution result stream: %w", err)
+	}
+	consumer, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+		Durable:       ExecutionResultConsumer,
+		FilterSubject: ResultSubject,
+		AckPolicy:     jetstream.AckExplicitPolicy,
+		AckWait:       30 * time.Second,
+		MaxDeliver:    5,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("nats: create execution result consumer: %w", err)
+	}
+	consumeContext, err := consumer.Consume(func(msg jetstream.Msg) {
+		handleCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+
+		if err := handler(handleCtx, msg.Data()); err != nil {
+			_ = msg.Nak()
+			return
+		}
+		_ = msg.Ack()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("nats: consume execution results: %w", err)
+	}
+	return consumeContext.Stop, nil
 }

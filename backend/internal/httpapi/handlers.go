@@ -9,7 +9,12 @@ import (
 
 func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 	if s.store.Ready() {
-		stats, err := s.store.UserStats(r.Context(), s.config.DefaultCurrency, s.config.GasFeeShareRate)
+		user, err := s.authUserFromRequest(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid or expired session")
+			return
+		}
+		stats, err := s.store.UserStats(r.Context(), user.ID, s.config.DefaultCurrency, s.config.GasFeeShareRate)
 		if err != nil {
 			s.logger.Error("read user stats", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to read user stats")
@@ -36,7 +41,12 @@ func mockUserStats(defaultCurrency, gasFeeShareRate string) map[string]any {
 
 func (s *Server) handleExchangeBindings(w http.ResponseWriter, r *http.Request) {
 	if s.store.Ready() {
-		bindings, err := s.store.ExchangeBindings(r.Context(), s.config.DefaultCurrency)
+		user, err := s.authUserFromRequest(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid or expired session")
+			return
+		}
+		bindings, err := s.store.UserExchangeBindings(r.Context(), user.ID, s.config.DefaultCurrency)
 		if err != nil {
 			s.logger.Error("read exchange bindings", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to read exchange bindings")
@@ -60,7 +70,12 @@ func mockExchangeBindings() []map[string]any {
 
 func (s *Server) handleLayers(w http.ResponseWriter, r *http.Request) {
 	if s.store.Ready() {
-		layers, err := s.store.ActiveLayers(r.Context())
+		user, err := s.authUserFromRequest(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid or expired session")
+			return
+		}
+		layers, err := s.store.ActiveLayers(r.Context(), user.ID)
 		if err != nil {
 			s.logger.Error("read active layers", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to read active layers")
@@ -83,7 +98,12 @@ func mockLayers() []map[string]any {
 
 func (s *Server) handleTradeHistory(w http.ResponseWriter, r *http.Request) {
 	if s.store.Ready() {
-		history, err := s.store.TradeHistory(r.Context())
+		user, err := s.authUserFromRequest(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid or expired session")
+			return
+		}
+		history, err := s.store.TradeHistory(r.Context(), user.ID)
 		if err != nil {
 			s.logger.Error("read trade history", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to read trade history")
@@ -105,6 +125,9 @@ func mockTradeHistory() []map[string]any {
 
 func (s *Server) handleAdminOverview(w http.ResponseWriter, r *http.Request) {
 	if s.store.Ready() {
+		if _, ok := s.requireAdmin(w, r); !ok {
+			return
+		}
 		overview, err := s.store.AdminOverview(r.Context(), s.config.DefaultCurrency)
 		if err != nil {
 			s.logger.Error("read admin overview", "error", err)
@@ -136,6 +159,11 @@ type gasFeePreviewRequest struct {
 }
 
 func (s *Server) handleGasFeePreview(w http.ResponseWriter, r *http.Request) {
+	if s.store.Ready() {
+		if _, ok := s.requireAdmin(w, r); !ok {
+			return
+		}
+	}
 	var req gasFeePreviewRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})

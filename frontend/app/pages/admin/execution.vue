@@ -36,19 +36,34 @@ useSeoMeta({
 })
 
 const selectedCoin = ref('BTC/USDT')
-const coinOptions = [
-  { symbol: 'BTC/USDT', name: 'Bitcoin', price: '64,718.00', change: '+1.09%' },
-  { symbol: 'ETH/USDT', name: 'Ethereum', price: '3,420.12', change: '+1.30%' },
-  { symbol: 'SOL/USDT', name: 'Solana', price: '182.33', change: '+2.57%' },
-  { symbol: 'BNB/USDT', name: 'BNB', price: '569.31', change: '+0.30%' },
-  { symbol: 'PEPE/USDT', name: 'Pepe', price: '0.00002028', change: '+5.69%' },
-  { symbol: 'XRP/USDT', name: 'XRP', price: '1.0967', change: '+0.65%' },
-  { symbol: 'DOGE/USDT', name: 'Dogecoin', price: '0.07253', change: '+0.23%' },
-  { symbol: 'ADA/USDT', name: 'Cardano', price: '0.42', change: '+0.92%' },
-  { symbol: 'AVAX/USDT', name: 'Avalanche', price: '28.18', change: '-0.36%' },
-  { symbol: 'LINK/USDT', name: 'Chainlink', price: '14.52', change: '+1.82%' },
-  { symbol: 'DOT/USDT', name: 'Polkadot', price: '6.18', change: '+0.54%' },
-  { symbol: 'LTC/USDT', name: 'Litecoin', price: '83.40', change: '-0.12%' }
+
+type CoinOption = {
+  symbol: string
+  name: string
+  price: string
+  change: string
+  volume?: string
+}
+
+const coinOptions: CoinOption[] = [
+  { symbol: 'BTC/USDT', name: 'Bitcoin', price: '64,718.00', change: '+1.09%', volume: '8.35K BTC' },
+  { symbol: 'ETH/USDT', name: 'Ethereum', price: '3,420.12', change: '+1.30%', volume: '158.61K ETH' },
+  { symbol: 'SOL/USDT', name: 'Solana', price: '182.33', change: '+2.57%', volume: '2.81M SOL' },
+  { symbol: 'BNB/USDT', name: 'BNB', price: '569.31', change: '+0.30%', volume: '421.18K BNB' },
+  { symbol: 'PEPE/USDT', name: 'Pepe', price: '0.00002028', change: '+5.69%', volume: '18.4T PEPE' },
+  { symbol: 'XRP/USDT', name: 'XRP', price: '1.0967', change: '+0.65%', volume: '620.71M XRP' },
+  { symbol: 'DOGE/USDT', name: 'Dogecoin', price: '0.07253', change: '+0.23%', volume: '1.92B DOGE' },
+  { symbol: 'ADA/USDT', name: 'Cardano', price: '0.42', change: '+0.92%', volume: '331.44M ADA' },
+  { symbol: 'AVAX/USDT', name: 'Avalanche', price: '28.18', change: '-0.36%', volume: '12.08M AVAX' },
+  { symbol: 'LINK/USDT', name: 'Chainlink', price: '14.52', change: '+1.82%', volume: '24.66M LINK' },
+  { symbol: 'DOT/USDT', name: 'Polkadot', price: '6.18', change: '+0.54%', volume: '41.82M DOT' },
+  { symbol: 'LTC/USDT', name: 'Litecoin', price: '83.40', change: '-0.12%', volume: '5.97M LTC' },
+  { symbol: 'SHIB/USDT', name: 'Shiba Inu', price: '0.00001891', change: '+4.10%', volume: '9.48T SHIB' },
+  { symbol: 'TRX/USDT', name: 'TRON', price: '0.31', change: '+0.48%', volume: '988.12M TRX' },
+  { symbol: 'ARB/USDT', name: 'Arbitrum', price: '0.87', change: '-1.14%', volume: '88.24M ARB' },
+  { symbol: 'OP/USDT', name: 'Optimism', price: '1.72', change: '+1.76%', volume: '39.11M OP' },
+  { symbol: 'NEAR/USDT', name: 'NEAR Protocol', price: '5.41', change: '+2.03%', volume: '52.08M NEAR' },
+  { symbol: 'SUI/USDT', name: 'Sui', price: '3.84', change: '-0.82%', volume: '76.55M SUI' }
 ]
 
 const orderType = ref<'limit' | 'market'>('limit')
@@ -62,8 +77,12 @@ const chartDataValues = ref(Array.from({ length: 50 }, () => 65000 + (Math.rando
 const currentPrice = computed(() => chartDataValues.value[chartDataValues.value.length - 1] ?? 65000)
 const baseAsset = computed(() => selectedCoin.value.split('/')[0] ?? 'BTC')
 const quoteAsset = computed(() => selectedCoin.value.split('/')[1] ?? 'USDT')
-const selectedCoinMeta = computed(() => {
-  return coinOptions.find(coin => coin.symbol === selectedCoin.value) ?? coinOptions[0]
+const selectedCoinMeta = computed<CoinOption>(() => {
+  return coinOptions.find(coin => coin.symbol === selectedCoin.value) ?? coinOptions[0]!
+})
+
+const selectedCoinTrend = computed(() => {
+  return selectedCoinMeta.value.change.startsWith('-') ? 'down' : 'up'
 })
 
 const chartData = computed(() => ({
@@ -108,22 +127,34 @@ const chartOptions = {
   }
 }
 
-const marketStats = [
-  { label: '24H Change', value: '+1.09%', tone: 'up' },
-  { label: '24H High', value: '64,967.25' },
-  { label: '24H Low', value: '63,887.73' },
-  { label: '24H Volume', value: '8,354.54 BTC' },
-  { label: 'Network', value: 'BTC (5)' }
-]
+type MarketStat = {
+  label: string
+  value: string
+  tone?: 'up' | 'down'
+}
 
-const watchlist = [
-  { symbol: 'ETH/USDT', price: '3,420.12', change: '+1.30%' },
-  { symbol: 'SOL/USDT', price: '182.33', change: '+2.57%' },
-  { symbol: 'BNB/USDT', price: '569.31', change: '+0.30%' },
-  { symbol: 'PEPE/USDT', price: '0.00002028', change: '+5.69%' },
-  { symbol: 'XRP/USDT', price: '1.0967', change: '+0.65%' },
-  { symbol: 'DOGE/USDT', price: '0.07253', change: '+0.23%' }
-]
+const marketStats = computed<MarketStat[]>(() => [
+  { label: '24H Change', value: selectedCoinMeta.value.change, tone: selectedCoinTrend.value },
+  { label: 'Last Price', value: selectedCoinMeta.value.price },
+  { label: '24H Volume', value: selectedCoinMeta.value.volume ?? '-' },
+  { label: 'Quote', value: quoteAsset.value },
+  { label: 'Network', value: `${baseAsset.value} (5)` }
+])
+
+const marketRows = computed(() => {
+  const selected = coinOptions.find(coin => coin.symbol === selectedCoin.value)
+  const rest = coinOptions.filter(coin => coin.symbol !== selectedCoin.value)
+
+  return selected ? [selected, ...rest].slice(0, 8) : coinOptions.slice(0, 8)
+})
+
+const quickMarketOptions = computed(() => {
+  const preferredSymbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'PEPE/USDT', 'XRP/USDT']
+
+  return preferredSymbols
+    .map(symbol => coinOptions.find(coin => coin.symbol === symbol))
+    .filter((coin): coin is CoinOption => Boolean(coin))
+})
 
 const topMovers = [
   { symbol: 'BANK/USDT', change: '+56.89%' },
@@ -226,15 +257,30 @@ const cancelAllLayers = () => {
   <div class="execution-page">
     <section class="market-strip">
       <div class="market-identity">
-        <CoinPairDropdown
-          v-model="selectedCoin"
-          :options="coinOptions"
-          label="Select Coin"
-        />
+        <div class="market-picker-shell">
+          <CoinPairDropdown
+            v-model="selectedCoin"
+            :options="coinOptions"
+            label="Market Pair"
+            full-width
+          />
+
+          <div class="market-picker-shell__quick">
+            <button
+              v-for="coin in quickMarketOptions"
+              :key="`strip-${coin.symbol}`"
+              type="button"
+              :class="{ 'is-active': coin.symbol === selectedCoin }"
+              @click="selectedCoin = coin.symbol"
+            >
+              {{ coin.symbol }}
+            </button>
+          </div>
+        </div>
 
         <div class="market-price">
-          <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
-          <span>Rp1.164.817.215,30</span>
+          <strong>{{ selectedCoinMeta.price }}</strong>
+          <span>{{ selectedCoinMeta.name }} spot market</span>
         </div>
       </div>
 
@@ -245,7 +291,7 @@ const cancelAllLayers = () => {
           class="market-stat"
         >
           <span>{{ stat.label }}</span>
-          <strong :class="{ 'text-success': stat.tone === 'up' }">{{ stat.value }}</strong>
+          <strong :class="{ 'text-success': stat.tone === 'up', 'text-danger': stat.tone === 'down' }">{{ stat.value }}</strong>
         </div>
       </div>
 
@@ -466,17 +512,37 @@ const cancelAllLayers = () => {
             <span>USDT</span>
           </div>
 
+          <div class="market-selector">
+            <CoinPairDropdown
+              v-model="selectedCoin"
+              :options="coinOptions"
+              label="Choose Coin"
+              compact
+              full-width
+              class="market-selector__dropdown"
+            />
+
+            <div class="selected-market-card">
+              <span>Selected Pair</span>
+              <strong>{{ selectedCoin }}</strong>
+              <em :class="{ 'is-negative': selectedCoinTrend === 'down' }">
+                {{ selectedCoinMeta.price }} / {{ selectedCoinMeta.change }}
+              </em>
+            </div>
+          </div>
+
           <div class="watchlist">
             <button
-              v-for="item in watchlist"
+              v-for="item in marketRows"
               :key="item.symbol"
               type="button"
               class="watch-row"
+              :class="{ 'is-active': item.symbol === selectedCoin }"
               @click="selectedCoin = item.symbol"
             >
               <span>{{ item.symbol }}</span>
               <strong>{{ item.price }}</strong>
-              <em>{{ item.change }}</em>
+              <em :class="{ 'is-negative': item.change.startsWith('-') }">{{ item.change }}</em>
             </button>
           </div>
         </section>
@@ -626,18 +692,62 @@ const cancelAllLayers = () => {
 }
 
 .market-strip {
+  position: relative;
+  z-index: 30;
   display: grid;
   grid-template-columns: minmax(260px, 1.1fr) minmax(420px, 2fr) auto;
   align-items: center;
   gap: 1rem;
+  overflow: visible;
   padding: 0.85rem 1rem;
 }
 
 .market-identity {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   min-width: 0;
+}
+
+.market-picker-shell {
+  display: grid;
+  flex: 0 1 390px;
+  gap: 0.45rem;
+  min-width: min(100%, 300px);
+}
+
+.market-picker-shell :deep(.coin-pair-select__menu) {
+  width: min(560px, calc(100vw - 2rem));
+}
+
+.market-picker-shell__quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.market-picker-shell__quick button {
+  min-width: 0;
+  height: 28px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text-mute);
+  border-radius: 4px;
+  padding: 0 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color 160ms var(--ease-quiet), background 160ms var(--ease-quiet), color 160ms var(--ease-quiet);
+}
+
+.market-picker-shell__quick button:hover,
+.market-picker-shell__quick button.is-active {
+  border-color: rgba(255, 90, 0, 0.48);
+  background: rgba(255, 90, 0, 0.14);
+  color: var(--accent);
 }
 
 .pair-dropdown {
@@ -922,9 +1032,19 @@ const cancelAllLayers = () => {
   min-width: 0;
 }
 
+.trade-zone {
+  overflow: visible;
+}
+
 .terminal-panel {
   min-width: 0;
   overflow: hidden;
+}
+
+.watchlist-panel {
+  position: relative;
+  z-index: 36;
+  overflow: visible;
 }
 
 .terminal-panel__header {
@@ -1015,6 +1135,8 @@ const cancelAllLayers = () => {
 }
 
 .chart-panel {
+  position: relative;
+  z-index: 1;
   min-height: 480px;
 }
 
@@ -1073,10 +1195,15 @@ const cancelAllLayers = () => {
 }
 
 .order-entry {
+  position: relative;
+  z-index: 24;
   min-height: 214px;
+  overflow: visible;
 }
 
 .order-entry__bar {
+  position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1101,6 +1228,8 @@ const cancelAllLayers = () => {
 }
 
 .order-ticket-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
@@ -1186,6 +1315,76 @@ const cancelAllLayers = () => {
   padding: 0.55rem;
 }
 
+.market-selector {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.market-selector__dropdown {
+  width: 100%;
+  min-width: 0;
+}
+
+.market-selector__dropdown :deep(.coin-pair-select__trigger) {
+  min-height: 46px;
+  background: color-mix(in srgb, var(--charcoal) 88%, var(--accent) 12%);
+}
+
+.market-selector__dropdown :deep(.coin-pair-select__menu) {
+  left: auto;
+  right: 0;
+  width: min(520px, calc(100vw - 2rem));
+}
+
+.selected-market-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.25rem 0.75rem;
+  min-height: 62px;
+  border: 1px solid rgba(255, 90, 0, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 90, 0, 0.12), transparent 62%),
+    var(--charcoal);
+  border-radius: 4px;
+  padding: 0.65rem 0.75rem;
+}
+
+.selected-market-card span {
+  grid-column: 1 / -1;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.selected-market-card strong {
+  min-width: 0;
+  color: var(--text);
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.selected-market-card em {
+  color: #00c087;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.selected-market-card em.is-negative {
+  color: #f6465d;
+}
+
 .watch-row {
   width: 100%;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -1204,6 +1403,12 @@ const cancelAllLayers = () => {
   background: var(--charcoal);
 }
 
+.watch-row.is-active {
+  border: 1px solid rgba(255, 90, 0, 0.42);
+  background: rgba(255, 90, 0, 0.1);
+  color: var(--accent);
+}
+
 .watch-row strong,
 .watch-row em {
   font-weight: 500;
@@ -1216,6 +1421,10 @@ const cancelAllLayers = () => {
 .text-success,
 .price-buy {
   color: #00c087;
+}
+
+.watch-row em.is-negative {
+  color: #f6465d;
 }
 
 .recent-trades-panel {
@@ -1389,11 +1598,24 @@ const cancelAllLayers = () => {
     padding: 0.75rem;
   }
 
-  .market-identity,
   .market-actions,
   .chart-header,
   .bottom-tabs {
     flex-wrap: wrap;
+  }
+
+  .market-identity {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .market-picker-shell {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .market-picker-shell__quick {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .market-stats {

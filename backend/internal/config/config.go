@@ -8,14 +8,22 @@ import (
 )
 
 type Config struct {
-	Environment       string
-	HTTPAddr          string
-	DatabaseURL       string
-	NATSURL           string
-	ShutdownTimeout   time.Duration
-	GasFeeShareRate   string
-	DefaultCurrency   string
-	AllowedCORSOrigin string
+	Environment            string
+	HTTPAddr               string
+	DatabaseURL            string
+	NATSURL                string
+	ShutdownTimeout        time.Duration
+	GasFeeShareRate        string
+	DefaultCurrency        string
+	AllowedCORSOrigin      string
+	AuthSessionTTL         time.Duration
+	EmailOTPTTL            time.Duration
+	GasFeeDepositAddress   string
+	ExchangeCredentialKey  string
+	AdminBootstrapEmail    string
+	AdminBootstrapPassword string
+	AdminBootstrapName     string
+	AdminBootstrapRole     string
 }
 
 func Load() (Config, error) {
@@ -23,16 +31,32 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	sessionHours, err := intEnv("AUTH_SESSION_TTL_HOURS", 720)
+	if err != nil {
+		return Config{}, err
+	}
+	otpMinutes, err := intEnv("EMAIL_OTP_TTL_MINUTES", 10)
+	if err != nil {
+		return Config{}, err
+	}
 
 	return Config{
-		Environment:       stringEnv("APP_ENV", "development"),
-		HTTPAddr:          stringEnv("HTTP_ADDR", ":8080"),
-		DatabaseURL:       stringEnv("DATABASE_URL", ""),
-		NATSURL:           stringEnv("NATS_URL", "nats://localhost:4222"),
-		ShutdownTimeout:   time.Duration(shutdownSeconds) * time.Second,
-		GasFeeShareRate:   stringEnv("GAS_FEE_SHARE_RATE", "0.5"),
-		DefaultCurrency:   stringEnv("DEFAULT_CURRENCY", "USDT"),
-		AllowedCORSOrigin: stringEnv("ALLOWED_CORS_ORIGIN", "*"),
+		Environment:            stringEnv("APP_ENV", "development"),
+		HTTPAddr:               stringEnv("HTTP_ADDR", ":8080"),
+		DatabaseURL:            stringEnv("DATABASE_URL", ""),
+		NATSURL:                stringEnv("NATS_URL", "nats://localhost:4222"),
+		ShutdownTimeout:        time.Duration(shutdownSeconds) * time.Second,
+		GasFeeShareRate:        stringEnv("GAS_FEE_SHARE_RATE", "0.5"),
+		DefaultCurrency:        stringEnv("DEFAULT_CURRENCY", "USDT"),
+		AllowedCORSOrigin:      stringEnv("ALLOWED_CORS_ORIGIN", "*"),
+		AuthSessionTTL:         time.Duration(sessionHours) * time.Hour,
+		EmailOTPTTL:            time.Duration(otpMinutes) * time.Minute,
+		GasFeeDepositAddress:   stringEnv("GAS_FEE_DEPOSIT_ADDRESS", "MAUTRADE-USDT-DEPOSIT-PENDING"),
+		ExchangeCredentialKey:  stringEnv("EXCHANGE_CREDENTIAL_KEY", ""),
+		AdminBootstrapEmail:    stringEnv("ADMIN_BOOTSTRAP_EMAIL", ""),
+		AdminBootstrapPassword: stringEnv("ADMIN_BOOTSTRAP_PASSWORD", ""),
+		AdminBootstrapName:     stringEnv("ADMIN_BOOTSTRAP_NAME", "Mautrade Super Admin"),
+		AdminBootstrapRole:     stringEnv("ADMIN_BOOTSTRAP_ROLE", "super_admin"),
 	}, nil
 }
 

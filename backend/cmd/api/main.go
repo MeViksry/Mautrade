@@ -48,6 +48,12 @@ func main() {
 		logger.Error("create api", "error", err)
 		os.Exit(1)
 	}
+	stopExecutionResults, err := api.StartExecutionResultConsumer(rootCtx)
+	if err != nil {
+		logger.Warn("execution result consumer unavailable", "error", err)
+	} else {
+		defer stopExecutionResults()
+	}
 
 	server := &http.Server{
 		Addr:    cfg.HTTPAddr,

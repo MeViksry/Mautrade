@@ -31,19 +31,22 @@ type UserStats struct {
 	GasFeeShareRate   string `json:"gasFeeShareRate"`
 }
 
-func (s *DashboardStore) UserStats(ctx context.Context, defaultCurrency, gasFeeShareRate string) (UserStats, error) {
+func (s *DashboardStore) UserStats(ctx context.Context, userID, defaultCurrency, gasFeeShareRate string) (UserStats, error) {
 	const query = `
 WITH latest_balances AS (
   SELECT DISTINCT ON (exchange_binding_id, asset)
-    exchange_binding_id,
-    asset,
-    free_amount,
-    locked_amount
-  FROM exchange_balance_snapshots
-  ORDER BY exchange_binding_id, asset, captured_at DESC
+    s.exchange_binding_id,
+    s.asset,
+    s.free_amount,
+    s.locked_amount
+  FROM exchange_balance_snapshots s
+  JOIN exchange_bindings b ON b.id = s.exchange_binding_id
+  WHERE b.user_id = $2::uuid
+    AND s.asset = $1
+  ORDER BY s.exchange_binding_id, s.asset, s.captured_at DESC
 ),
 balance_sum AS (
-  SELECT COALESCE(SUM(free_amount + locked_amount) FILTER (WHERE asset = $1), 0)::text AS total_balance
+  SELECT COALESCE(SUM(free_amount + locked_amount), 0)::text AS total_balance
   FROM latest_balances
 ),
 gas_sum AS (
@@ -51,11 +54,13 @@ gas_sum AS (
     COALESCE(SUM(gross_pnl), 0)::text AS realized_profit,
     COALESCE(SUM(gas_fee_amount), 0)::text AS total_gas_fee_paid
   FROM gas_fee_ledger
+  WHERE user_id = $2::uuid
 ),
 layer_sum AS (
   SELECT COUNT(*) AS active_layers_count
   FROM layers
-  WHERE status IN ('open', 'partial')
+  WHERE user_id = $2::uuid
+    AND status IN ('open', 'partial')
 )
 SELECT balance_sum.total_balance, gas_sum.realized_profit, gas_sum.total_gas_fee_paid, layer_sum.active_layers_count
 FROM balance_sum, gas_sum, layer_sum`
@@ -65,7 +70,7 @@ FROM balance_sum, gas_sum, layer_sum`
 		DefaultCurrency: defaultCurrency,
 		GasFeeShareRate: gasFeeShareRate,
 	}
-	if err := s.db.QueryRow(ctx, query, defaultCurrency).Scan(
+	if err := s.db.QueryRow(ctx, query, defaultCurrency, userID).Scan(
 		&stats.TotalBalance,
 		&stats.RealizedProfit,
 		&stats.TotalGasFeePaid,
@@ -146,7 +151,7 @@ type LayerView struct {
 	OpenedAt         string `json:"openedAt"`
 }
 
-func (s *DashboardStore) ActiveLayers(ctx context.Context) ([]LayerView, error) {
+func (s *DashboardStore) ActiveLayers(ctx context.Context, userID string) ([]LayerView, error) {
 	const query = `
 WITH latest_prices AS (
   SELECT DISTINCT ON (symbol)
@@ -171,11 +176,12 @@ SELECT
   l.opened_at::text
 FROM layers l
 LEFT JOIN latest_prices mp ON mp.symbol = l.symbol
-WHERE l.status IN ('open', 'partial')
+WHERE l.user_id = $1::uuid
+  AND l.status IN ('open', 'partial')
 ORDER BY l.opened_at DESC
 LIMIT 100`
 
-	rows, err := s.db.Query(ctx, query)
+	rows, err := s.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("store: active layers: %w", err)
 	}
@@ -215,7 +221,7 @@ type TradeHistoryView struct {
 	ClosedAt  string `json:"closedAt"`
 }
 
-func (s *DashboardStore) TradeHistory(ctx context.Context) ([]TradeHistoryView, error) {
+func (s *DashboardStore) TradeHistory(ctx context.Context, userID string) ([]TradeHistoryView, error) {
 	const query = `
 SELECT
   l.id::text,
@@ -227,10 +233,11 @@ SELECT
 FROM gas_fee_ledger g
 JOIN layers l ON l.id = g.layer_id
 JOIN layer_executions e ON e.id = g.execution_id
+WHERE g.user_id = $1::uuid
 ORDER BY COALESCE(e.executed_at, g.calculated_at) DESC
 LIMIT 100`
 
-	rows, err := s.db.Query(ctx, query)
+	rows, err := s.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("store: trade history: %w", err)
 	}
