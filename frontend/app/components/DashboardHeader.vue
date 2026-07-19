@@ -21,7 +21,8 @@ const toggleTheme = () => {
         @click="toggleSidebar"
       >
         <svg
-          v-if="isSidebarOpen"
+          class="sidebar-icon-open"
+          :class="{ 'force-show': isSidebarOpen === true, 'force-hide': isSidebarOpen === false }"
           width="24"
           height="24"
           viewBox="0 0 24 24"
@@ -37,7 +38,8 @@ const toggleTheme = () => {
           />
         </svg>
         <svg
-          v-else
+          class="sidebar-icon-closed"
+          :class="{ 'force-show': isSidebarOpen === false, 'force-hide': isSidebarOpen === true }"
           width="24"
           height="24"
           viewBox="0 0 24 24"
@@ -165,6 +167,42 @@ const toggleTheme = () => {
   color: var(--text);
   background: var(--charcoal);
   border-color: var(--line);
+}
+
+/* Sidebar Toggle Icons Responsive CSS */
+.sidebar-icon-open {
+  display: block;
+}
+.sidebar-icon-closed {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .sidebar-icon-open {
+    display: none;
+  }
+  .sidebar-icon-closed {
+    display: block;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 1366px) {
+  .sidebar-icon-open {
+    display: none;
+  }
+  .sidebar-icon-closed {
+    display: block;
+  }
+}
+
+.sidebar-icon-open.force-show,
+.sidebar-icon-closed.force-show {
+  display: block !important;
+}
+
+.sidebar-icon-open.force-hide,
+.sidebar-icon-closed.force-hide {
+  display: none !important;
 }
 
 .header-right {
