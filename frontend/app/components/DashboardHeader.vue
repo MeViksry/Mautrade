@@ -234,17 +234,18 @@ const toggleTheme = () => {
 .user-profile {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0 2px;
+  height: 34px;
   background: var(--charcoal);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 999px;
   min-width: 0;
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent) 0%, #ff8a4c 100%);
 }
@@ -253,10 +254,13 @@ const toggleTheme = () => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  justify-content: center;
+  gap: 2px;
 }
 
 .user-name {
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1;
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
@@ -264,7 +268,8 @@ const toggleTheme = () => {
 
 .user-id {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 9px;
+  line-height: 1;
   color: var(--text-mute);
   white-space: nowrap;
 }
@@ -322,7 +327,8 @@ const toggleTheme = () => {
 
   .user-profile {
     gap: 0;
-    padding: 0.45rem;
+    padding: 0 3px;
+    justify-content: center;
   }
 
   .user-info {
