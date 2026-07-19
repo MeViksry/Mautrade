@@ -32,7 +32,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  submitted: [payload: { exchange: string, apiKey: string, apiSecret: string, extras: Record<string, string> }]
+  'submitted': [payload: { exchange: string, apiKey: string, apiSecret: string, extras: Record<string, string> }]
 }>()
 
 const exchangeConfigs: Record<string, ExchangeConfig> = {
@@ -194,7 +194,7 @@ const submitBindExchange = () => {
     apiKey: apiKey.value.trim(),
     apiSecret: apiSecret.value.trim(),
     extras: Object.fromEntries(
-      selectedConfig.value.extraFields.map((field) => [field.key, (extras[field.key] ?? '').trim()])
+      selectedConfig.value.extraFields.map(field => [field.key, (extras[field.key] ?? '').trim()])
     )
   })
 }

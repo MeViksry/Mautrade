@@ -20,7 +20,7 @@ const countryCodes = [
 const codeToFlag = (code: string) => {
   return code
     .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt(0)))
 }
 
 export const useCountries = () => {
@@ -29,7 +29,7 @@ export const useCountries = () => {
     : null
 
   const countries = countryCodes
-    .map((code) => ({
+    .map(code => ({
       code,
       flag: codeToFlag(code),
       name: displayNames?.of(code) ?? code

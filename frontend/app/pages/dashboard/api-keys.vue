@@ -110,7 +110,7 @@ const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'conn
     }
   })
 
-  managedExchange.value = exchanges.value.find((exchange) => exchange.id === payload.exchangeId) ?? null
+  managedExchange.value = exchanges.value.find(exchange => exchange.id === payload.exchangeId) ?? null
 }
 </script>
 

@@ -104,7 +104,7 @@ const formatTimezoneOffset = (timezone: string) => {
   const timeZoneName = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     timeZoneName: 'shortOffset'
-  }).formatToParts(new Date()).find((part) => part.type === 'timeZoneName')?.value ?? 'GMT'
+  }).formatToParts(new Date()).find(part => part.type === 'timeZoneName')?.value ?? 'GMT'
 
   if (timeZoneName === 'GMT') return 'UTC+00:00'
 
@@ -130,7 +130,7 @@ const timezoneOptions = computed(() => {
 })
 
 const selectedTimezone = computed(() => {
-  return timezoneOptions.value.find((timezone) => timezone.value === profileForm.value.timezone)
+  return timezoneOptions.value.find(timezone => timezone.value === profileForm.value.timezone)
 })
 
 const timezoneSearchTerm = computed(() => timezoneSearch.value.trim().toLowerCase())
@@ -138,7 +138,7 @@ const timezoneSearchTerm = computed(() => timezoneSearch.value.trim().toLowerCas
 const filteredTimezones = computed(() => {
   if (!timezoneSearchTerm.value) return timezoneOptions.value
 
-  return timezoneOptions.value.filter((timezone) => timezone.searchText.includes(timezoneSearchTerm.value))
+  return timezoneOptions.value.filter(timezone => timezone.searchText.includes(timezoneSearchTerm.value))
 })
 
 const openTimezoneDropdown = () => {

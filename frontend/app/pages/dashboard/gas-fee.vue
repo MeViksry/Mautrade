@@ -168,7 +168,7 @@ const gasFeeMetricPoints = computed<GasFeeMetricPoint[]>(() => {
   const height = 170
   const paddingX = 24
   const paddingY = 18
-  const values = entries.map((entry) => entry.balanceAfter)
+  const values = entries.map(entry => entry.balanceAfter)
   const minValue = Math.min(...values)
   const maxValue = Math.max(...values)
   const range = maxValue - minValue || 1
@@ -189,7 +189,7 @@ const gasFeeMetricPoints = computed<GasFeeMetricPoint[]>(() => {
 })
 
 const gasFeeMetricLine = computed(() => {
-  return gasFeeMetricPoints.value.map((point) => `${point.x},${point.y}`).join(' ')
+  return gasFeeMetricPoints.value.map(point => `${point.x},${point.y}`).join(' ')
 })
 
 const gasFeeMetricArea = computed(() => {
@@ -199,7 +199,7 @@ const gasFeeMetricArea = computed(() => {
   const bottom = 152
   const first = points[0]!
   const last = points[points.length - 1]!
-  const line = points.map((point) => `L ${point.x} ${point.y}`).join(' ')
+  const line = points.map(point => `L ${point.x} ${point.y}`).join(' ')
 
   return `M ${first.x} ${bottom} L ${first.x} ${first.y} ${line} L ${last.x} ${bottom} Z`
 })
@@ -214,180 +214,264 @@ const gasFeeMetricTrend = computed(() => {
 
 <template>
   <div class="dashboard-page">
-    <div class="page-header">
-      <h2 class="page-title">
-        Gas Fee
-      </h2>
-    </div>
-
     <div
       v-if="loading"
-      class="loading-state"
+      class="skeleton-loading"
     >
-      Loading gas fee...
+      <div class="skeleton-page-header">
+        <div class="skeleton-bone skeleton-title" />
+      </div>
+
+      <div class="gas-fee-content">
+        <div class="gas-fee-summary">
+          <div class="skeleton-stat-card">
+            <div class="skeleton-bone skeleton-stat-label" />
+            <div class="skeleton-bone skeleton-stat-value" />
+            <div class="skeleton-bone skeleton-stat-action" />
+          </div>
+          <div class="gas-fee-metric">
+            <div
+              class="gas-fee-metric__header"
+              style="height: 56px"
+            >
+              <div
+                class="skeleton-bone"
+                style="width: 150px; height: 38px"
+              />
+              <div
+                class="skeleton-bone"
+                style="width: 60px; height: 16px"
+              />
+            </div>
+            <div class="gas-fee-chart">
+              <div
+                class="skeleton-bone"
+                style="width: 100%; height: 100%"
+              />
+            </div>
+            <div
+              class="gas-fee-metric__footer"
+              style="height: 52px; gap: 1rem; display: flex;"
+            >
+              <div
+                class="skeleton-bone"
+                style="width: 80px; height: 26px"
+              />
+              <div
+                class="skeleton-bone"
+                style="width: 80px; height: 26px"
+              />
+            </div>
+          </div>
+        </div>
+
+        <section class="gas-fee-history">
+          <div class="section-header">
+            <div
+              class="skeleton-bone"
+              style="width: 160px; height: 24px"
+            />
+          </div>
+
+          <div class="gas-fee-list">
+            <div
+              v-for="n in 4"
+              :key="`gf-${n}`"
+              class="gas-fee-row"
+            >
+              <div class="gas-fee-row__info">
+                <div class="skeleton-bone skeleton-history-pair" />
+                <div class="skeleton-bone skeleton-history-meta" />
+              </div>
+
+              <div class="gas-fee-row__reference">
+                <div class="skeleton-bone skeleton-history-stat-label" />
+                <div class="skeleton-bone skeleton-history-stat-val" />
+              </div>
+
+              <div class="gas-fee-row__balance">
+                <div class="skeleton-bone skeleton-history-stat-label" />
+                <div class="skeleton-bone skeleton-history-stat-val" />
+              </div>
+
+              <div
+                class="skeleton-bone skeleton-history-pnl-amount"
+                style="justify-self: end;"
+              />
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
     <div
       v-else-if="stats"
-      class="gas-fee-content"
     >
-      <div class="gas-fee-summary">
-        <StatCard
-          class="gas-fee-balance-card"
-          title="Gas Fee Balance"
-          :value="stats.totalGasFeePaid.toLocaleString()"
-          unit="USDT"
-          action-label="Deposit"
-          action-icon="lucide:plus"
-          @action="depositModalOpen = true"
-        />
-
-        <div class="gas-fee-metric">
-          <div class="gas-fee-metric__header">
-            <div>
-              <div class="gas-fee-metric__label">
-                Gas Fee Metric
-              </div>
-              <div class="gas-fee-metric__value">
-                ${{ formatCurrency(stats.totalGasFeePaid) }}<span>USDT</span>
-              </div>
-            </div>
-            <div
-              class="gas-fee-metric__trend"
-              :class="gasFeeMetricTrend >= 0 ? 'change-positive' : 'change-negative'"
-            >
-              {{ gasFeeMetricTrend >= 0 ? '+' : '-' }}${{ formatCurrency(Math.abs(gasFeeMetricTrend)) }}
-            </div>
-          </div>
-
-          <div class="gas-fee-chart">
-            <svg
-              viewBox="0 0 640 170"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <defs>
-                <linearGradient
-                  id="gasFeeArea"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop
-                    offset="0%"
-                    stop-color="var(--accent)"
-                    stop-opacity="0.34"
-                  />
-                  <stop
-                    offset="100%"
-                    stop-color="var(--accent)"
-                    stop-opacity="0"
-                  />
-                </linearGradient>
-              </defs>
-              <line
-                x1="24"
-                y1="38"
-                x2="616"
-                y2="38"
-                class="gas-fee-chart__grid"
-              />
-              <line
-                x1="24"
-                y1="84"
-                x2="616"
-                y2="84"
-                class="gas-fee-chart__grid"
-              />
-              <line
-                x1="24"
-                y1="130"
-                x2="616"
-                y2="130"
-                class="gas-fee-chart__grid"
-              />
-              <path
-                :d="gasFeeMetricArea"
-                class="gas-fee-chart__area"
-              />
-              <polyline
-                :points="gasFeeMetricLine"
-                class="gas-fee-chart__line"
-              />
-              <circle
-                v-for="point in gasFeeMetricPoints"
-                :key="point.label"
-                :cx="point.x"
-                :cy="point.y"
-                r="3.5"
-                class="gas-fee-chart__dot"
-              />
-            </svg>
-          </div>
-
-          <div class="gas-fee-metric__footer">
-            <div>
-              <span>Fees Used</span>
-              <strong>${{ formatCurrency(totalGasFeeUsed) }}</strong>
-            </div>
-            <div>
-              <span>Rebates</span>
-              <strong>${{ formatCurrency(totalGasFeeRebates) }}</strong>
-            </div>
-          </div>
-        </div>
+      <div class="page-header">
+        <h2 class="page-title">
+          Gas Fee
+        </h2>
       </div>
 
-      <section class="gas-fee-history">
-        <div class="section-header">
-          <h3>Gas Fee History</h3>
-        </div>
+      <div class="gas-fee-content">
+        <div class="gas-fee-summary">
+          <StatCard
+            class="gas-fee-balance-card"
+            title="Gas Fee Balance"
+            :value="stats.totalGasFeePaid.toLocaleString()"
+            unit="USDT"
+            action-label="Deposit"
+            action-icon="lucide:plus"
+            @action="depositModalOpen = true"
+          />
 
-        <div class="gas-fee-list">
-          <div
-            v-for="entry in gasFeeHistory"
-            :key="entry.id"
-            class="gas-fee-row"
-          >
-            <div class="gas-fee-row__info">
-              <div class="gas-fee-row__title">
-                {{ entry.title }}
+          <div class="gas-fee-metric">
+            <div class="gas-fee-metric__header">
+              <div>
+                <div class="gas-fee-metric__label">
+                  Gas Fee Metric
+                </div>
+                <div class="gas-fee-metric__value">
+                  ${{ formatCurrency(stats.totalGasFeePaid) }}<span>USDT</span>
+                </div>
               </div>
-              <div class="gas-fee-row__meta">
-                <span>{{ entry.id }}</span>
-                <span class="gas-fee-row__dot" />
-                <span>{{ formatDate(entry.occurredAt) }}</span>
+              <div
+                class="gas-fee-metric__trend"
+                :class="gasFeeMetricTrend >= 0 ? 'change-positive' : 'change-negative'"
+              >
+                {{ gasFeeMetricTrend >= 0 ? '+' : '-' }}${{ formatCurrency(Math.abs(gasFeeMetricTrend)) }}
               </div>
             </div>
 
-            <div class="gas-fee-row__reference">
-              <div class="gas-fee-row__label">
-                Reference
-              </div>
-              <div class="gas-fee-row__value">
-                {{ entry.reference }}
-              </div>
+            <div class="gas-fee-chart">
+              <svg
+                viewBox="0 0 640 170"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient
+                    id="gasFeeArea"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stop-color="var(--accent)"
+                      stop-opacity="0.34"
+                    />
+                    <stop
+                      offset="100%"
+                      stop-color="var(--accent)"
+                      stop-opacity="0"
+                    />
+                  </linearGradient>
+                </defs>
+                <line
+                  x1="24"
+                  y1="38"
+                  x2="616"
+                  y2="38"
+                  class="gas-fee-chart__grid"
+                />
+                <line
+                  x1="24"
+                  y1="84"
+                  x2="616"
+                  y2="84"
+                  class="gas-fee-chart__grid"
+                />
+                <line
+                  x1="24"
+                  y1="130"
+                  x2="616"
+                  y2="130"
+                  class="gas-fee-chart__grid"
+                />
+                <path
+                  :d="gasFeeMetricArea"
+                  class="gas-fee-chart__area"
+                />
+                <polyline
+                  :points="gasFeeMetricLine"
+                  class="gas-fee-chart__line"
+                />
+                <circle
+                  v-for="point in gasFeeMetricPoints"
+                  :key="point.label"
+                  :cx="point.x"
+                  :cy="point.y"
+                  r="3.5"
+                  class="gas-fee-chart__dot"
+                />
+              </svg>
             </div>
 
-            <div class="gas-fee-row__balance">
-              <div class="gas-fee-row__label">
-                Balance After
+            <div class="gas-fee-metric__footer">
+              <div>
+                <span>Fees Used</span>
+                <strong>${{ formatCurrency(totalGasFeeUsed) }}</strong>
               </div>
-              <div class="gas-fee-row__value">
-                ${{ formatCurrency(entry.balanceAfter) }}
+              <div>
+                <span>Rebates</span>
+                <strong>${{ formatCurrency(totalGasFeeRebates) }}</strong>
               </div>
-            </div>
-
-            <div
-              class="gas-fee-row__change"
-              :class="entry.change >= 0 ? 'change-positive' : 'change-negative'"
-            >
-              {{ entry.change >= 0 ? '+' : '-' }}${{ formatCurrency(Math.abs(entry.change)) }}
             </div>
           </div>
         </div>
-      </section>
+
+        <section class="gas-fee-history">
+          <div class="section-header">
+            <h3>Gas Fee History</h3>
+          </div>
+
+          <div class="gas-fee-list">
+            <div
+              v-for="entry in gasFeeHistory"
+              :key="entry.id"
+              class="gas-fee-row"
+            >
+              <div class="gas-fee-row__info">
+                <div class="gas-fee-row__title">
+                  {{ entry.title }}
+                </div>
+                <div class="gas-fee-row__meta">
+                  <span>{{ entry.id }}</span>
+                  <span class="gas-fee-row__dot" />
+                  <span>{{ formatDate(entry.occurredAt) }}</span>
+                </div>
+              </div>
+
+              <div class="gas-fee-row__reference">
+                <div class="gas-fee-row__label">
+                  Reference
+                </div>
+                <div class="gas-fee-row__value">
+                  {{ entry.reference }}
+                </div>
+              </div>
+
+              <div class="gas-fee-row__balance">
+                <div class="gas-fee-row__label">
+                  Balance After
+                </div>
+                <div class="gas-fee-row__value">
+                  ${{ formatCurrency(entry.balanceAfter) }}
+                </div>
+              </div>
+
+              <div
+                class="gas-fee-row__change"
+                :class="entry.change >= 0 ? 'change-positive' : 'change-negative'"
+              >
+                {{ entry.change >= 0 ? '+' : '-' }}${{ formatCurrency(Math.abs(entry.change)) }}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
     <GasFeeDepositModal v-model="depositModalOpen" />
@@ -440,16 +524,77 @@ const gasFeeMetricTrend = computed(() => {
 }
 
 .gas-fee-metric {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-  min-height: 100%;
-  padding: 1.5rem;
-  background: var(--charcoal);
+  background: var(--bg-elevated);
+  padding: 2rem;
+  border-radius: 4px;
   border: 1px solid var(--line);
   transition: border-color 300ms var(--ease-quiet);
 }
+
+/* ─── Skeleton Loading ─── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-loading {
+  animation: skeletonFadeIn 0.4s ease-out;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  min-width: 0;
+}
+
+@keyframes skeletonFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.skeleton-bone {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 138, 76, 0.12) 40%,
+    rgba(255, 138, 76, 0.18) 50%,
+    rgba(255, 138, 76, 0.12) 60%,
+    rgba(255, 255, 255, 0.08) 80%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-page-header {
+  margin-bottom: 2rem;
+}
+
+.skeleton-title {
+  width: 130px;
+  height: 28px;
+}
+
+.skeleton-stat-card {
+  background: var(--charcoal);
+  border: 1px solid var(--line);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+  border-radius: 4px;
+}
+
+.skeleton-stat-label { width: 90px; height: 10px; }
+.skeleton-stat-value { width: 65%; height: 32px; }
+.skeleton-stat-action { width: 80px; height: 26px; margin-top: 0.35rem; }
+
+.skeleton-history-pair { width: 90px; height: 18px; }
+.skeleton-history-meta { width: 130px; height: 10px; }
+.skeleton-history-stat-label { width: 50px; height: 9px; margin-bottom: 0.25rem; }
+.skeleton-history-stat-val { width: 70px; height: 13px; }
+.skeleton-history-pnl-amount { width: 65px; height: 18px; }
 
 .gas-fee-metric:hover {
   border-color: var(--accent);
@@ -714,15 +859,58 @@ const gasFeeMetricTrend = computed(() => {
   .gas-fee-summary {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page { gap: 0.75rem; }
+  .page-header { margin-bottom: 0.5rem; }
+  .page-title { font-size: 1.3rem; }
+  .skeleton-page-header { margin-bottom: 0.5rem; }
+  .skeleton-title { width: 100px; height: 22px; }
+
+  .gas-fee-metric { padding: 1.25rem; }
+  .gas-fee-chart { height: 120px; }
+  .skeleton-stat-card { padding: 1.25rem; }
 
   .gas-fee-row {
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 0.85rem;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.4rem;
+    padding: 0.65rem;
   }
-
+  .gas-fee-row__info {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 0.1rem;
+  }
   .gas-fee-row__change {
-    justify-self: start;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    font-size: 1.15rem;
   }
+  .gas-fee-row__reference {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .gas-fee-row__balance {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: right;
+  }
+  .gas-fee-row__label { font-size: 8px; }
+  .gas-fee-row__value { font-size: 11px; }
+  .gas-fee-row__title { font-size: 1rem; }
+  .gas-fee-row__meta { font-size: 7.5px; }
+}
+
+@media (max-width: 380px) {
+  .dashboard-page { gap: 0.5rem; }
+  .page-title { font-size: 1.15rem; }
+  .gas-fee-row {
+    padding: 0.5rem;
+    gap: 0.3rem;
+  }
+  .gas-fee-row__change { font-size: 1.05rem; }
 }
 </style>

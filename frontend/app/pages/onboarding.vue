@@ -44,7 +44,7 @@ const exchangeOptions = [
 ]
 
 const selectedCountryData = computed(() => {
-  return countries.find((country) => country.code === selectedCountry.value)
+  return countries.find(country => country.code === selectedCountry.value)
 })
 
 const countrySearchTerm = computed(() => countrySearch.value.trim().toLowerCase())
@@ -64,7 +64,7 @@ const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.valu
 
 const toggleExchange = (exchange: string) => {
   if (selectedExchanges.value.includes(exchange)) {
-    selectedExchanges.value = selectedExchanges.value.filter((item) => item !== exchange)
+    selectedExchanges.value = selectedExchanges.value.filter(item => item !== exchange)
     return
   }
 
