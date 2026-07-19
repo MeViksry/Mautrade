@@ -261,30 +261,18 @@ const cancelAllLayers = () => {
         <div class="execution-panel panel">
           <div class="order-types">
             <button
+              type="button"
               :class="{ active: orderType === 'limit' }"
               @click="orderType = 'limit'"
             >
               Limit
             </button>
             <button
+              type="button"
               :class="{ active: orderType === 'market' }"
               @click="orderType = 'market'"
             >
               Market
-            </button>
-          </div>
-          <div class="order-sides">
-            <button
-              :class="['side-btn buy', { active: orderSide === 'buy' }]"
-              @click="orderSide = 'buy'"
-            >
-              Buy
-            </button>
-            <button
-              :class="['side-btn sell', { active: orderSide === 'sell' }]"
-              @click="orderSide = 'sell'"
-            >
-              Sell
             </button>
           </div>
 
@@ -535,6 +523,12 @@ const cancelAllLayers = () => {
   cursor: pointer;
   border-bottom: 2px solid transparent;
   font-weight: 500;
+  transition: all 0.2s;
+}
+
+.order-types button:hover {
+  background: var(--charcoal);
+  color: var(--text);
 }
 
 .order-types button.active {
