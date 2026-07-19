@@ -134,8 +134,14 @@ const toggleTheme = () => {
           <div class="user-profile user-profile-skeleton">
             <div class="user-avatar header-skeleton-bone" />
             <div class="user-info">
-              <span class="user-name header-skeleton-bone" style="width: 72px; height: 12px; border-radius: 2px;" />
-              <span class="user-id header-skeleton-bone" style="width: 54px; height: 9px; border-radius: 2px;" />
+              <span
+                class="user-name header-skeleton-bone"
+                style="width: 72px; height: 12px; border-radius: 2px;"
+              />
+              <span
+                class="user-id header-skeleton-bone"
+                style="width: 54px; height: 9px; border-radius: 2px;"
+              />
             </div>
           </div>
         </template>
