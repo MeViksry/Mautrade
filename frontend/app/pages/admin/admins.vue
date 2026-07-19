@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
+defineOptions({ name: 'AdminAdminsPage' })
+
 definePageMeta({
   layout: 'admin'
 })
@@ -35,16 +37,30 @@ onMounted(() => {
     >
       <div class="skeleton-page-header">
         <div class="skeleton-bone skeleton-title" />
+        <div class="skeleton-bone skeleton-subtitle" />
       </div>
 
-      <div class="skeleton-stats-grid">
-        <div
-          v-for="n in 1"
-          :key="`stat-${n}`"
-          class="skeleton-stat-card"
-        >
-          <div class="skeleton-bone skeleton-stat-label" />
-          <div class="skeleton-bone skeleton-stat-value" />
+      <div class="skeleton-table-card">
+        <div class="skeleton-table-header">
+          <div class="skeleton-bone skeleton-section-title" />
+          <div class="skeleton-bone skeleton-add-btn" />
+        </div>
+
+        <div class="skeleton-table-content">
+          <div
+            v-for="i in 4"
+            :key="`row-${i}`"
+            class="skeleton-table-row"
+          >
+            <div class="skeleton-bone skeleton-cell-sm" />
+            <div class="skeleton-bone skeleton-cell-lg" />
+            <div class="skeleton-bone skeleton-cell-md" />
+            <div class="skeleton-bone skeleton-cell-sm" />
+            <div
+              class="skeleton-bone skeleton-cell-md"
+              style="margin-left: auto;"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -343,21 +359,68 @@ onMounted(() => {
   height: 24px;
 }
 
-.skeleton-stats-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
+.skeleton-subtitle {
+  width: 300px;
+  height: 16px;
+  margin-top: 0.5rem;
 }
 
-.skeleton-stat-card {
+.skeleton-table-card {
   background: var(--bg-elevated);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+}
+
+.skeleton-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skeleton-section-title {
+  width: 150px;
+  height: 20px;
+}
+
+.skeleton-add-btn {
+  width: 120px;
+  height: 36px;
+}
+
+.skeleton-table-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-table-row {
+  display: flex;
+  align-items: center;
   gap: 1rem;
-  height: 300px;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.skeleton-table-row:last-child {
+  border-bottom: none;
+}
+
+.skeleton-cell-sm {
+  width: 60px;
+  height: 16px;
+}
+
+.skeleton-cell-md {
+  width: 100px;
+  height: 16px;
+}
+
+.skeleton-cell-lg {
+  width: 200px;
+  height: 16px;
 }
 
 @media (max-width: 640px) {
