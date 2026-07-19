@@ -148,4 +148,76 @@ const formatDate = (dateString: string) => {
 .pnl-negative .history-row__pnl-amount {
   color: #ef4444;
 }
+
+@media (max-width: 640px) {
+  .history-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.4rem;
+    padding: 0.65rem;
+  }
+  .history-row__info {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 0.1rem;
+  }
+  .history-row__pair {
+    font-size: 0.9rem;
+  }
+  .history-row__meta {
+    font-size: 7.5px;
+    gap: 0.3rem;
+  }
+  .history-row__pnl {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .history-row__pnl-amount {
+    font-size: 0.95rem;
+  }
+  .history-row__pnl-label {
+    font-size: 8px;
+  }
+  .history-row__stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 0;
+    justify-content: space-between;
+  }
+  .history-row__stat-group {
+    gap: 0.1rem;
+  }
+  .history-row__label {
+    font-size: 7px;
+    letter-spacing: 0.04em;
+  }
+  .history-row__val {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .history-row {
+    gap: 0.3rem;
+    padding: 0.5rem;
+  }
+  .history-row__pair {
+    font-size: 0.85rem;
+  }
+  .history-row__meta {
+    font-size: 7px;
+  }
+  .history-row__pnl-amount {
+    font-size: 0.85rem;
+  }
+  .history-row__pnl-label {
+    font-size: 7.5px;
+  }
+  .history-row__label {
+    font-size: 6.5px;
+  }
+  .history-row__val {
+    font-size: 9px;
+  }
+}
 </style>
