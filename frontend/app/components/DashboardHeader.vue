@@ -247,8 +247,28 @@ const toggleTheme = () => {
 }
 
 .theme-toggle-skeleton .theme-toggle__track {
-  background: var(--line);
-  border-color: var(--line);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 138, 76, 0.12) 40%,
+    rgba(255, 138, 76, 0.18) 50%,
+    rgba(255, 138, 76, 0.12) 60%,
+    rgba(255, 255, 255, 0.08) 80%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-color: transparent;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 
 .theme-toggle__thumb {
