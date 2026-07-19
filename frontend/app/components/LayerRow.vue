@@ -164,23 +164,23 @@ const formatDate = (dateString: string) => {
   .layer-row {
     grid-template-columns: 1fr auto;
     grid-template-rows: auto auto;
-    gap: 0.5rem;
-    padding: 0.75rem;
+    gap: 0.4rem;
+    padding: 0.65rem;
   }
 
   .layer-row__info {
     grid-column: 1;
     grid-row: 1;
-    gap: 0.15rem;
+    gap: 0.1rem;
   }
 
   .layer-row__pair {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .layer-row__meta {
-    font-size: 8px;
-    gap: 0.35rem;
+    font-size: 7.5px;
+    gap: 0.3rem;
   }
 
   .layer-row__pnl {
@@ -189,11 +189,11 @@ const formatDate = (dateString: string) => {
   }
 
   .layer-row__pnl-amount {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .layer-row__pnl-pct {
-    font-size: 9px;
+    font-size: 8px;
   }
 
   .layer-row__stats {
@@ -208,12 +208,44 @@ const formatDate = (dateString: string) => {
   }
 
   .layer-row__label {
-    font-size: 8px;
-    letter-spacing: 0.05em;
+    font-size: 7px;
+    letter-spacing: 0.04em;
   }
 
   .layer-row__val {
-    font-size: 11px;
+    font-size: 10px;
+  }
+}
+
+/* Extra-small devices (320px and below) */
+@media (max-width: 380px) {
+  .layer-row {
+    gap: 0.3rem;
+    padding: 0.5rem;
+  }
+
+  .layer-row__pair {
+    font-size: 0.85rem;
+  }
+
+  .layer-row__meta {
+    font-size: 7px;
+  }
+
+  .layer-row__pnl-amount {
+    font-size: 0.85rem;
+  }
+
+  .layer-row__pnl-pct {
+    font-size: 7.5px;
+  }
+
+  .layer-row__label {
+    font-size: 6.5px;
+  }
+
+  .layer-row__val {
+    font-size: 9px;
   }
 }
 </style>

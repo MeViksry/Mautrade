@@ -67,7 +67,13 @@ import DashboardHeader from '~/components/DashboardHeader.vue'
 
 @media (max-width: 640px) {
   .dashboard-content {
-    padding: 1rem;
+    padding: 0.65rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .dashboard-content {
+    padding: 0.5rem;
   }
 }
 </style>

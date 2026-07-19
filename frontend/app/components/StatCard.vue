@@ -130,42 +130,78 @@ const emit = defineEmits<{
 
 @media (max-width: 640px) {
   .stat-card {
-    padding: 0.85rem;
-    gap: 0.4rem;
+    padding: 0.75rem;
+    gap: 0.35rem;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .stat-card__label {
-    font-size: 8px;
-    letter-spacing: 0.18em;
+    font-size: 7px;
+    letter-spacing: 0.15em;
   }
 
   .stat-card__value-wrapper {
     flex-wrap: wrap;
-    gap: 0.15rem 0.5rem;
+    gap: 0.1rem 0.4rem;
   }
 
   .stat-card__value {
-    font-size: 1.45rem;
+    font-size: 1.3rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .stat-card__unit {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
+    margin-left: 0.2rem;
   }
 
   .stat-card__trend {
-    font-size: 9px;
+    font-size: 8px;
   }
 
   .stat-card__action {
-    margin-top: 0.15rem;
-    padding: 0.3rem 0.55rem;
-    font-size: 8px;
-    gap: 0.3rem;
+    margin-top: 0.1rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 7px;
+    gap: 0.25rem;
   }
 
   .stat-card__action-icon {
-    width: 11px;
-    height: 11px;
+    width: 10px;
+    height: 10px;
+  }
+}
+
+/* Extra-small devices (320px and below) */
+@media (max-width: 380px) {
+  .stat-card {
+    padding: 0.6rem;
+    gap: 0.25rem;
+  }
+
+  .stat-card__label {
+    font-size: 6.5px;
+    letter-spacing: 0.1em;
+  }
+
+  .stat-card__value {
+    font-size: 1.15rem;
+  }
+
+  .stat-card__unit {
+    font-size: 0.5rem;
+  }
+
+  .stat-card__trend {
+    font-size: 7.5px;
+  }
+
+  .stat-card__action {
+    padding: 0.2rem 0.4rem;
+    font-size: 6.5px;
   }
 }
 </style>
