@@ -159,4 +159,61 @@ const formatDate = (dateString: string) => {
 .pnl-negative .layer-row__pnl-pct {
   color: #ef4444; /* Red 500 */
 }
+
+@media (max-width: 640px) {
+  .layer-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .layer-row__info {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 0.15rem;
+  }
+
+  .layer-row__pair {
+    font-size: 0.95rem;
+  }
+
+  .layer-row__meta {
+    font-size: 8px;
+    gap: 0.35rem;
+  }
+
+  .layer-row__pnl {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .layer-row__pnl-amount {
+    font-size: 1rem;
+  }
+
+  .layer-row__pnl-pct {
+    font-size: 9px;
+  }
+
+  .layer-row__stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 0;
+    justify-content: space-between;
+  }
+
+  .layer-row__stat-group {
+    gap: 0.1rem;
+  }
+
+  .layer-row__label {
+    font-size: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .layer-row__val {
+    font-size: 11px;
+  }
+}
 </style>

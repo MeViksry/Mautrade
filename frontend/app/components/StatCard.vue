@@ -127,4 +127,45 @@ const emit = defineEmits<{
   width: 14px;
   height: 14px;
 }
+
+@media (max-width: 640px) {
+  .stat-card {
+    padding: 0.85rem;
+    gap: 0.4rem;
+  }
+
+  .stat-card__label {
+    font-size: 8px;
+    letter-spacing: 0.18em;
+  }
+
+  .stat-card__value-wrapper {
+    flex-wrap: wrap;
+    gap: 0.15rem 0.5rem;
+  }
+
+  .stat-card__value {
+    font-size: 1.45rem;
+  }
+
+  .stat-card__unit {
+    font-size: 0.65rem;
+  }
+
+  .stat-card__trend {
+    font-size: 9px;
+  }
+
+  .stat-card__action {
+    margin-top: 0.15rem;
+    padding: 0.3rem 0.55rem;
+    font-size: 8px;
+    gap: 0.3rem;
+  }
+
+  .stat-card__action-icon {
+    width: 11px;
+    height: 11px;
+  }
+}
 </style>

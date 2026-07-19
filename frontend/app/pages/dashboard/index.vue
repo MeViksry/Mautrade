@@ -1214,9 +1214,102 @@ const submitDeposit = () => {
 }
 
 @media (max-width: 640px) {
-  .stats-grid,
+  .dashboard-page {
+    padding: 1rem;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .dashboard-grid {
+    margin-top: 1.5rem;
+    row-gap: 1rem;
+    column-gap: 1rem;
+  }
+
+  .section-header {
+    padding-bottom: 0.6rem;
+  }
+
+  .section-header h3 {
+    font-size: 1.15rem;
+  }
+
+  .view-all {
+    font-size: 10px;
+  }
+
   .exchange-list {
     grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .exchange-card {
+    padding: 0.85rem;
+  }
+
+  .exchange-card__header {
+    margin-bottom: 0.75rem;
+  }
+
+  .exchange-logo {
+    width: 90px;
+    height: 22px;
+  }
+
+  .exchange-status {
+    font-size: 8px;
+    padding: 0.2rem 0.45rem;
+  }
+
+  .exchange-card__body {
+    gap: 0.45rem;
+  }
+
+  .exchange-stat__label {
+    font-size: 9px;
+  }
+
+  .exchange-stat__val {
+    font-size: 11px;
+  }
+
+  .exchange-stat__val-time {
+    font-size: 9px;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+    font-size: 11px;
+  }
+
+  .layer-pagination {
+    min-height: 36px;
+    gap: 0.5rem;
+  }
+
+  .layer-pagination__nav,
+  .layer-pagination__page {
+    width: 24px;
+    height: 24px;
+  }
+
+  .layer-pagination__nav {
+    padding: 0.25rem;
+  }
+
+  .layer-pagination__page {
+    font-size: 11px;
   }
 
   .deposit-modal {
