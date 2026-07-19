@@ -1,12 +1,29 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-const isSidebarOpen = useState('sidebar-open', () => true)
+const compactSidebarQuery = '(max-width: 1180px), (pointer: coarse) and (max-width: 1366px)'
+const isSidebarOpen = useState('sidebar-open', () => false)
+const isCompactSidebar = ref(false)
+
+let mediaQuery: MediaQueryList | null = null
+
+const syncSidebarMode = (matches: boolean) => {
+  isCompactSidebar.value = matches
+  isSidebarOpen.value = !matches
+}
+
+const handleSidebarModeChange = (event: MediaQueryListEvent) => {
+  syncSidebarMode(event.matches)
+}
 
 onMounted(() => {
-  if (window.innerWidth <= 768) {
-    isSidebarOpen.value = false
-  }
+  mediaQuery = window.matchMedia(compactSidebarQuery)
+  syncSidebarMode(mediaQuery.matches)
+  mediaQuery.addEventListener('change', handleSidebarModeChange)
+})
+
+onBeforeUnmount(() => {
+  mediaQuery?.removeEventListener('change', handleSidebarModeChange)
 })
 
 const navItems = [
@@ -17,18 +34,27 @@ const navItems = [
   { label: 'API Keys', to: '/dashboard/api-keys', icon: 'lucide:key' },
   { label: 'Settings', to: '/dashboard/settings', icon: 'lucide:settings' }
 ]
+
+const closeCompactSidebar = () => {
+  if (isCompactSidebar.value) {
+    isSidebarOpen.value = false
+  }
+}
 </script>
 
 <template>
   <div
-    v-if="isSidebarOpen"
+    v-if="isCompactSidebar && isSidebarOpen"
     class="sidebar-overlay"
     @click="isSidebarOpen = false"
   />
 
   <aside
     class="sidebar"
-    :class="{ 'sidebar--closed': !isSidebarOpen }"
+    :class="{
+      'sidebar--closed': !isSidebarOpen,
+      'sidebar--compact': isCompactSidebar
+    }"
   >
     <div class="sidebar__logo">
       <NuxtLink to="/dashboard">
@@ -43,6 +69,7 @@ const navItems = [
         :to="item.to"
         class="sidebar__link"
         active-class="sidebar__link--active"
+        @click="closeCompactSidebar"
       >
         <UIcon
           :name="item.icon"
@@ -85,7 +112,7 @@ const navItems = [
 }
 
 .sidebar-overlay {
-  display: none;
+  display: block;
   position: fixed;
   top: 0;
   left: 0;
@@ -96,16 +123,22 @@ const navItems = [
   z-index: 30;
 }
 
-@media (max-width: 768px) {
+.sidebar--compact {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  height: 100dvh; /* For mobile browsers */
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 420px) {
   .sidebar {
-    position: fixed;
-    z-index: 40;
-    height: 100dvh; /* For mobile browsers */
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    width: min(260px, 86vw);
   }
 
-  .sidebar-overlay {
-    display: block;
+  .sidebar--closed {
+    margin-left: min(-260px, -86vw);
   }
 }
 

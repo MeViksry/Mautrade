@@ -1141,7 +1141,84 @@ const submitDeposit = () => {
   }
 }
 
+@media (max-width: 1180px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .main-column > .section-header,
+  .side-column > .section-header,
+  .layers-container,
+  .exchange-list {
+    grid-column: 1;
+  }
+
+  .main-column > .section-header {
+    grid-row: 1;
+  }
+
+  .layers-container {
+    grid-row: 2;
+  }
+
+  .side-column > .section-header {
+    grid-row: 3;
+  }
+
+  .exchange-list {
+    grid-row: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 1366px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .main-column > .section-header,
+  .side-column > .section-header,
+  .layers-container,
+  .exchange-list {
+    grid-column: 1;
+  }
+
+  .main-column > .section-header {
+    grid-row: 1;
+  }
+
+  .layers-container {
+    grid-row: 2;
+  }
+
+  .side-column > .section-header {
+    grid-row: 3;
+  }
+
+  .exchange-list {
+    grid-row: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+}
+
 @media (max-width: 640px) {
+  .stats-grid,
+  .exchange-list {
+    grid-template-columns: 1fr;
+  }
+
   .deposit-modal {
     padding: 1rem;
   }

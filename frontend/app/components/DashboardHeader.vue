@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const isSidebarOpen = useState('sidebar-open', () => true)
+const isSidebarOpen = useState('sidebar-open', () => false)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
 
@@ -129,6 +129,7 @@ const toggleTheme = () => {
   height: 72px;
   padding: 0 3rem;
   display: flex;
+  gap: 1rem;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -136,7 +137,7 @@ const toggleTheme = () => {
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
 }
 
 .header-left {
@@ -145,15 +146,17 @@ const toggleTheme = () => {
 }
 
 .sidebar-toggle {
-  background: transparent;
-  border: none;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid transparent;
   color: var(--text-mute);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: 4px;
   transition: all 0.2s;
   margin-left: -1rem; /* Adjust alignment to perfectly align with padding */
 }
@@ -161,12 +164,14 @@ const toggleTheme = () => {
 .sidebar-toggle:hover {
   color: var(--text);
   background: var(--charcoal);
+  border-color: var(--line);
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
 }
 
 .theme-toggle {
@@ -233,7 +238,8 @@ const toggleTheme = () => {
   padding: 0.5rem 1rem;
   background: var(--charcoal);
   border: 1px solid var(--line);
-  border-radius: 40px;
+  border-radius: 4px;
+  min-width: 0;
 }
 
 .user-avatar {
@@ -246,26 +252,80 @@ const toggleTheme = () => {
 .user-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .user-name {
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
+  white-space: nowrap;
 }
 
 .user-id {
   font-family: var(--mono);
   font-size: 10px;
   color: var(--text-mute);
+  white-space: nowrap;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1180px) {
   .dashboard-header {
+    height: 64px;
     padding: 0 1.5rem;
   }
 
-  .user-name {
+  .sidebar-toggle {
+    margin-left: -0.5rem;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 1366px) {
+  .dashboard-header {
+    height: 64px;
+    padding: 0 1.5rem;
+  }
+
+  .sidebar-toggle {
+    margin-left: -0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-header {
+    padding: 0 1rem;
+  }
+
+  .header-right {
+    gap: 0.65rem;
+  }
+
+  .theme-toggle,
+  .theme-toggle__track {
+    width: 52px;
+    height: 32px;
+  }
+
+  .theme-toggle__thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .theme-toggle__thumb--light {
+    transform: translate(22px, -50%);
+  }
+
+  .theme-toggle__icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .user-profile {
+    gap: 0;
+    padding: 0.45rem;
+  }
+
+  .user-info {
     display: none;
   }
 }
