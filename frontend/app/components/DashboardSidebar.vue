@@ -4,6 +4,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 const compactSidebarQuery = '(max-width: 1180px), (pointer: coarse) and (max-width: 1366px)'
 const isSidebarOpen = useState('sidebar-open', () => false)
 const isCompactSidebar = ref(false)
+const isMounted = ref(false)
 
 let mediaQuery: MediaQueryList | null = null
 
@@ -20,6 +21,11 @@ onMounted(() => {
   mediaQuery = window.matchMedia(compactSidebarQuery)
   syncSidebarMode(mediaQuery.matches)
   mediaQuery.addEventListener('change', handleSidebarModeChange)
+
+  // Enable transitions after a short delay to prevent initial load animation
+  setTimeout(() => {
+    isMounted.value = true
+  }, 50)
 })
 
 onBeforeUnmount(() => {
@@ -53,7 +59,8 @@ const closeCompactSidebar = () => {
     class="sidebar"
     :class="{
       'sidebar--closed': !isSidebarOpen,
-      'sidebar--compact': isCompactSidebar
+      'sidebar--compact': isCompactSidebar,
+      'sidebar--mounted': isMounted
     }"
   >
     <div class="sidebar__logo">
@@ -103,8 +110,11 @@ const closeCompactSidebar = () => {
   top: 0;
   flex-shrink: 0;
   margin-left: 0;
-  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+}
+
+.sidebar--mounted {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar--closed {
