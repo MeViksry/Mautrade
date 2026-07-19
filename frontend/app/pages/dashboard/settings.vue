@@ -1095,8 +1095,9 @@ input:checked + .slider:before {
 
 @media (max-width: 768px) {
   .settings-container {
+    display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 0;
   }
   .settings-sidebar {
     width: 100%;
@@ -1104,11 +1105,17 @@ input:checked + .slider:before {
     overflow-x: auto;
     border-right: none;
     border-bottom: 1px solid var(--line);
-    padding-right: 0;
-    padding-bottom: 1rem;
+    padding: 0;
   }
   .settings-tab {
     white-space: nowrap;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    padding: 1rem 1.5rem;
+  }
+  .settings-tab.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent);
   }
   .skeleton-sidebar-item {
     width: 140px;
