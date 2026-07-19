@@ -67,8 +67,11 @@ const closeCompactSidebar = () => {
     }"
   >
     <div class="sidebar__logo">
-      <NuxtLink to="/admin">
-        ADMIN<span class="dot" />
+      <NuxtLink to="/admin" class="logo-link">
+        <div class="logo-main">
+          MAUTRADE<span class="dot" />
+        </div>
+        <span class="logo-subtitle">admin panel</span>
       </NuxtLink>
 
       <button
@@ -202,9 +205,24 @@ const closeCompactSidebar = () => {
 }
 .sidebar__logo a {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  color: var(--accent);
+  text-decoration: none;
+}
+.sidebar__logo .logo-main {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--accent);
+}
+.sidebar__logo .logo-subtitle {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  margin-top: -2px;
 }
 .sidebar__logo .dot {
   width: 6px; height: 6px;
