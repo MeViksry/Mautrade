@@ -1818,18 +1818,100 @@ const submitDeposit = () => {
   .layer-pagination__page {
     font-size: 11px;
   }
+}
 
+@media (max-width: 640px), (max-height: 740px) {
   .deposit-modal {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
 
-  .deposit-copy {
-    grid-template-columns: 1fr;
+  .deposit-modal__box {
+    max-height: 98vh;
+  }
+
+  .deposit-modal__header {
+    padding: 0.75rem 1rem;
+    gap: 0.25rem;
+  }
+
+  .deposit-modal__header h3 {
+    font-size: 1rem;
+  }
+
+  .deposit-modal__icon-btn,
+  .deposit-modal__spacer {
+    width: 28px;
+    height: 28px;
+  }
+
+  .deposit-methods,
+  .deposit-form {
+    padding: 0.75rem 1rem;
     gap: 0.5rem;
   }
 
-  .deposit-copy button {
-    border-left: 1px solid var(--accent);
+  .deposit-method {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .deposit-method__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .deposit-method__title {
+    font-size: 0.9rem;
+  }
+
+  .deposit-qr {
+    padding: 0.5rem;
+  }
+
+  .deposit-qr img {
+    width: 120px;
+    height: 120px;
+  }
+
+  .deposit-download {
+    padding: 0.4rem 0.75rem;
+    font-size: 9px;
+  }
+
+  .deposit-field {
+    gap: 0.2rem;
+  }
+
+  .deposit-field > span {
+    font-size: 9px;
+  }
+
+  .deposit-field input {
+    height: 34px;
+    font-size: 11px;
+    padding: 0 0.5rem;
+  }
+
+  .deposit-copy button,
+  .deposit-amount span {
+    height: 34px;
+    font-size: 9px;
+    padding: 0 0.5rem;
+  }
+
+  .deposit-copy {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0;
+  }
+
+  .deposit-submit {
+    height: 36px;
+    font-size: 10px;
+  }
+
+  .deposit-error,
+  .deposit-success {
+    font-size: 9px;
   }
 }
 
