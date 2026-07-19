@@ -81,10 +81,14 @@ const syncExchangeListHeight = () => {
 onMounted(async () => {
   loading.value = true
   try {
+    // Minimum loading time so skeleton shimmer is visible (remove when using real API)
+    const minDelay = new Promise(resolve => setTimeout(resolve, 1500))
+
     const [statsData, exchangesData, layersData] = await Promise.all([
       getUserStats(),
       getExchangeBindings(),
-      getActiveLayers()
+      getActiveLayers(),
+      minDelay
     ])
     stats.value = statsData
     exchanges.value = exchangesData
