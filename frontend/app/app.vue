@@ -68,7 +68,7 @@ useSeoMeta({
   <div>
     <div class="noise-overlay" />
     <NuxtLayout>
-      <NuxtPage />
+      <NuxtPage :page-key="route => route.fullPath" />
     </NuxtLayout>
   </div>
 </template>
