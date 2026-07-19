@@ -1101,27 +1101,12 @@ input:checked + .slider:before {
   }
   .settings-sidebar {
     width: 100%;
-    flex-direction: row;
-    overflow-x: auto;
     border-right: none;
     border-bottom: 1px solid var(--line);
-    padding: 0;
+    padding: 1rem 0;
   }
   .settings-tab {
-    white-space: nowrap;
-    border-left: none;
-    border-bottom: 3px solid transparent;
     padding: 1rem 1.5rem;
-  }
-  .settings-tab.active {
-    border-left-color: transparent;
-    border-bottom-color: var(--accent);
-  }
-  .skeleton-sidebar-item {
-    width: 140px;
-    height: 48px;
-    margin-right: 0.5rem;
-    margin-bottom: 0;
   }
 }
 
