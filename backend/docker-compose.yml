@@ -30,7 +30,7 @@ services:
         condition: service_started
 
   postgres:
-    image: postgres:18
+    image: postgres:17
     environment:
       POSTGRES_USER: mautrade
       POSTGRES_PASSWORD: mautrade
