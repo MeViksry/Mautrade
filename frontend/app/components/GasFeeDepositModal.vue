@@ -7,7 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  submitted: [payload: { amount: number, txId: string }]
+  'submitted': [payload: { amount: number, txId: string }]
 }>()
 
 const depositStep = ref<'methods' | 'deposit'>('methods')
@@ -594,16 +594,78 @@ const submitDeposit = () => {
 
 @media (max-width: 640px) {
   .deposit-modal {
+    padding: 0.75rem;
+  }
+
+  .deposit-modal__box {
+    max-height: 95vh;
+  }
+
+  .deposit-modal__header {
     padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .deposit-modal__header h3 {
+    font-size: 1.15rem;
+  }
+
+  .deposit-modal__icon-btn,
+  .deposit-modal__spacer {
+    width: 32px;
+    height: 32px;
+  }
+
+  .deposit-methods,
+  .deposit-form {
+    padding: 1rem;
+    gap: 0.85rem;
+  }
+
+  .deposit-method {
+    padding: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .deposit-method__icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .deposit-method__title {
+    font-size: 0.95rem;
+  }
+
+  .deposit-qr {
+    padding: 0.75rem;
+  }
+
+  .deposit-qr img {
+    width: 160px;
+    height: 160px;
+  }
+
+  .deposit-field {
+    gap: 0.4rem;
+  }
+
+  .deposit-field input,
+  .deposit-copy button,
+  .deposit-amount span {
+    height: 38px;
   }
 
   .deposit-copy {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .deposit-copy button {
     border-left: 1px solid var(--accent);
+  }
+
+  .deposit-submit {
+    height: 40px;
   }
 }
 </style>
