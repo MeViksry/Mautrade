@@ -1097,12 +1097,24 @@ input:checked + .slider:before {
   }
   .settings-sidebar {
     width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
     border-right: none;
     border-bottom: 1px solid var(--line);
-    padding: 1rem 0;
+    padding: 1rem;
+    gap: 0.5rem;
   }
   .settings-tab {
-    padding: 1rem 1.5rem;
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+  .settings-tab.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent);
   }
   .skeleton-sidebar-item {
     margin: 1rem 1.5rem;
