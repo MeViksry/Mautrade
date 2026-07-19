@@ -16,8 +16,6 @@ concurrency:
   group: mautrade-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  HOME: /home/runner
 
 jobs:
   # ──────────────────────────────────────────────
