@@ -592,80 +592,98 @@ const submitDeposit = () => {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 740px) {
   .deposit-modal {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
 
   .deposit-modal__box {
-    max-height: 95vh;
+    max-height: 98vh;
   }
 
   .deposit-modal__header {
-    padding: 1rem;
-    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    gap: 0.25rem;
   }
 
   .deposit-modal__header h3 {
-    font-size: 1.15rem;
+    font-size: 1rem;
   }
 
   .deposit-modal__icon-btn,
   .deposit-modal__spacer {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
 
   .deposit-methods,
   .deposit-form {
-    padding: 1rem;
-    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
   }
 
   .deposit-method {
-    padding: 0.75rem;
-    gap: 0.65rem;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
   }
 
   .deposit-method__icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
 
   .deposit-method__title {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .deposit-qr {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
 
   .deposit-qr img {
-    width: 160px;
-    height: 160px;
+    width: 120px;
+    height: 120px;
+  }
+
+  .deposit-download {
+    padding: 0.4rem 0.75rem;
+    font-size: 9px;
   }
 
   .deposit-field {
-    gap: 0.4rem;
+    gap: 0.2rem;
   }
 
-  .deposit-field input,
+  .deposit-field > span {
+    font-size: 9px;
+  }
+
+  .deposit-field input {
+    height: 34px;
+    font-size: 11px;
+    padding: 0 0.5rem;
+  }
+
   .deposit-copy button,
   .deposit-amount span {
-    height: 38px;
+    height: 34px;
+    font-size: 9px;
+    padding: 0 0.5rem;
   }
 
   .deposit-copy {
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
-  }
-
-  .deposit-copy button {
-    border-left: 1px solid var(--accent);
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0;
   }
 
   .deposit-submit {
-    height: 40px;
+    height: 36px;
+    font-size: 10px;
+  }
+
+  .deposit-error,
+  .deposit-success {
+    font-size: 9px;
   }
 }
 </style>
