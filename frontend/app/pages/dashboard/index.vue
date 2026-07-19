@@ -668,6 +668,9 @@ const submitDeposit = () => {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .page-header {
@@ -696,6 +699,10 @@ const submitDeposit = () => {
 
 .skeleton-loading {
   animation: skeletonFadeIn 0.4s ease-out;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  min-width: 0;
 }
 
 @keyframes skeletonFadeIn {
@@ -717,6 +724,7 @@ const submitDeposit = () => {
   background-size: 800px 100%;
   animation: shimmer 1.8s ease-in-out infinite;
   border-radius: 4px;
+  max-width: 100%;
 }
 
 .skeleton-page-header {
@@ -731,8 +739,10 @@ const submitDeposit = () => {
 /* Skeleton Stats Grid */
 .skeleton-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.5rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .skeleton-stat-card {
@@ -742,6 +752,8 @@ const submitDeposit = () => {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .skeleton-stat-label {
@@ -768,6 +780,8 @@ const submitDeposit = () => {
   column-gap: 2rem;
   row-gap: 2rem;
   margin-top: 2.5rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .skeleton-section-header {
@@ -793,6 +807,8 @@ const submitDeposit = () => {
 .skeleton-layers {
   border: 1px solid var(--line);
   margin-top: 1rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .skeleton-layer-row {
@@ -802,6 +818,8 @@ const submitDeposit = () => {
   padding: 1.5rem;
   border-bottom: 1px solid var(--line);
   background: var(--bg-elevated);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .skeleton-layer-row:last-child {
