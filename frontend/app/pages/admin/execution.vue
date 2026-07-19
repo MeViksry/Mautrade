@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,9 +42,12 @@ const orderSide = ref<'buy' | 'sell'>('buy')
 const orderPrice = ref('')
 const orderAmount = ref('')
 
-// Dummy data for live chart
 const chartLabels = ref(Array.from({ length: 50 }, (_, i) => `T-${50 - i}`))
 const chartDataValues = ref(Array.from({ length: 50 }, () => 65000 + (Math.random() - 0.5) * 100))
+
+const currentPrice = computed(() => chartDataValues.value[chartDataValues.value.length - 1] ?? 65000)
+const baseAsset = computed(() => selectedCoin.value.split('/')[0] ?? 'BTC')
+const quoteAsset = computed(() => selectedCoin.value.split('/')[1] ?? 'USDT')
 
 const chartData = computed(() => ({
   labels: chartLabels.value,
@@ -55,7 +58,7 @@ const chartData = computed(() => ({
       borderColor: '#ff5a00',
       data: chartDataValues.value,
       fill: false,
-      tension: 0.1,
+      tension: 0.16,
       pointRadius: 0
     }
   ]
@@ -65,7 +68,16 @@ const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   animation: { duration: 0 },
-  plugins: { legend: { display: false } },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#121212',
+      borderColor: '#ff5a00',
+      borderWidth: 1,
+      titleColor: '#ebebeb',
+      bodyColor: '#c8c8c8'
+    }
+  },
   scales: {
     y: {
       position: 'right',
@@ -73,18 +85,52 @@ const chartOptions = {
       ticks: { color: '#888' }
     },
     x: {
-      grid: { display: false },
-      ticks: { display: false }
+      grid: { color: 'rgba(255,255,255,0.025)' },
+      ticks: { color: '#666', maxTicksLimit: 8 }
     }
   }
 }
 
-// Orderbook Mock
-const orderbookAsks = ref(Array.from({ length: 15 }, (_, i) => ({ price: 65100 + i * 10, amount: (Math.random() * 2).toFixed(4) })).reverse())
-const orderbookBids = ref(Array.from({ length: 15 }, (_, i) => ({ price: 65090 - i * 10, amount: (Math.random() * 2).toFixed(4) })))
+const marketStats = [
+  { label: '24H Change', value: '+1.09%', tone: 'up' },
+  { label: '24H High', value: '64,967.25' },
+  { label: '24H Low', value: '63,887.73' },
+  { label: '24H Volume', value: '8,354.54 BTC' },
+  { label: 'Network', value: 'BTC (5)' }
+]
 
-// Live Trades Mock
-const recentTrades = ref(Array.from({ length: 20 }, (_, i) => ({
+const watchlist = [
+  { symbol: 'ETH/USDT', price: '3,420.12', change: '+1.30%' },
+  { symbol: 'SOL/USDT', price: '182.33', change: '+2.57%' },
+  { symbol: 'BNB/USDT', price: '569.31', change: '+0.30%' },
+  { symbol: 'PEPE/USDT', price: '0.00002028', change: '+5.69%' },
+  { symbol: 'XRP/USDT', price: '1.0967', change: '+0.65%' },
+  { symbol: 'DOGE/USDT', price: '0.07253', change: '+0.23%' }
+]
+
+const topMovers = [
+  { symbol: 'BANK/USDT', change: '+56.89%' },
+  { symbol: 'TLM/USDT', change: '+55.88%' },
+  { symbol: 'HOME/USDT', change: '+9.47%' }
+]
+
+const orderbookAsks = ref(
+  Array.from({ length: 13 }, (_, i) => ({
+    price: 65100 + i * 8,
+    amount: (Math.random() * 2).toFixed(4),
+    total: (Math.random() * 900).toFixed(2)
+  })).reverse()
+)
+
+const orderbookBids = ref(
+  Array.from({ length: 13 }, (_, i) => ({
+    price: 65090 - i * 8,
+    amount: (Math.random() * 2).toFixed(4),
+    total: (Math.random() * 900).toFixed(2)
+  }))
+)
+
+const recentTrades = ref(Array.from({ length: 16 }, (_, i) => ({
   time: new Date(Date.now() - i * 5000).toLocaleTimeString(),
   price: 65090 + (Math.random() - 0.5) * 20,
   amount: (Math.random() * 1.5).toFixed(4),
@@ -110,27 +156,29 @@ const completedLayers = ref([
   { id: 'layer-eth-c', pair: 'ETH/USDT', entryPrice: 3400, closePrice: 3550, pnl: 4.4, date: '2026-07-18' }
 ])
 
+const openOrders = ref([
+  { id: 'EX-091', pair: 'BTC/USDT', type: 'Limit Buy', side: 'Buy', price: '64,500.00', amount: '0.0185', filled: '62%', status: 'Working' },
+  { id: 'EX-092', pair: 'ETH/USDT', type: 'Limit Sell', side: 'Sell', price: '3,520.00', amount: '1.2400', filled: '18%', status: 'Queued' }
+])
+
 let intervalId: ReturnType<typeof setInterval>
 
 onMounted(() => {
-  // Simulate live data websocket
   intervalId = setInterval(() => {
-    // Update chart
     chartLabels.value.push('Now')
     chartLabels.value.shift()
+
     const lastVal = chartDataValues.value[chartDataValues.value.length - 1] ?? 65000
     chartDataValues.value.push(lastVal + (Math.random() - 0.5) * 20)
     chartDataValues.value.shift()
 
-    // Update orderbook randomly
-    if (orderbookAsks.value[14]) {
-      orderbookAsks.value[14].amount = (Math.random() * 2).toFixed(4)
+    if (orderbookAsks.value[12]) {
+      orderbookAsks.value[12].amount = (Math.random() * 2).toFixed(4)
     }
     if (orderbookBids.value[0]) {
       orderbookBids.value[0].amount = (Math.random() * 2).toFixed(4)
     }
 
-    // Add recent trade
     recentTrades.value.unshift({
       time: new Date().toLocaleTimeString(),
       price: lastVal + (Math.random() - 0.5) * 10,
@@ -145,13 +193,13 @@ onUnmounted(() => {
   clearInterval(intervalId)
 })
 
-const handleExecuteOrder = () => {
+const handleExecuteOrder = (side = orderSide.value) => {
+  orderSide.value = side
   console.log(`Executing ${orderSide.value} ${orderType.value} for ${selectedCoin.value}`)
-  // Implementation for order execution goes here
 }
 
 const cancelAllLayers = () => {
-  if (confirm('Are you sure you want to cancel all active layers?')) {
+  if (confirm('Cancel all active master layers?')) {
     activeLayers.value = []
   }
 }
@@ -159,107 +207,132 @@ const cancelAllLayers = () => {
 
 <template>
   <div class="execution-page">
-    <header class="page-header">
-      <h1 class="page-title">
-        Execution Hub
-      </h1>
-      <div class="header-controls">
-        <select
-          v-model="selectedCoin"
-          class="coin-select"
-        >
-          <option
-            v-for="coin in coins"
-            :key="coin"
-            :value="coin"
+    <section class="market-strip">
+      <div class="market-identity">
+        <div class="pair-select">
+          <span class="pair-dot" />
+          <select
+            v-model="selectedCoin"
+            class="coin-select"
           >
-            {{ coin }}
-          </option>
-        </select>
-      </div>
-    </header>
+            <option
+              v-for="coin in coins"
+              :key="coin"
+              :value="coin"
+            >
+              {{ coin }}
+            </option>
+          </select>
+        </div>
 
-    <div class="trading-layout">
-      <!-- Left Column: Chart and Orders -->
-      <div class="main-column">
-        <div class="chart-panel panel">
-          <div class="panel-header">
-            <h3>Live Chart (Custom feed)</h3>
+        <div class="market-price">
+          <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
+          <span>Rp1.164.817.215,30</span>
+        </div>
+      </div>
+
+      <div class="market-stats">
+        <div
+          v-for="stat in marketStats"
+          :key="stat.label"
+          class="market-stat"
+        >
+          <span>{{ stat.label }}</span>
+          <strong :class="{ 'text-success': stat.tone === 'up' }">{{ stat.value }}</strong>
+        </div>
+      </div>
+
+      <div class="market-actions">
+        <button type="button">
+          <UIcon name="lucide:activity" />
+          Live Feed
+        </button>
+        <button type="button">
+          <UIcon name="lucide:settings-2" />
+          Controls
+        </button>
+      </div>
+    </section>
+
+    <section class="terminal-grid">
+      <aside class="orderbook-panel terminal-panel">
+        <div class="terminal-panel__header">
+          <h2>Order Book</h2>
+          <span>0.01</span>
+        </div>
+
+        <div class="book-table">
+          <div class="book-head">
+            <span>Price</span>
+            <span>Amount</span>
+            <span>Total</span>
           </div>
+
+          <div class="book-side book-side--asks">
+            <div
+              v-for="(ask, index) in orderbookAsks"
+              :key="`ask-${index}`"
+              class="book-row"
+            >
+              <span class="price-sell">{{ ask.price.toFixed(2) }}</span>
+              <span>{{ ask.amount }}</span>
+              <span>{{ ask.total }}</span>
+            </div>
+          </div>
+
+          <div class="book-spread">
+            <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
+            <span>Spread 0.09%</span>
+          </div>
+
+          <div class="book-side book-side--bids">
+            <div
+              v-for="(bid, index) in orderbookBids"
+              :key="`bid-${index}`"
+              class="book-row"
+            >
+              <span class="price-buy">{{ bid.price.toFixed(2) }}</span>
+              <span>{{ bid.amount }}</span>
+              <span>{{ bid.total }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="trade-zone">
+        <section class="chart-panel terminal-panel">
+          <div class="terminal-panel__header chart-header">
+            <div class="chart-tabs">
+              <button class="active">Chart</button>
+              <button>Info</button>
+              <button>Data</button>
+              <button>Analysis</button>
+            </div>
+            <div class="timeframe-tabs">
+              <button>15m</button>
+              <button>1h</button>
+              <button class="active">1D</button>
+              <button>1W</button>
+            </div>
+          </div>
+
+          <div class="chart-meta">
+            <span>Open <strong>64,834.21</strong></span>
+            <span>High <strong>64,967.25</strong></span>
+            <span>Low <strong>63,887.73</strong></span>
+            <span>MA(7) <strong>64,206.98</strong></span>
+          </div>
+
           <div class="chart-wrapper">
             <Line
               :data="chartData"
               :options="chartOptions as any"
             />
           </div>
-        </div>
+        </section>
 
-        <div class="layers-panel panel">
-          <div class="panel-header">
-            <h3>Active Master Layers</h3>
-            <div class="panel-actions">
-              <button
-                class="action-btn cancel-all"
-                @click="cancelAllLayers"
-              >
-                Cancel All
-              </button>
-              <button class="action-btn sell-limit">
-                Bulk Sell Limit
-              </button>
-            </div>
-          </div>
-          <div class="layers-list">
-            <LayerRow
-              v-for="layer in activeLayers"
-              :key="layer.id"
-              :layer="layer"
-            />
-            <div
-              v-if="activeLayers.length === 0"
-              class="empty-state"
-            >
-              No active layers running.
-            </div>
-          </div>
-        </div>
-
-        <div class="history-panel panel">
-          <div class="panel-header">
-            <h3>Completed Layers (History)</h3>
-          </div>
-          <table class="history-table">
-            <thead>
-              <tr>
-                <th>Pair</th>
-                <th>Entry</th>
-                <th>Close</th>
-                <th>PnL (%)</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="h in completedLayers"
-                :key="h.id"
-              >
-                <td>{{ h.pair }}</td>
-                <td>{{ h.entryPrice }}</td>
-                <td>{{ h.closePrice }}</td>
-                <td :class="h.pnl >= 0 ? 'text-success' : 'text-danger'">
-                  +{{ h.pnl }}%
-                </td>
-                <td>{{ h.date }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Right Column: Orderbook and Execution -->
-      <div class="side-column">
-        <div class="execution-panel panel">
-          <div class="order-types">
+        <section class="order-entry terminal-panel">
+          <div class="order-entry__tabs">
             <button
               type="button"
               :class="{ active: orderType === 'limit' }"
@@ -274,99 +347,221 @@ const cancelAllLayers = () => {
             >
               Market
             </button>
+            <button type="button">Stop Limit</button>
           </div>
 
-          <div class="order-form">
-            <div
-              v-if="orderType === 'limit'"
-              class="form-group"
-            >
-              <label>Price (USDT)</label>
-              <input
-                v-model="orderPrice"
-                type="number"
-                placeholder="0.00"
-                class="form-input"
+          <div class="order-ticket-grid">
+            <div class="order-ticket order-ticket--buy">
+              <label>Price</label>
+              <div class="ticket-input">
+                <input
+                  v-model="orderPrice"
+                  type="number"
+                  placeholder="Market price"
+                >
+                <span>{{ quoteAsset }}</span>
+              </div>
+
+              <label>Amount</label>
+              <div class="ticket-input">
+                <input
+                  v-model="orderAmount"
+                  type="number"
+                  placeholder="0.00"
+                >
+                <span>{{ baseAsset }}</span>
+              </div>
+
+              <div class="ticket-summary">
+                <span>Available</span>
+                <strong>8,177.18 USDT</strong>
+              </div>
+
+              <button
+                class="submit-order submit-order--buy"
+                type="button"
+                @click="handleExecuteOrder('buy')"
               >
+                Buy {{ baseAsset }}
+              </button>
             </div>
-            <div class="form-group">
-              <label>Amount ({{ selectedCoin.split('/')[0] }})</label>
-              <input
-                v-model="orderAmount"
-                type="number"
-                placeholder="0.00"
-                class="form-input"
+
+            <div class="order-ticket order-ticket--sell">
+              <label>Price</label>
+              <div class="ticket-input">
+                <input
+                  v-model="orderPrice"
+                  type="number"
+                  placeholder="Market price"
+                >
+                <span>{{ quoteAsset }}</span>
+              </div>
+
+              <label>Amount</label>
+              <div class="ticket-input">
+                <input
+                  v-model="orderAmount"
+                  type="number"
+                  placeholder="0.00"
+                >
+                <span>{{ baseAsset }}</span>
+              </div>
+
+              <div class="ticket-summary">
+                <span>Locked</span>
+                <strong>0.00000000 {{ baseAsset }}</strong>
+              </div>
+
+              <button
+                class="submit-order submit-order--sell"
+                type="button"
+                @click="handleExecuteOrder('sell')"
               >
+                Sell {{ baseAsset }}
+              </button>
             </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="market-rail">
+        <section class="watchlist-panel terminal-panel">
+          <div class="terminal-panel__header">
+            <h2>Markets</h2>
+            <span>USDT</span>
+          </div>
+
+          <div class="watchlist">
             <button
-              :class="['execute-btn', orderSide]"
-              @click="handleExecuteOrder"
+              v-for="item in watchlist"
+              :key="item.symbol"
+              type="button"
+              class="watch-row"
+              @click="selectedCoin = item.symbol"
             >
-              Execute {{ orderSide.toUpperCase() }} Layer
+              <span>{{ item.symbol }}</span>
+              <strong>{{ item.price }}</strong>
+              <em>{{ item.change }}</em>
             </button>
           </div>
-        </div>
+        </section>
 
-        <div class="orderbook-panel panel">
-          <div class="panel-header">
-            <h3>Order Book</h3>
+        <section class="recent-trades-panel terminal-panel">
+          <div class="terminal-panel__header">
+            <h2>Market Trades</h2>
+            <span>Live</span>
           </div>
-          <div class="ob-container">
-            <div class="ob-header">
-              <span>Price(USDT)</span>
-              <span>Amount</span>
-            </div>
-            <div class="ob-asks">
-              <div
-                v-for="(ask, i) in orderbookAsks"
-                :key="'a'+i"
-                class="ob-row ask"
-              >
-                <span class="price">{{ ask.price.toFixed(2) }}</span>
-                <span>{{ ask.amount }}</span>
-              </div>
-            </div>
-            <div class="ob-spread">
-              <span class="spread-price">{{ chartDataValues[chartDataValues.length - 1]?.toFixed(2) ?? '0.00' }}</span>
-            </div>
-            <div class="ob-bids">
-              <div
-                v-for="(bid, i) in orderbookBids"
-                :key="'b'+i"
-                class="ob-row bid"
-              >
-                <span class="price">{{ bid.price.toFixed(2) }}</span>
-                <span>{{ bid.amount }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div class="recent-trades-panel panel">
-          <div class="panel-header">
-            <h3>Recent Trades</h3>
-          </div>
-          <div class="trades-container">
-            <div class="trade-header">
+          <div class="trade-table">
+            <div class="trade-head">
               <span>Price</span>
               <span>Amount</span>
               <span>Time</span>
             </div>
-            <div class="trades-list">
-              <div
-                v-for="(trade, i) in recentTrades"
-                :key="'t'+i"
-                class="trade-row"
-              >
-                <span :class="trade.type === 'buy' ? 'text-success' : 'text-danger'">{{ trade.price.toFixed(2) }}</span>
-                <span>{{ trade.amount }}</span>
-                <span class="text-mute">{{ trade.time }}</span>
-              </div>
+            <div
+              v-for="(trade, index) in recentTrades"
+              :key="`trade-${index}`"
+              class="trade-row"
+            >
+              <span :class="trade.type === 'buy' ? 'price-buy' : 'price-sell'">{{ trade.price.toFixed(2) }}</span>
+              <span>{{ trade.amount }}</span>
+              <span>{{ trade.time }}</span>
             </div>
           </div>
+        </section>
+
+        <section class="top-movers-panel terminal-panel">
+          <div class="terminal-panel__header">
+            <h2>Top Movers</h2>
+            <span>24H</span>
+          </div>
+
+          <div class="mover-list">
+            <div
+              v-for="item in topMovers"
+              :key="item.symbol"
+              class="mover-row"
+            >
+              <span>{{ item.symbol }}</span>
+              <strong>{{ item.change }}</strong>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="bottom-desk terminal-panel">
+      <div class="bottom-tabs">
+        <button class="active">Open Orders({{ openOrders.length }})</button>
+        <button>Active Layers({{ activeLayers.length }})</button>
+        <button>Completed History</button>
+        <button>Risk Queue</button>
+        <div class="bottom-actions">
+          <button
+            type="button"
+            class="cancel-all"
+            @click="cancelAllLayers"
+          >
+            Cancel All
+          </button>
         </div>
       </div>
-    </div>
+
+      <div class="orders-table-wrap">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Pair</th>
+              <th>Type</th>
+              <th>Side</th>
+              <th>Price</th>
+              <th>Amount</th>
+              <th>Filled</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="order in openOrders"
+              :key="order.id"
+            >
+              <td>{{ order.id }}</td>
+              <td>{{ order.pair }}</td>
+              <td>{{ order.type }}</td>
+              <td :class="order.side === 'Buy' ? 'price-buy' : 'price-sell'">{{ order.side }}</td>
+              <td>{{ order.price }}</td>
+              <td>{{ order.amount }}</td>
+              <td>{{ order.filled }}</td>
+              <td>{{ order.status }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="layers-list">
+        <LayerRow
+          v-for="layer in activeLayers"
+          :key="layer.id"
+          :layer="layer"
+        />
+        <div
+          v-if="activeLayers.length === 0"
+          class="empty-state"
+        >
+          No active layers running.
+        </div>
+      </div>
+
+      <div class="completed-strip">
+        <span
+          v-for="item in completedLayers"
+          :key="item.id"
+        >
+          {{ item.pair }} closed at {{ item.closePrice }} <strong class="text-success">+{{ item.pnl }}%</strong>
+        </span>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -374,297 +569,588 @@ const cancelAllLayers = () => {
 .execution-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
+.market-strip,
+.terminal-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.market-strip {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.1fr) minmax(420px, 2fr) auto;
   align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
 }
 
-.page-title {
-  font-family: 'Oswald', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  color: var(--text);
+.market-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.pair-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pair-dot {
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
+  display: inline-block;
 }
 
 .coin-select {
+  min-width: 136px;
   background: var(--charcoal);
   border: 1px solid var(--line);
   color: var(--text);
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.45rem 0.65rem;
+  border-radius: 4px;
   font-family: 'Oswald', sans-serif;
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
   outline: none;
 }
 
-.trading-layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 1.5rem;
-}
-
-.main-column, .side-column {
+.market-price {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  min-width: 0;
 }
 
-.panel {
-  background: var(--bg-elevated);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.panel-header h3 {
+.market-price strong {
+  color: #00c087;
   font-family: 'Oswald', sans-serif;
-  font-size: 1rem;
+  font-size: 1.45rem;
   font-weight: 500;
-  letter-spacing: 0.05em;
-  color: var(--text);
-  margin: 0;
+  line-height: 1;
 }
 
-.chart-wrapper {
-  height: 400px;
-  padding: 1rem;
+.market-price span {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.7rem;
 }
 
-.layers-list {
-  padding: 1rem;
+.market-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.market-stat {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
-.panel-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.action-btn {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--text);
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cancel-all {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.cancel-all:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
-}
-
-.sell-limit {
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.sell-limit:hover {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: #fbbf24;
-}
-
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.history-table th, .history-table td {
-  padding: 0.75rem 1.5rem;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.9rem;
-}
-
-.history-table th {
+.market-stat span,
+.terminal-panel__header span,
+.chart-meta,
+.ticket-summary,
+.completed-strip {
+  color: var(--text-mute);
   font-family: var(--mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--text-mute);
-  border-bottom: 2px solid var(--line);
+  font-size: 0.68rem;
 }
 
-.order-types {
+.market-stat strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.market-actions {
   display: flex;
-  border-bottom: 1px solid var(--line);
+  align-items: center;
+  gap: 0.45rem;
 }
 
-.order-types button {
-  flex: 1;
-  background: transparent;
-  border: none;
-  padding: 1rem;
-  color: var(--text-mute);
-  font-size: 0.9rem;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.order-types button:hover {
+.market-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  border: 1px solid var(--line);
   background: var(--charcoal);
   color: var(--text);
+  border-radius: 4px;
+  padding: 0 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
 }
 
-.order-types button.active {
+.terminal-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(270px, 330px);
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.trade-zone,
+.market-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.terminal-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.terminal-panel__header {
+  min-height: 42px;
+  padding: 0 0.85rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.terminal-panel__header h2,
+.terminal-panel__header h3 {
+  margin: 0;
+  color: var(--text);
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.book-table,
+.trade-table {
+  padding: 0.65rem 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.book-head,
+.book-row,
+.trade-head,
+.trade-row,
+.watch-row,
+.mover-row {
+  display: grid;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.book-head,
+.book-row {
+  grid-template-columns: 1fr 0.8fr 0.8fr;
+}
+
+.book-head,
+.trade-head {
+  color: var(--text-mute);
+  padding-bottom: 0.35rem;
+}
+
+.book-row,
+.trade-row {
+  position: relative;
+  min-height: 22px;
+  color: var(--silver);
+}
+
+.book-row span:nth-child(2),
+.book-row span:nth-child(3),
+.trade-row span:nth-child(2),
+.trade-row span:nth-child(3) {
+  text-align: right;
+}
+
+.book-spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.45rem -0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 90, 0, 0.06);
+}
+
+.book-spread strong {
+  color: #00c087;
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.25rem;
+}
+
+.book-spread span {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
+.chart-panel {
+  min-height: 480px;
+}
+
+.chart-header {
+  align-items: stretch;
+  padding: 0 0.75rem;
+}
+
+.chart-tabs,
+.timeframe-tabs,
+.order-entry__tabs,
+.bottom-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.chart-tabs button,
+.timeframe-tabs button,
+.order-entry__tabs button,
+.bottom-tabs button {
+  height: 42px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-mute);
+  padding: 0 0.65rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.chart-tabs button.active,
+.timeframe-tabs button.active,
+.order-entry__tabs button.active,
+.bottom-tabs button.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
 
-.order-sides {
+.chart-meta {
   display: flex;
-  gap: 0.5rem;
-  padding: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.7rem 0.85rem 0;
 }
 
-.side-btn {
-  flex: 1;
-  padding: 0.5rem;
-  border-radius: 4px;
+.chart-meta strong {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.chart-wrapper {
+  height: 390px;
+  padding: 0.5rem 0.75rem 0.85rem;
+}
+
+.order-entry {
+  min-height: 214px;
+}
+
+.order-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0.9rem;
+}
+
+.order-ticket {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.order-ticket label {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.ticket-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   border: 1px solid var(--line);
   background: var(--charcoal);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ticket-input input {
+  width: 100%;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0 0.7rem;
+  outline: none;
+  font-family: var(--mono);
+}
+
+.ticket-input span {
+  padding-right: 0.7rem;
   color: var(--text-mute);
-  cursor: pointer;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.2s;
+  font-family: var(--mono);
+  font-size: 0.72rem;
 }
 
-.side-btn.buy.active {
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
-  border-color: #4ade80;
-}
-
-.side-btn.sell.active {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: #ef4444;
-}
-
-.order-form {
-  padding: 0 1rem 1rem 1rem;
+.ticket-summary {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   gap: 1rem;
 }
 
-.form-group label {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-mute);
-  margin-bottom: 0.25rem;
+.ticket-summary strong {
+  color: var(--silver);
+  font-weight: 500;
 }
 
-.form-input {
-  width: 100%;
-  background: var(--charcoal);
-  border: 1px solid var(--line);
-  color: var(--text);
-  padding: 0.75rem;
+.submit-order {
+  height: 40px;
+  border: 0;
   border-radius: 4px;
+  color: #030303;
   font-family: var(--mono);
-}
-
-.execute-btn {
-  width: 100%;
-  padding: 0.85rem;
-  border-radius: 4px;
-  border: none;
-  color: #fff;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: opacity 0.2s;
 }
 
-.execute-btn.buy {
-  background: #22c55e;
+.submit-order--buy {
+  background: #00c087;
 }
 
-.execute-btn.sell {
-  background: #ef4444;
+.submit-order--sell {
+  background: #f6465d;
+  color: #fff;
 }
 
-.execute-btn:hover {
-  opacity: 0.9;
+.watchlist,
+.mover-list {
+  padding: 0.55rem;
 }
 
-.ob-container, .trades-container {
-  padding: 1rem;
+.watch-row {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 0.45rem;
   font-family: var(--mono);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  text-align: left;
 }
 
-.ob-header, .trade-header {
-  display: flex;
-  justify-content: space-between;
-  color: var(--text-mute);
-  font-size: 0.75rem;
-  margin-bottom: 0.5rem;
+.watch-row:hover {
+  background: var(--charcoal);
 }
 
-.ob-row, .trade-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.15rem 0;
+.watch-row strong,
+.watch-row em {
+  font-weight: 500;
+  font-style: normal;
+  white-space: nowrap;
 }
 
-.ob-row.ask .price { color: #ef4444; }
-.ob-row.bid .price { color: #4ade80; }
+.watch-row em,
+.mover-row strong,
+.text-success,
+.price-buy {
+  color: #00c087;
+}
 
-.ob-spread {
-  text-align: center;
-  padding: 0.5rem 0;
-  font-size: 1.1rem;
-  font-weight: bold;
-  border-top: 1px solid var(--line);
+.recent-trades-panel {
+  flex: 1;
+}
+
+.trade-head,
+.trade-row {
+  grid-template-columns: 1fr 0.8fr 0.8fr;
+}
+
+.top-movers-panel {
+  min-height: 138px;
+}
+
+.mover-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 30px;
+  padding: 0 0.45rem;
+  color: var(--silver);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.bottom-desk {
+  min-height: 240px;
+}
+
+.bottom-tabs {
   border-bottom: 1px solid var(--line);
-  margin: 0.5rem 0;
+  padding: 0 0.85rem;
 }
 
-.text-success { color: #4ade80; }
-.text-danger { color: #ef4444; }
-.text-mute { color: var(--text-mute); }
+.bottom-actions {
+  margin-left: auto;
+}
+
+.cancel-all {
+  color: #f6465d !important;
+}
+
+.orders-table-wrap {
+  overflow-x: auto;
+}
+
+.orders-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.orders-table th,
+.orders-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--silver);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.orders-table th {
+  color: var(--text-mute);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.layers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.completed-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.price-sell,
+.text-danger {
+  color: #f6465d;
+}
 
 .empty-state {
   text-align: center;
   padding: 2rem;
   color: var(--text-mute);
-  font-style: italic;
-  font-size: 0.9rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
 }
 
-@media (max-width: 1180px) {
-  .trading-layout {
+@media (max-width: 1380px) {
+  .market-strip {
     grid-template-columns: 1fr;
+  }
+
+  .market-stats {
+    grid-template-columns: repeat(5, minmax(110px, 1fr));
+    overflow-x: auto;
+  }
+
+  .terminal-grid {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  .market-rail {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1.1fr 1.2fr 0.8fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .terminal-grid,
+  .market-rail,
+  .order-ticket-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orderbook-panel {
+    order: 2;
+  }
+
+  .trade-zone {
+    order: 1;
+  }
+
+  .market-rail {
+    order: 3;
+    display: flex;
+  }
+
+  .chart-panel {
+    min-height: 420px;
+  }
+
+  .chart-wrapper {
+    height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .market-strip {
+    padding: 0.75rem;
+  }
+
+  .market-identity,
+  .market-actions,
+  .chart-header,
+  .bottom-tabs {
+    flex-wrap: wrap;
+  }
+
+  .market-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .chart-tabs,
+  .timeframe-tabs,
+  .order-entry__tabs,
+  .bottom-tabs {
+    overflow-x: auto;
+  }
+
+  .chart-wrapper {
+    height: 260px;
   }
 }
 </style>
