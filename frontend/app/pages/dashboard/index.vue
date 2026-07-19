@@ -226,9 +226,95 @@ const submitDeposit = () => {
   <div class="dashboard-page">
     <div
       v-if="loading"
-      class="loading-state"
+      class="skeleton-loading"
     >
-      Loading dashboard...
+      <!-- Skeleton Page Header -->
+      <div class="skeleton-page-header">
+        <div class="skeleton-bone skeleton-title" />
+      </div>
+
+      <!-- Skeleton Stats Grid -->
+      <div class="skeleton-stats-grid">
+        <div
+          v-for="n in 4"
+          :key="`stat-${n}`"
+          class="skeleton-stat-card"
+        >
+          <div class="skeleton-bone skeleton-stat-label" />
+          <div class="skeleton-bone skeleton-stat-value" />
+          <div
+            v-if="n === 4"
+            class="skeleton-bone skeleton-stat-action"
+          />
+        </div>
+      </div>
+
+      <!-- Skeleton Dashboard Grid -->
+      <div class="skeleton-dashboard-grid">
+        <!-- Skeleton Active Layers -->
+        <div class="skeleton-main-col">
+          <div class="skeleton-section-header">
+            <div class="skeleton-bone skeleton-section-title" />
+            <div class="skeleton-bone skeleton-section-link" />
+          </div>
+          <div class="skeleton-layers">
+            <div
+              v-for="n in 6"
+              :key="`layer-${n}`"
+              class="skeleton-layer-row"
+            >
+              <div class="skeleton-layer-info">
+                <div class="skeleton-bone skeleton-layer-pair" />
+                <div class="skeleton-bone skeleton-layer-meta" />
+              </div>
+              <div class="skeleton-layer-stats">
+                <div
+                  v-for="s in 3"
+                  :key="`ls-${s}`"
+                  class="skeleton-layer-stat"
+                >
+                  <div class="skeleton-bone skeleton-layer-stat-label" />
+                  <div class="skeleton-bone skeleton-layer-stat-val" />
+                </div>
+              </div>
+              <div class="skeleton-layer-pnl">
+                <div class="skeleton-bone skeleton-layer-pnl-amount" />
+                <div class="skeleton-bone skeleton-layer-pnl-pct" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton Exchange Bindings -->
+        <div class="skeleton-side-col">
+          <div class="skeleton-section-header">
+            <div class="skeleton-bone skeleton-section-title" />
+            <div class="skeleton-bone skeleton-section-link" />
+          </div>
+          <div class="skeleton-exchanges">
+            <div
+              v-for="n in 4"
+              :key="`exch-${n}`"
+              class="skeleton-exchange-card"
+            >
+              <div class="skeleton-exchange-header">
+                <div class="skeleton-bone skeleton-exchange-logo" />
+                <div class="skeleton-bone skeleton-exchange-status" />
+              </div>
+              <div class="skeleton-exchange-body">
+                <div class="skeleton-exchange-row">
+                  <div class="skeleton-bone skeleton-exchange-label" />
+                  <div class="skeleton-bone skeleton-exchange-val" />
+                </div>
+                <div class="skeleton-exchange-row">
+                  <div class="skeleton-bone skeleton-exchange-label" />
+                  <div class="skeleton-bone skeleton-exchange-val-wide" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-else-if="stats">
@@ -594,11 +680,358 @@ const submitDeposit = () => {
   letter-spacing: 0.05em;
 }
 
-.loading-state {
-  font-family: var(--mono);
-  color: var(--text-mute);
-  padding: 4rem;
-  text-align: center;
+/* ─── Skeleton Shimmer Loading ─── */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton-loading {
+  animation: skeletonFadeIn 0.4s ease-out;
+}
+
+@keyframes skeletonFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.skeleton-bone {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 138, 76, 0.12) 40%,
+    rgba(255, 138, 76, 0.18) 50%,
+    rgba(255, 138, 76, 0.12) 60%,
+    rgba(255, 255, 255, 0.08) 80%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-page-header {
+  margin-bottom: 2rem;
+}
+
+.skeleton-title {
+  width: 140px;
+  height: 28px;
+}
+
+/* Skeleton Stats Grid */
+.skeleton-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.skeleton-stat-card {
+  background: var(--charcoal);
+  border: 1px solid var(--line);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.skeleton-stat-label {
+  width: 90px;
+  height: 10px;
+}
+
+.skeleton-stat-value {
+  width: 65%;
+  height: 32px;
+}
+
+.skeleton-stat-action {
+  width: 80px;
+  height: 26px;
+  margin-top: 0.35rem;
+  border-radius: 0;
+}
+
+/* Skeleton Dashboard Grid */
+.skeleton-dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  column-gap: 2rem;
+  row-gap: 2rem;
+  margin-top: 2.5rem;
+}
+
+.skeleton-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.skeleton-section-title {
+  width: 130px;
+  height: 20px;
+}
+
+.skeleton-section-link {
+  width: 65px;
+  height: 12px;
+}
+
+/* Skeleton Layer Rows */
+.skeleton-layers {
+  border: 1px solid var(--line);
+  margin-top: 1rem;
+}
+
+.skeleton-layer-row {
+  display: grid;
+  grid-template-columns: 2fr 3fr 1.5fr;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+
+.skeleton-layer-row:last-child {
+  border-bottom: none;
+}
+
+.skeleton-layer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.skeleton-layer-pair {
+  width: 90px;
+  height: 18px;
+}
+
+.skeleton-layer-meta {
+  width: 130px;
+  height: 10px;
+}
+
+.skeleton-layer-stats {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.skeleton-layer-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.skeleton-layer-stat-label {
+  width: 50px;
+  height: 9px;
+}
+
+.skeleton-layer-stat-val {
+  width: 70px;
+  height: 13px;
+}
+
+.skeleton-layer-pnl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.skeleton-layer-pnl-amount {
+  width: 65px;
+  height: 18px;
+}
+
+.skeleton-layer-pnl-pct {
+  width: 45px;
+  height: 11px;
+}
+
+/* Skeleton Exchange Cards */
+.skeleton-exchanges {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.skeleton-exchange-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.skeleton-exchange-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-exchange-logo {
+  width: 100px;
+  height: 22px;
+}
+
+.skeleton-exchange-status {
+  width: 65px;
+  height: 18px;
+  border-radius: 20px;
+}
+
+.skeleton-exchange-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.skeleton-exchange-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skeleton-exchange-label {
+  width: 55px;
+  height: 10px;
+}
+
+.skeleton-exchange-val {
+  width: 70px;
+  height: 12px;
+}
+
+.skeleton-exchange-val-wide {
+  width: 110px;
+  height: 10px;
+}
+
+/* ─── Skeleton Responsive ─── */
+@media (max-width: 1180px) {
+  .skeleton-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skeleton-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-exchanges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 1366px) {
+  .skeleton-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skeleton-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-exchanges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .skeleton-page-header {
+    margin-bottom: 1rem;
+  }
+
+  .skeleton-title {
+    width: 100px;
+    height: 22px;
+  }
+
+  .skeleton-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .skeleton-stat-card {
+    padding: 0.85rem;
+    gap: 0.4rem;
+  }
+
+  .skeleton-stat-label {
+    width: 60px;
+    height: 8px;
+  }
+
+  .skeleton-stat-value {
+    height: 22px;
+  }
+
+  .skeleton-stat-action {
+    width: 60px;
+    height: 20px;
+  }
+
+  .skeleton-dashboard-grid {
+    grid-template-columns: 1fr;
+    margin-top: 1.5rem;
+    row-gap: 1rem;
+  }
+
+  .skeleton-layer-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .skeleton-layer-info {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .skeleton-layer-pnl {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .skeleton-layer-stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  .skeleton-exchanges {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .skeleton-exchange-card {
+    padding: 0.85rem;
+  }
+
+  .skeleton-exchange-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .skeleton-exchange-logo {
+    width: 80px;
+    height: 18px;
+  }
 }
 
 .stats-grid {
