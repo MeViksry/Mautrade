@@ -50,60 +50,64 @@ onMounted(async () => {
 
 <template>
   <div class="dashboard-page">
-    <div class="page-header">
-      <h2 class="page-title">
-        Active Layers
-      </h2>
-    </div>
-
     <div
       v-if="loading"
-      class="layers-container skeleton-layers"
+      class="skeleton-loading"
     >
-      <div
-        v-for="n in 6"
-        :key="`layer-${n}`"
-        class="skeleton-layer-row"
-      >
-        <div class="skeleton-layer-info">
-          <div class="skeleton-bone skeleton-layer-pair" />
-          <div class="skeleton-bone skeleton-layer-meta" />
-        </div>
-        <div class="skeleton-layer-stats">
-          <div
-            v-for="s in 3"
-            :key="`ls-${s}`"
-            class="skeleton-layer-stat"
-          >
-            <div class="skeleton-bone skeleton-layer-stat-label" />
-            <div class="skeleton-bone skeleton-layer-stat-val" />
+      <div class="skeleton-page-header">
+        <div class="skeleton-bone skeleton-title" />
+      </div>
+      <div class="layers-container skeleton-layers">
+        <div
+          v-for="n in 6"
+          :key="`layer-${n}`"
+          class="skeleton-layer-row"
+        >
+          <div class="skeleton-layer-info">
+            <div class="skeleton-bone skeleton-layer-pair" />
+            <div class="skeleton-bone skeleton-layer-meta" />
           </div>
-        </div>
-        <div class="skeleton-layer-pnl">
-          <div class="skeleton-bone skeleton-layer-pnl-amount" />
-          <div class="skeleton-bone skeleton-layer-pnl-pct" />
+          <div class="skeleton-layer-stats">
+            <div
+              v-for="s in 3"
+              :key="`ls-${s}`"
+              class="skeleton-layer-stat"
+            >
+              <div class="skeleton-bone skeleton-layer-stat-label" />
+              <div class="skeleton-bone skeleton-layer-stat-val" />
+            </div>
+          </div>
+          <div class="skeleton-layer-pnl">
+            <div class="skeleton-bone skeleton-layer-pnl-amount" />
+            <div class="skeleton-bone skeleton-layer-pnl-pct" />
+          </div>
         </div>
       </div>
     </div>
 
-    <div
-      v-else
-      class="layers-container"
-    >
-      <div class="layers-list">
-        <LayerRow
-          v-for="layer in layers"
-          :key="layer.id"
-          :layer="layer"
-        />
-        <div
-          v-if="layers.length === 0"
-          class="empty-state"
-        >
-          No active layers. Waiting for Master Signal.
+    <template v-else>
+      <div class="page-header">
+        <h2 class="page-title">
+          Active Layers
+        </h2>
+      </div>
+
+      <div class="layers-container">
+        <div class="layers-list">
+          <LayerRow
+            v-for="layer in layers"
+            :key="layer.id"
+            :layer="layer"
+          />
+          <div
+            v-if="layers.length === 0"
+            class="empty-state"
+          >
+            No active layers. Waiting for Master Signal.
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -191,6 +195,14 @@ onMounted(async () => {
   animation: skeletonFadeIn 0.4s ease-out;
 }
 
+.skeleton-loading {
+  animation: skeletonFadeIn 0.4s ease-out;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  min-width: 0;
+}
+
 @keyframes skeletonFadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -210,6 +222,15 @@ onMounted(async () => {
   background-size: 800px 100%;
   animation: shimmer 1.8s ease-in-out infinite;
   border-radius: 4px;
+}
+
+.skeleton-page-header {
+  margin-bottom: 2rem;
+}
+
+.skeleton-title {
+  width: 140px;
+  height: 28px;
 }
 
 .skeleton-layer-row {
@@ -235,6 +256,9 @@ onMounted(async () => {
   .dashboard-page { gap: 0.75rem; }
   .page-header { margin-bottom: 0.5rem; }
   .page-title { font-size: 1.3rem; }
+
+  .skeleton-page-header { margin-bottom: 0.5rem; }
+  .skeleton-title { width: 100px; height: 22px; }
 
   .skeleton-layer-row {
     grid-template-columns: 1fr auto;
