@@ -1060,14 +1060,10 @@ input:checked + .slider:before {
 
 .skeleton-title { width: 180px; height: 38px; }
 
-.skeleton-container {
-  display: flex;
-}
-
 .skeleton-sidebar-item {
-  width: 100%;
-  height: 48px;
-  margin-bottom: 0.5rem;
+  width: 140px;
+  height: 20px;
+  margin: 1rem 2rem;
   border-radius: 4px;
 }
 
@@ -1107,6 +1103,9 @@ input:checked + .slider:before {
   }
   .settings-tab {
     padding: 1rem 1.5rem;
+  }
+  .skeleton-sidebar-item {
+    margin: 1rem 1.5rem;
   }
 }
 
