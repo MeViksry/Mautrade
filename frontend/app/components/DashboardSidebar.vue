@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const compactSidebarQuery = '(max-width: 1180px), (pointer: coarse) and (max-width: 1366px)'
-const isSidebarOpen = useState('sidebar-open', () => false)
+const isSidebarOpen = useState<boolean | null>('sidebar-open', () => null)
 const isCompactSidebar = ref(false)
 const isMounted = ref(false)
 
@@ -58,7 +58,8 @@ const closeCompactSidebar = () => {
   <aside
     class="sidebar"
     :class="{
-      'sidebar--closed': !isSidebarOpen,
+      'sidebar--closed': isSidebarOpen === false,
+      'sidebar--open': isSidebarOpen === true,
       'sidebar--compact': isCompactSidebar,
       'sidebar--mounted': isMounted
     }"
@@ -118,7 +119,11 @@ const closeCompactSidebar = () => {
 }
 
 .sidebar--closed {
-  margin-left: -260px;
+  margin-left: -260px !important;
+}
+
+.sidebar--open {
+  margin-left: 0 !important;
 }
 
 .sidebar-overlay {
@@ -142,13 +147,19 @@ const closeCompactSidebar = () => {
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
 }
 
+@media (max-width: 1180px), (pointer: coarse) and (max-width: 1366px) {
+  .sidebar {
+    margin-left: -260px; /* Mobile default closed */
+  }
+}
+
 @media (max-width: 420px) {
   .sidebar {
     width: min(260px, 86vw);
   }
 
   .sidebar--closed {
-    margin-left: min(-260px, -86vw);
+    margin-left: min(-260px, -86vw) !important;
   }
 }
 

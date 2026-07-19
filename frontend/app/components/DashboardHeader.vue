@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const isSidebarOpen = useState('sidebar-open', () => false)
+const isSidebarOpen = useState<boolean | null>('sidebar-open', () => null)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
 
