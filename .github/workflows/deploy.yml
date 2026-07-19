@@ -1,0 +1,295 @@
+name: Validate and Deploy
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+
+concurrency:
+  group: mautrade-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HOME: /home/runner
+
+jobs:
+  # ──────────────────────────────────────────────
+  #  STEP 1: Detect which components changed
+  # ──────────────────────────────────────────────
+  changes:
+    name: DETECT CHANGES
+    runs-on: self-hosted
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      go_api: ${{ steps.filter.outputs.go_api }}
+      rust_worker: ${{ steps.filter.outputs.rust_worker }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            go_api:
+              - 'backend/cmd/**'
+              - 'backend/internal/**'
+              - 'backend/go.mod'
+              - 'backend/go.sum'
+              - 'backend/Dockerfile'
+              - 'backend/migrations/**'
+            rust_worker:
+              - 'backend/rust-node-execution/**'
+            infra:
+              - 'docker-compose.prod.yml'
+              - 'backend/docker-compose.yml'
+              - 'deploy-vps.sh'
+              - 'frontend/Dockerfile'
+              - 'backend/Dockerfile'
+
+  # ──────────────────────────────────────────────
+  #  STEP 2: Quality checks (parallel)
+  # ──────────────────────────────────────────────
+  frontend_quality:
+    name: FRONTEND BUILD
+    runs-on: self-hosted
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint check
+        run: pnpm lint
+
+      - name: Build Nuxt frontend
+        run: pnpm build
+
+  go_api_quality:
+    name: GO API QUALITY
+    runs-on: self-hosted
+    needs: changes
+    if: needs.changes.outputs.go_api == 'true'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          cache-dependency-path: backend/go.sum
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+  rust_worker_quality:
+    name: RUST WORKER QUALITY
+    runs-on: self-hosted
+    needs: changes
+    if: needs.changes.outputs.rust_worker == 'true'
+    defaults:
+      run:
+        working-directory: backend/rust-node-execution
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend/rust-node-execution
+
+      - name: Check formatting
+        run: cargo fmt --check || true
+
+      - name: Compile check
+        run: cargo check --all-targets || true
+
+      - name: Clippy lint
+        run: cargo clippy --all-targets -- -D warnings || true
+
+  # ──────────────────────────────────────────────
+  #  STEP 3: Configuration validation
+  # ──────────────────────────────────────────────
+  config_validation:
+    name: CONFIG VALIDATION
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Ensure Docker is available
+        run: |
+          if ! command -v docker &> /dev/null; then
+            echo 'Docker not found. Installing...'
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker $USER
+            rm get-docker.sh
+          fi
+          docker --version
+
+      - name: Validate dev Docker Compose config
+        working-directory: backend
+        run: docker compose config -q
+
+      - name: Validate prod Docker Compose config
+        run: |
+          touch backend/.env
+          docker compose -f docker-compose.prod.yml config -q
+          rm -f backend/.env
+
+      - name: Validate deploy script syntax
+        run: bash -n deploy-vps.sh
+
+  # ──────────────────────────────────────────────
+  #  STEP 4: Deploy to VPS (only on push to main)
+  # ──────────────────────────────────────────────
+  deploy:
+    name: DEPLOY TO VPS
+    runs-on: self-hosted
+    if: >-
+      always()
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled')
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+    needs:
+      - frontend_quality
+      - go_api_quality
+      - rust_worker_quality
+      - config_validation
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files for smart deploy
+        run: |
+          set -euo pipefail
+          mkdir -p .deploy
+
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            git ls-files > .deploy/changed-files.txt
+          else
+            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" > .deploy/changed-files.txt
+          fi
+
+          echo "Changed files for smart deploy:"
+          cat .deploy/changed-files.txt
+
+      - name: Deploy via rsync and SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          echo "Setting up SSH keys..."
+          mkdir -p $HOME/.ssh
+          python3 -c "import os; open('$HOME/.ssh/deploy_key', 'w').write(os.environ['VPS_SSH_KEY'].replace('\r', '') + '\n')"
+          chmod 600 $HOME/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> $HOME/.ssh/known_hosts || true
+
+          echo "Preparing target directory on VPS..."
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=60 \
+              -o PasswordAuthentication=no \
+              -o PubkeyAuthentication=yes \
+              -o IdentitiesOnly=yes \
+              -i $HOME/.ssh/deploy_key \
+              ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} \
+              "mkdir -p ~/Mautrade"
+
+          echo "Syncing project files to VPS..."
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude '.env' \
+            --exclude 'backend/.env' \
+            --exclude 'frontend/.env' \
+            --exclude 'logs' \
+            --exclude 'letsencrypt' \
+            --exclude '.deploy.lock' \
+            --exclude '**/node_modules' \
+            --exclude '**/.nuxt' \
+            --exclude '**/.output' \
+            --exclude '**/.nitro' \
+            --exclude '**/dist' \
+            --exclude '**/build' \
+            --exclude '**/.cache' \
+            --exclude '**/target' \
+            --exclude '**/__pycache__' \
+            --exclude '**/.pytest_cache' \
+            --exclude '**/.mypy_cache' \
+            --exclude '**/.ruff_cache' \
+            --exclude '**/.venv' \
+            --exclude '**/venv' \
+            --exclude '**/*.pyc' \
+            --exclude '**/*.log' \
+            -e "ssh -o ServerAliveInterval=60 \
+                    -o StrictHostKeyChecking=no \
+                    -o PasswordAuthentication=no \
+                    -o PubkeyAuthentication=yes \
+                    -o IdentitiesOnly=yes \
+                    -i $HOME/.ssh/deploy_key" \
+            ./ ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:~/Mautrade/
+
+          echo "Executing smart deploy script on VPS..."
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=60 \
+              -o PasswordAuthentication=no \
+              -o PubkeyAuthentication=yes \
+              -o IdentitiesOnly=yes \
+              -i $HOME/.ssh/deploy_key \
+              ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'DEPLOY_EOF'
+            cd ~/Mautrade
+            chmod +x deploy-vps.sh
+            GITHUB_ACTOR='${{ github.actor }}' \
+            GITHUB_WORKFLOW='${{ github.workflow }}' \
+            GITHUB_SHA='${{ github.sha }}' \
+            GITHUB_BEFORE='${{ github.event.before }}' \
+            ./deploy-vps.sh
+          DEPLOY_EOF
