@@ -68,6 +68,29 @@ const closeCompactSidebar = () => {
       <NuxtLink to="/dashboard">
         MAUTRADE<span class="dot" />
       </NuxtLink>
+
+      <button
+        v-if="isCompactSidebar"
+        class="sidebar__close-btn"
+        aria-label="Close sidebar"
+        @click="isSidebarOpen = false"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M17.5 17.5L17.5 6.5M7.8 3H16.2C17.8802 3 18.7202 3 19.362 3.32698C19.9265 3.6146 20.3854 4.07354 20.673 4.63803C21 5.27976 21 6.11984 21 7.8V16.2C21 17.8802 21 18.7202 20.673 19.362C20.3854 19.9265 19.9265 20.3854 19.362 20.673C18.7202 21 17.8802 21 16.2 21H7.8C6.11984 21 5.27976 21 4.63803 20.673C4.07354 20.3854 3.6146 19.9265 3.32698 19.362C3 18.7202 3 17.8802 3 16.2V7.8C3 6.11984 3 5.27976 3.32698 4.63803C3.6146 4.07354 4.07354 3.6146 4.63803 3.32698C5.27976 3 6.11984 3 7.8 3Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
     </div>
 
     <nav class="sidebar__nav">
@@ -165,9 +188,10 @@ const closeCompactSidebar = () => {
 
 .sidebar__logo {
   height: 72px;
-  padding: 0 2rem;
+  padding: 0 1rem 0 2rem;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
   font-size: 20px;
@@ -183,6 +207,25 @@ const closeCompactSidebar = () => {
   width: 6px; height: 6px;
   background: var(--accent);
   display: inline-block;
+}
+
+.sidebar__close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--text-mute);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.sidebar__close-btn:hover {
+  background: var(--charcoal);
+  color: var(--text);
 }
 
 .sidebar__nav {
