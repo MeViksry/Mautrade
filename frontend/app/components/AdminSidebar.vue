@@ -107,7 +107,7 @@ const closeCompactSidebar = () => {
         :key="item.to"
         :to="item.to"
         class="sidebar__link"
-        active-class="sidebar__link--active"
+        exact-active-class="sidebar__link--active"
         @click="closeCompactSidebar"
       >
         <UIcon
