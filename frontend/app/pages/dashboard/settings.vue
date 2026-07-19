@@ -151,6 +151,8 @@ const selectTimezone = (timezone: string) => {
   timezoneDropdownOpen.value = false
 }
 
+const loading = ref(true)
+
 const handleSettingsClickOutside = (event: MouseEvent) => {
   if (!timezoneSelectRef.value?.contains(event.target as Node)) {
     timezoneDropdownOpen.value = false
@@ -159,6 +161,11 @@ const handleSettingsClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   document.addEventListener('click', handleSettingsClickOutside)
+
+  // Simulate loading delay for skeleton shimmer effect
+  setTimeout(() => {
+    loading.value = false
+  }, 400)
 })
 
 onBeforeUnmount(() => {
@@ -168,304 +175,331 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-page">
-    <div class="page-header">
-      <h2 class="page-title">
-        Settings
-      </h2>
+    <div
+      v-if="loading"
+      class="skeleton-loading"
+    >
+      <div class="skeleton-page-header">
+        <div class="skeleton-bone skeleton-title" />
+      </div>
+      <div class="settings-container skeleton-container">
+        <div class="settings-sidebar">
+          <div class="skeleton-bone skeleton-sidebar-item" />
+          <div class="skeleton-bone skeleton-sidebar-item" />
+          <div class="skeleton-bone skeleton-sidebar-item" />
+        </div>
+        <div class="settings-content skeleton-content">
+          <div class="skeleton-bone skeleton-pane-title" />
+          <div class="skeleton-bone skeleton-pane-subtitle" />
+          <div class="skeleton-form">
+            <div class="skeleton-bone skeleton-input" />
+            <div class="skeleton-bone skeleton-input" />
+            <div class="skeleton-bone skeleton-input" />
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="settings-container">
-      <div class="settings-sidebar">
-        <button
-          class="settings-tab"
-          :class="{ active: activeTab === 'profile' }"
-          @click="activeTab = 'profile'"
-        >
-          <UIcon
-            name="lucide:user"
-            class="tab-icon"
-          />
-          Profile Details
-        </button>
-        <button
-          class="settings-tab"
-          :class="{ active: activeTab === 'notifications' }"
-          @click="activeTab = 'notifications'"
-        >
-          <UIcon
-            name="lucide:bell"
-            class="tab-icon"
-          />
-          Notifications
-        </button>
-        <button
-          class="settings-tab"
-          :class="{ active: activeTab === 'security' }"
-          @click="activeTab = 'security'"
-        >
-          <UIcon
-            name="lucide:shield"
-            class="tab-icon"
-          />
-          Security
-        </button>
+    <template v-else>
+      <div class="page-header">
+        <h2 class="page-title">
+          Settings
+        </h2>
       </div>
 
-      <div class="settings-content">
-        <!-- Profile Tab -->
-        <div
-          v-if="activeTab === 'profile'"
-          class="tab-pane"
-        >
-          <h3 class="pane-title">
-            Profile Information
-          </h3>
-          <p class="pane-subtitle">
-            Update your account's profile information and timezone.
-          </p>
-
-          <form
-            class="settings-form"
-            @submit.prevent
+      <div class="settings-container">
+        <div class="settings-sidebar">
+          <button
+            class="settings-tab"
+            :class="{ active: activeTab === 'profile' }"
+            @click="activeTab = 'profile'"
           >
-            <div class="profile-photo-field">
-              <div class="profile-photo-preview">
-                <img
-                  v-if="profilePhoto"
-                  :src="profilePhoto"
-                  alt="Profile photo"
-                >
-                <UIcon
-                  v-else
-                  name="lucide:user"
-                  class="profile-photo-preview__icon"
-                />
+            <UIcon
+              name="lucide:user"
+              class="tab-icon"
+            />
+            Profile Details
+          </button>
+          <button
+            class="settings-tab"
+            :class="{ active: activeTab === 'notifications' }"
+            @click="activeTab = 'notifications'"
+          >
+            <UIcon
+              name="lucide:bell"
+              class="tab-icon"
+            />
+            Notifications
+          </button>
+          <button
+            class="settings-tab"
+            :class="{ active: activeTab === 'security' }"
+            @click="activeTab = 'security'"
+          >
+            <UIcon
+              name="lucide:shield"
+              class="tab-icon"
+            />
+            Security
+          </button>
+        </div>
+
+        <div class="settings-content">
+          <!-- Profile Tab -->
+          <div
+            v-if="activeTab === 'profile'"
+            class="tab-pane"
+          >
+            <h3 class="pane-title">
+              Profile Information
+            </h3>
+            <p class="pane-subtitle">
+              Update your account's profile information and timezone.
+            </p>
+
+            <form
+              class="settings-form"
+              @submit.prevent
+            >
+              <div class="profile-photo-field">
+                <div class="profile-photo-preview">
+                  <img
+                    v-if="profilePhoto"
+                    :src="profilePhoto"
+                    alt="Profile photo"
+                  >
+                  <UIcon
+                    v-else
+                    name="lucide:user"
+                    class="profile-photo-preview__icon"
+                  />
+                </div>
+
+                <div class="profile-photo-actions">
+                  <input
+                    ref="profilePhotoInput"
+                    class="profile-photo-input"
+                    type="file"
+                    accept="image/*"
+                    @change="handleProfilePhotoChange"
+                  >
+                  <button
+                    class="btn-photo"
+                    type="button"
+                    @click="openProfilePhotoPicker"
+                  >
+                    <UIcon name="lucide:image-plus" />
+                    <span>Upload Photo</span>
+                  </button>
+                  <button
+                    class="btn-photo btn-photo--danger"
+                    type="button"
+                    :disabled="!profilePhoto"
+                    @click="deleteProfilePhoto"
+                  >
+                    <UIcon name="lucide:trash-2" />
+                    <span>Delete Photo</span>
+                  </button>
+                </div>
               </div>
 
-              <div class="profile-photo-actions">
+              <div class="form-group">
+                <label>Full Name</label>
                 <input
-                  ref="profilePhotoInput"
-                  class="profile-photo-input"
-                  type="file"
-                  accept="image/*"
-                  @change="handleProfilePhotoChange"
+                  v-model="profileForm.fullName"
+                  type="text"
+                  class="form-input"
                 >
-                <button
-                  class="btn-photo"
-                  type="button"
-                  @click="openProfilePhotoPicker"
-                >
-                  <UIcon name="lucide:image-plus" />
-                  <span>Upload Photo</span>
-                </button>
-                <button
-                  class="btn-photo btn-photo--danger"
-                  type="button"
-                  :disabled="!profilePhoto"
-                  @click="deleteProfilePhoto"
-                >
-                  <UIcon name="lucide:trash-2" />
-                  <span>Delete Photo</span>
-                </button>
               </div>
-            </div>
 
-            <div class="form-group">
-              <label>Full Name</label>
-              <input
-                v-model="profileForm.fullName"
-                type="text"
-                class="form-input"
-              >
-            </div>
-
-            <div class="form-group">
-              <label>Email Address</label>
-              <input
-                v-model="profileForm.email"
-                type="email"
-                class="form-input"
-                disabled
-              >
-              <span class="input-help">Email cannot be changed directly. Please contact support.</span>
-            </div>
-
-            <div class="form-group">
-              <label>Timezone</label>
-              <div
-                ref="timezoneSelectRef"
-                class="timezone-select"
-              >
-                <button
-                  class="timezone-select__trigger"
-                  type="button"
-                  @click="timezoneDropdownOpen = !timezoneDropdownOpen"
+              <div class="form-group">
+                <label>Email Address</label>
+                <input
+                  v-model="profileForm.email"
+                  type="email"
+                  class="form-input"
+                  disabled
                 >
-                  <span>
-                    <strong>{{ selectedTimezone?.offset }}</strong>
-                    {{ selectedTimezone?.label }}
-                  </span>
-                  <UIcon name="lucide:chevrons-up-down" />
-                </button>
+                <span class="input-help">Email cannot be changed directly. Please contact support.</span>
+              </div>
 
+              <div class="form-group">
+                <label>Timezone</label>
                 <div
-                  v-if="timezoneDropdownOpen"
-                  class="timezone-select__dropdown"
+                  ref="timezoneSelectRef"
+                  class="timezone-select"
                 >
-                  <div class="timezone-select__search">
-                    <UIcon name="lucide:search" />
-                    <input
-                      v-model="timezoneSearch"
-                      type="text"
-                      placeholder="Search timezone"
-                      autocomplete="off"
-                      @focus="openTimezoneDropdown"
-                    >
-                  </div>
+                  <button
+                    class="timezone-select__trigger"
+                    type="button"
+                    @click="timezoneDropdownOpen = !timezoneDropdownOpen"
+                  >
+                    <span>
+                      <strong>{{ selectedTimezone?.offset }}</strong>
+                      {{ selectedTimezone?.label }}
+                    </span>
+                    <UIcon name="lucide:chevrons-up-down" />
+                  </button>
 
-                  <div class="timezone-select__list">
-                    <button
-                      v-for="timezone in filteredTimezones"
-                      :key="timezone.value"
-                      class="timezone-option"
-                      :class="{ 'is-selected': timezone.value === profileForm.timezone }"
-                      type="button"
-                      @click="selectTimezone(timezone.value)"
-                    >
-                      <span>{{ timezone.label }}</span>
-                      <strong>{{ timezone.offset }}</strong>
-                    </button>
-                    <div
-                      v-if="filteredTimezones.length === 0"
-                      class="timezone-empty"
-                    >
-                      No timezone found.
+                  <div
+                    v-if="timezoneDropdownOpen"
+                    class="timezone-select__dropdown"
+                  >
+                    <div class="timezone-select__search">
+                      <UIcon name="lucide:search" />
+                      <input
+                        v-model="timezoneSearch"
+                        type="text"
+                        placeholder="Search timezone"
+                        autocomplete="off"
+                        @focus="openTimezoneDropdown"
+                      >
+                    </div>
+
+                    <div class="timezone-select__list">
+                      <button
+                        v-for="timezone in filteredTimezones"
+                        :key="timezone.value"
+                        class="timezone-option"
+                        :class="{ 'is-selected': timezone.value === profileForm.timezone }"
+                        type="button"
+                        @click="selectTimezone(timezone.value)"
+                      >
+                        <span>{{ timezone.label }}</span>
+                        <strong>{{ timezone.offset }}</strong>
+                      </button>
+                      <div
+                        v-if="filteredTimezones.length === 0"
+                        class="timezone-empty"
+                      >
+                        No timezone found.
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div class="form-actions">
-              <button class="btn-primary">
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Notifications Tab -->
-        <div
-          v-if="activeTab === 'notifications'"
-          class="tab-pane"
-        >
-          <h3 class="pane-title">
-            Notification Preferences
-          </h3>
-          <p class="pane-subtitle">
-            Choose what updates you want to receive from Mautrade.
-          </p>
-
-          <div class="settings-form">
-            <div class="toggle-group">
-              <div class="toggle-info">
-                <h4>New Trade Executed</h4>
-                <p>Get notified when a master signal triggers a trade.</p>
+              <div class="form-actions">
+                <button class="btn-primary">
+                  Save Changes
+                </button>
               </div>
-              <label class="toggle-switch">
-                <input
-                  v-model="notifSettings.emailNewTrade"
-                  type="checkbox"
-                >
-                <span class="slider" />
-              </label>
-            </div>
+            </form>
+          </div>
 
-            <div class="toggle-group">
-              <div class="toggle-info">
-                <h4>Daily PNL Report</h4>
-                <p>Receive a daily summary of your realized and unrealized profit.</p>
-              </div>
-              <label class="toggle-switch">
-                <input
-                  v-model="notifSettings.emailDailyReport"
-                  type="checkbox"
-                >
-                <span class="slider" />
-              </label>
-            </div>
+          <!-- Notifications Tab -->
+          <div
+            v-if="activeTab === 'notifications'"
+            class="tab-pane"
+          >
+            <h3 class="pane-title">
+              Notification Preferences
+            </h3>
+            <p class="pane-subtitle">
+              Choose what updates you want to receive from Mautrade.
+            </p>
 
-            <div class="toggle-group">
-              <div class="toggle-info">
-                <h4>Telegram Alerts</h4>
-                <p>Instant push notifications via our Telegram bot.</p>
+            <div class="settings-form">
+              <div class="toggle-group">
+                <div class="toggle-info">
+                  <h4>New Trade Executed</h4>
+                  <p>Get notified when a master signal triggers a trade.</p>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    v-model="notifSettings.emailNewTrade"
+                    type="checkbox"
+                  >
+                  <span class="slider" />
+                </label>
               </div>
-              <label class="toggle-switch">
-                <input
-                  v-model="notifSettings.telegramAlerts"
-                  type="checkbox"
-                >
-                <span class="slider" />
-              </label>
+
+              <div class="toggle-group">
+                <div class="toggle-info">
+                  <h4>Daily PNL Report</h4>
+                  <p>Receive a daily summary of your realized and unrealized profit.</p>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    v-model="notifSettings.emailDailyReport"
+                    type="checkbox"
+                  >
+                  <span class="slider" />
+                </label>
+              </div>
+
+              <div class="toggle-group">
+                <div class="toggle-info">
+                  <h4>Telegram Alerts</h4>
+                  <p>Instant push notifications via our Telegram bot.</p>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    v-model="notifSettings.telegramAlerts"
+                    type="checkbox"
+                  >
+                  <span class="slider" />
+                </label>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Security Tab -->
-        <div
-          v-if="activeTab === 'security'"
-          class="tab-pane"
-        >
-          <h3 class="pane-title">
-            Security Settings
-          </h3>
-          <p class="pane-subtitle">
-            Manage your password and 2-factor authentication.
-          </p>
-
-          <form
-            class="settings-form"
-            @submit.prevent
+          <!-- Security Tab -->
+          <div
+            v-if="activeTab === 'security'"
+            class="tab-pane"
           >
-            <div class="form-group">
-              <label>Current Password</label>
-              <input
-                type="password"
-                class="form-input"
-                placeholder="Enter current password"
-              >
-            </div>
+            <h3 class="pane-title">
+              Security Settings
+            </h3>
+            <p class="pane-subtitle">
+              Manage your password and 2-factor authentication.
+            </p>
 
-            <div class="form-group">
-              <label>New Password</label>
-              <input
-                type="password"
-                class="form-input"
-                placeholder="Enter new password"
-              >
-            </div>
-
-            <div class="form-actions">
-              <button class="btn-primary">
-                Update Password
-              </button>
-            </div>
-
-            <hr class="divider">
-
-            <div class="two-fa-section">
-              <div class="two-fa-info">
-                <h4>Two-Factor Authentication (2FA)</h4>
-                <p>Secure your account with an authenticator app.</p>
+            <form
+              class="settings-form"
+              @submit.prevent
+            >
+              <div class="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  class="form-input"
+                  placeholder="Enter current password"
+                >
               </div>
-              <button class="btn-secondary">
-                Enable 2FA
-              </button>
-            </div>
-          </form>
+
+              <div class="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  class="form-input"
+                  placeholder="Enter new password"
+                >
+              </div>
+
+              <div class="form-actions">
+                <button class="btn-primary">
+                  Update Password
+                </button>
+              </div>
+
+              <hr class="divider">
+
+              <div class="two-fa-section">
+                <div class="two-fa-info">
+                  <h4>Two-Factor Authentication (2FA)</h4>
+                  <p>Secure your account with an authenticator app.</p>
+                </div>
+                <button class="btn-secondary">
+                  Enable 2FA
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -983,5 +1017,143 @@ input:checked + .slider:before {
   margin: 0;
   font-size: 13px;
   color: var(--text-mute);
+}
+
+/* ─── Skeleton Loading ─── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-loading {
+  animation: skeletonFadeIn 0.4s ease-out;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  min-width: 0;
+}
+
+@keyframes skeletonFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.skeleton-bone {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 138, 76, 0.12) 40%,
+    rgba(255, 138, 76, 0.18) 50%,
+    rgba(255, 138, 76, 0.12) 60%,
+    rgba(255, 255, 255, 0.08) 80%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-page-header {
+  margin-bottom: 1rem;
+}
+
+.skeleton-title { width: 180px; height: 38px; }
+
+.skeleton-container {
+  display: flex;
+}
+
+.skeleton-sidebar-item {
+  width: 100%;
+  height: 48px;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+.skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.skeleton-pane-title { width: 220px; height: 24px; }
+.skeleton-pane-subtitle { width: 340px; height: 16px; }
+
+.skeleton-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.skeleton-input {
+  width: 100%;
+  height: 72px;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .settings-container {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .settings-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding-right: 0;
+    padding-bottom: 1rem;
+  }
+  .settings-tab {
+    white-space: nowrap;
+  }
+  .skeleton-sidebar-item {
+    width: 140px;
+    height: 48px;
+    margin-right: 0.5rem;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page { gap: 0.75rem; }
+  .page-header { margin-bottom: 0.5rem; }
+  .page-title { font-size: 1.3rem; }
+
+  .skeleton-page-header { margin-bottom: 0.5rem; }
+  .skeleton-title { width: 150px; height: 22px; }
+  .skeleton-pane-subtitle { width: 240px; }
+
+  .settings-content {
+    padding: 1.25rem;
+  }
+  .profile-photo-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  .profile-photo-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-photo {
+    width: 100%;
+    justify-content: center;
+  }
+  .two-fa-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .btn-primary { width: 100%; }
+}
+
+@media (max-width: 380px) {
+  .dashboard-page { gap: 0.5rem; }
+  .page-title { font-size: 1.15rem; }
+  .settings-content { padding: 1rem; }
 }
 </style>
