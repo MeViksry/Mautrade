@@ -122,13 +122,24 @@ const toggleTheme = () => {
         </template>
       </ClientOnly>
 
-      <div class="user-profile">
-        <div class="user-avatar" />
-        <div class="user-info">
-          <span class="user-name">User Account</span>
-          <span class="user-id">UID: 88472910</span>
+      <ClientOnly>
+        <div class="user-profile">
+          <div class="user-avatar" />
+          <div class="user-info">
+            <span class="user-name">User Account</span>
+            <span class="user-id">UID: 88472910</span>
+          </div>
         </div>
-      </div>
+        <template #fallback>
+          <div class="user-profile user-profile-skeleton">
+            <div class="user-avatar header-skeleton-bone" />
+            <div class="user-info">
+              <span class="user-name header-skeleton-bone" style="width: 72px; height: 12px; border-radius: 2px;" />
+              <span class="user-id header-skeleton-bone" style="width: 54px; height: 9px; border-radius: 2px;" />
+            </div>
+          </div>
+        </template>
+      </ClientOnly>
     </div>
   </header>
 </template>
@@ -246,7 +257,8 @@ const toggleTheme = () => {
   border-color: var(--line-strong);
 }
 
-.theme-toggle-skeleton .theme-toggle__track {
+.theme-toggle-skeleton .theme-toggle__track,
+.header-skeleton-bone {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.04) 0%,
@@ -259,7 +271,8 @@ const toggleTheme = () => {
   );
   background-size: 800px 100%;
   animation: shimmer 1.8s ease-in-out infinite;
-  border-color: transparent;
+  border-color: transparent !important;
+  color: transparent !important;
 }
 
 @keyframes shimmer {
