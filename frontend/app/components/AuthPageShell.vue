@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  activeTab: 'login' | 'register'
+  activeTab: 'signin' | 'signup'
   title: string
   subtitle: string
 }>()
@@ -10,7 +10,7 @@ defineProps<{
   <main class="auth-page">
     <section class="auth-page__form">
       <div class="auth-brand">
-        <NuxtLink to="/login">
+        <NuxtLink to="/signin">
           MAUTRADE<span class="auth-brand__dot" />
         </NuxtLink>
       </div>
@@ -18,15 +18,15 @@ defineProps<{
       <div class="auth-tabs">
         <NuxtLink
           class="auth-tab"
-          :class="{ active: activeTab === 'login' }"
-          to="/login"
+          :class="{ active: activeTab === 'signin' }"
+          to="/signin"
         >
           Sign In
         </NuxtLink>
         <NuxtLink
           class="auth-tab"
-          :class="{ active: activeTab === 'register' }"
-          to="/register"
+          :class="{ active: activeTab === 'signup' }"
+          to="/signup"
         >
           Sign Up
         </NuxtLink>

@@ -2,11 +2,11 @@
 import { computed } from 'vue'
 
 const props = defineProps<{
-  activeTab: 'login' | 'register'
+  activeTab: 'signin' | 'signup'
 }>()
 
 const panel = computed(() => {
-  if (props.activeTab === 'login') {
+  if (props.activeTab === 'signin') {
     return {
       status: 'Mautrade Dashboard Access',
       metrics: [

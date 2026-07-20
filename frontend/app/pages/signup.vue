@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useAuth } from '~/composables/useAuth'
 
 definePageMeta({
   layout: 'default'
@@ -41,7 +42,11 @@ const unlockReadonlyInput = (event: Event) => {
   input.readOnly = false
 }
 
-const submitRegister = () => {
+const { register, verifyOtp: verifyAuthOtp, devOtp } = useAuth()
+const errorMsg = ref('')
+const isLoading = ref(false)
+
+const submitRegister = async () => {
   submitAttempted.value = true
 
   if (registerInvalid.value) {
@@ -52,9 +57,23 @@ const submitRegister = () => {
     return
   }
 
-  registerStep.value = 'otp'
-  submitAttempted.value = false
-  otp.value = ''
+  errorMsg.value = ''
+  isLoading.value = true
+  try {
+    await register({
+      email: email.value,
+      name: fullName.value,
+      password: password.value,
+      confirm_password: confirmPassword.value
+    })
+    registerStep.value = 'otp'
+    submitAttempted.value = false
+    otp.value = ''
+  } catch (err: unknown) {
+    errorMsg.value = (err as Error).message
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const triggerOtpShake = () => {
@@ -72,13 +91,27 @@ const verifyOtp = async () => {
     return
   }
 
-  await navigateTo('/onboarding')
+  errorMsg.value = ''
+  isLoading.value = true
+  try {
+    await verifyAuthOtp({
+      email: email.value,
+      code: otp.value,
+      purpose: 'register_verify'
+    })
+    await navigateTo('/onboarding')
+  } catch (err: unknown) {
+    errorMsg.value = (err as Error).message
+    triggerOtpShake()
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
 <template>
   <AuthPageShell
-    active-tab="register"
+    active-tab="signup"
     :title="registerStep === 'credentials' ? 'Create Mautrade access' : 'Verify Mautrade email'"
     :subtitle="registerStep === 'credentials' ? 'Create access with name, email, and password, then verify OTP before setting country, exchange, and gas fee.' : 'Enter the email OTP to continue into Mautrade onboarding.'"
   >
@@ -196,11 +229,20 @@ const verifyOtp = async () => {
         </small>
       </div>
 
+      <div
+        v-if="errorMsg"
+        class="auth-error"
+        style="color: red; margin-bottom: 1rem; font-size: 0.875rem;"
+      >
+        {{ errorMsg }}
+      </div>
+
       <button
         class="auth-submit"
         type="submit"
+        :disabled="isLoading"
       >
-        Send Email OTP
+        {{ isLoading ? 'Sending...' : 'Send Email OTP' }}
         <UIcon name="lucide:mail-check" />
       </button>
 
@@ -241,11 +283,28 @@ const verifyOtp = async () => {
         >
       </div>
 
+      <div
+        v-if="devOtp"
+        class="auth-error"
+        style="color: #10b981; margin-bottom: 1rem; font-size: 0.875rem; text-align: center;"
+      >
+        Dev OTP: {{ devOtp }}
+      </div>
+
+      <div
+        v-if="errorMsg"
+        class="auth-error"
+        style="color: red; margin-bottom: 1rem; font-size: 0.875rem; text-align: center;"
+      >
+        {{ errorMsg }}
+      </div>
+
       <button
         class="auth-submit"
         type="submit"
+        :disabled="isLoading"
       >
-        Continue Mautrade Onboarding
+        {{ isLoading ? 'Verifying...' : 'Continue Mautrade Onboarding' }}
         <UIcon name="lucide:arrow-right" />
       </button>
 

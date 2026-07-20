@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useAuth } from '../composables/useAuth'
 
 definePageMeta({
   layout: 'default'
@@ -27,14 +28,32 @@ const unlockReadonlyInput = (event: Event) => {
   input.readOnly = false
 }
 
+const { login } = useAuth()
+const errorMsg = ref('')
+const isLoading = ref(false)
+
 const submitLogin = async () => {
-  await navigateTo('/dashboard')
+  errorMsg.value = ''
+  isLoading.value = true
+  try {
+    const res = await login({ email: email.value, password: password.value })
+    if (res.otpRequired) {
+      // Need OTP, navigate to signup page which handles OTP verification
+      await navigateTo('/signup?step=otp&email=' + encodeURIComponent(email.value))
+    } else {
+      await navigateTo('/dashboard')
+    }
+  } catch (err: unknown) {
+    errorMsg.value = (err as Error).message || 'Login failed. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
 <template>
   <AuthPageShell
-    active-tab="login"
+    active-tab="signin"
     title="Mautrade dashboard access"
     subtitle="Sign in to access Active Layers, Exchange Bindings, Gas Fee, and Trading History for your Mautrade account."
   >
@@ -100,11 +119,20 @@ const submitLogin = async () => {
         </NuxtLink>
       </div>
 
+      <div
+        v-if="errorMsg"
+        class="auth-error"
+        style="color: red; margin-bottom: 1rem; font-size: 0.875rem;"
+      >
+        {{ errorMsg }}
+      </div>
+
       <button
         class="auth-submit"
         type="submit"
+        :disabled="isLoading"
       >
-        Open Dashboard
+        {{ isLoading ? 'Signing In...' : 'Sign In' }}
         <UIcon name="lucide:arrow-right" />
       </button>
 
@@ -112,7 +140,7 @@ const submitLogin = async () => {
         New to Mautrade?
         <NuxtLink
           class="auth-link"
-          to="/register"
+          to="/signup"
         >
           Sign Up
         </NuxtLink>
