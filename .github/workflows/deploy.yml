@@ -23,7 +23,7 @@ jobs:
   # ──────────────────────────────────────────────
   changes:
     name: DETECT CHANGES
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       go_api: ${{ steps.filter.outputs.go_api }}
@@ -59,7 +59,7 @@ jobs:
   # ──────────────────────────────────────────────
   frontend_quality:
     name: FRONTEND BUILD
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     defaults:
@@ -90,7 +90,7 @@ jobs:
 
   go_api_quality:
     name: GO API QUALITY
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.go_api == 'true'
     defaults:
@@ -120,7 +120,7 @@ jobs:
 
   rust_worker_quality:
     name: RUST WORKER QUALITY
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.rust_worker == 'true'
     defaults:
@@ -149,7 +149,7 @@ jobs:
   # ──────────────────────────────────────────────
   config_validation:
     name: CONFIG VALIDATION
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -183,7 +183,7 @@ jobs:
   # ──────────────────────────────────────────────
   deploy:
     name: DEPLOY TO VPS
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: >-
       always()
       && !contains(needs.*.result, 'failure')
