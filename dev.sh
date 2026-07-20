@@ -271,7 +271,7 @@ start_dev() {
     if [ -d "$FRONTEND_DIR" ] && [ -f "$FRONTEND_DIR/package.json" ]; then
         echo -e "${BLUE}Starting Nuxt frontend (dev mode)...${NC}"
         cd "$FRONTEND_DIR"
-        pnpm dev -- --host 0.0.0.0 &
+        pnpm dev &
         FRONTEND_PID=$!
         cd "$PROJECT_DIR"
     fi

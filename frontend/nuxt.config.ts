@@ -21,7 +21,7 @@ export default defineNuxtConfig({
   routeRules: {
     '/': { redirect: { to: '/dashboard', statusCode: 302 } }
   },
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '2024-04-03',
 
   eslint: {
     config: {
