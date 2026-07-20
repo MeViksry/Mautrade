@@ -12,6 +12,7 @@ import (
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/secrets"
 	"github.com/MeViksry/Mautrade/backend/internal/store"
+	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/qdecimal"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,11 +24,12 @@ type Server struct {
 	store               *store.DashboardStore
 	gasFeeCalc          gasfee.Calculator
 	credentialEncryptor *secrets.Encryptor
+	mailer              *mailer.Mailer
 	logger              *slog.Logger
 	mux                 *http.ServeMux
 }
 
-func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, logger *slog.Logger) (*Server, error) {
+func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, mailer *mailer.Mailer, logger *slog.Logger) (*Server, error) {
 	shareRate, err := qdecimal.Parse(cfg.GasFeeShareRate)
 	if err != nil {
 		return nil, err
@@ -47,6 +49,7 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, l
 		store:               store.NewDashboardStore(db),
 		gasFeeCalc:          calculator,
 		credentialEncryptor: credentialEncryptor,
+		mailer:              mailer,
 		logger:              logger,
 		mux:                 http.NewServeMux(),
 	}

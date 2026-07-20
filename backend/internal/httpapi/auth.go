@@ -78,6 +78,13 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to register account")
 		return
 	}
+	if result.DevOTP != "" {
+		go func(toEmail, name, otp string) {
+			if err := s.mailer.SendOTP(toEmail, name, otp, "register"); err != nil {
+				s.logger.Error("failed to send register otp email", "error", err, "email", toEmail)
+			}
+		}(req.Email, result.User.DisplayName, result.DevOTP)
+	}
 	maskDevOTP(&result.DevOTP, s.config.Environment)
 	writeJSON(w, http.StatusCreated, result)
 }
@@ -115,6 +122,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("login user", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to login")
 		return
+	}
+	if result.OTPRequired && result.DevOTP != "" {
+		go func(toEmail, name, otp string) {
+			if err := s.mailer.SendOTP(toEmail, name, otp, "login"); err != nil {
+				s.logger.Error("failed to send login otp email", "error", err, "email", toEmail)
+			}
+		}(req.Email, result.User.DisplayName, result.DevOTP)
 	}
 	maskDevOTP(&result.DevOTP, s.config.Environment)
 	writeJSON(w, http.StatusOK, result)

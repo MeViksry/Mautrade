@@ -11,6 +11,7 @@ import (
 
 	"github.com/MeViksry/Mautrade/backend/internal/config"
 	"github.com/MeViksry/Mautrade/backend/internal/httpapi"
+	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/postgres"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 )
@@ -43,7 +44,9 @@ func main() {
 		defer natsClient.Close()
 	}
 
-	api, err := httpapi.NewServer(cfg, db, natsClient, logger)
+	m := mailer.NewMailer(&cfg)
+
+	api, err := httpapi.NewServer(cfg, db, natsClient, m, logger)
 	if err != nil {
 		logger.Error("create api", "error", err)
 		os.Exit(1)

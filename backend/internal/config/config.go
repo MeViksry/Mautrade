@@ -24,6 +24,11 @@ type Config struct {
 	AdminBootstrapPassword string
 	AdminBootstrapName     string
 	AdminBootstrapRole     string
+	SMTPHost               string
+	SMTPPort               string
+	SMTPUsername           string
+	SMTPPassword           string
+	SMTPFrom               string
 }
 
 func Load() (Config, error) {
@@ -57,6 +62,11 @@ func Load() (Config, error) {
 		AdminBootstrapPassword: stringEnv("ADMIN_BOOTSTRAP_PASSWORD", ""),
 		AdminBootstrapName:     stringEnv("ADMIN_BOOTSTRAP_NAME", "Mautrade Super Admin"),
 		AdminBootstrapRole:     stringEnv("ADMIN_BOOTSTRAP_ROLE", "super_admin"),
+		SMTPHost:               stringEnv("SMTP_HOST", ""),
+		SMTPPort:               stringEnv("SMTP_PORT", "587"),
+		SMTPUsername:           stringEnv("SMTP_USERNAME", ""),
+		SMTPPassword:           stringEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:               stringEnv("SMTP_FROM", "verify@mautrade.com"),
 	}, nil
 }
 
