@@ -81,17 +81,21 @@ const resetBindState = () => {
   submitted.value = false
 
   Object.keys(extras).forEach((key) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete extras[key]
   })
   Object.keys(visibleFields).forEach((key) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete visibleFields[key]
   })
   Object.keys(autofillLocked).forEach((key) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete autofillLocked[key]
   })
   autofillLocked.apiKey = true
   autofillLocked.apiSecret = true
   Object.keys(fieldShake).forEach((key) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete fieldShake[key]
   })
 }

@@ -54,9 +54,11 @@ const resetManageState = () => {
   submitted.value = false
 
   Object.keys(fieldShake).forEach((key) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete fieldShake[key]
   })
   Object.keys(visibleCredentials).forEach((key) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete visibleCredentials[key]
   })
 }
