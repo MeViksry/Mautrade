@@ -9,10 +9,10 @@ import (
 
 	"github.com/MeViksry/Mautrade/backend/internal/config"
 	"github.com/MeViksry/Mautrade/backend/internal/domain/gasfee"
+	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/secrets"
 	"github.com/MeViksry/Mautrade/backend/internal/store"
-	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/qdecimal"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
