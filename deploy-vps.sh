@@ -228,6 +228,19 @@ else
     echo -e "${GREEN}  ✓ backend/.env exists (production)${NC}"
 fi
 
+# Inject SMTP variables from CI/CD if provided
+if [ -n "${SMTP_HOST:-}" ]; then
+    for VAR in "SMTP_HOST" "SMTP_PORT" "SMTP_USERNAME" "SMTP_PASSWORD" "SMTP_FROM"; do
+        if grep -q "^${VAR}=" "$PROJECT_DIR/backend/.env"; then
+            sed -i "s|^${VAR}=.*|${VAR}=${!VAR}|" "$PROJECT_DIR/backend/.env"
+        else
+            echo "${VAR}=${!VAR}" >> "$PROJECT_DIR/backend/.env"
+        fi
+    done
+    echo -e "${GREEN}  ✓ Injected SMTP configuration into backend/.env${NC}"
+    audit_log "smtp_injected" "host=${SMTP_HOST}"
+fi
+
 # ──────────────────────────────────────────────
 #  [4/7] Build & Deploy Docker services
 # ──────────────────────────────────────────────
