@@ -72,6 +72,19 @@ const submitRegister = async () => {
     submitAttempted.value = false
     otp.value = ''
   } catch (err: unknown) {
+    if ((err as Error).message === 'Account already exists') {
+      try {
+        const res = await login({ email: email.value, password: password.value })
+        if (res?.otpRequired) {
+          registerStep.value = 'otp'
+          submitAttempted.value = false
+          otp.value = ''
+          return
+        }
+      } catch {
+        // If login fails (e.g. wrong password), just show the original error
+      }
+    }
     errorMsg.value = (err as Error).message
   } finally {
     isLoading.value = false
