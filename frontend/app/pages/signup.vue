@@ -42,9 +42,11 @@ const unlockReadonlyInput = (event: Event) => {
   input.readOnly = false
 }
 
-const { register, verifyOtp: verifyAuthOtp, devOtp } = useAuth()
+const { register, login, verifyOtp: verifyAuthOtp, devOtp } = useAuth()
 const errorMsg = ref('')
 const isLoading = ref(false)
+const resendLoading = ref(false)
+const resendMsg = ref('')
 
 const submitRegister = async () => {
   submitAttempted.value = true
@@ -81,6 +83,24 @@ const triggerOtpShake = () => {
   window.requestAnimationFrame(() => {
     otpShake.value = true
   })
+}
+
+const handleResendOtp = async () => {
+  resendMsg.value = ''
+  errorMsg.value = ''
+  resendLoading.value = true
+  try {
+    // Calling login will generate and send a new OTP if email is unverified
+    await login({
+      email: email.value,
+      password: password.value
+    })
+    resendMsg.value = 'A new OTP has been sent to your email.'
+  } catch (err: unknown) {
+    errorMsg.value = (err as Error).message
+  } finally {
+    resendLoading.value = false
+  }
 }
 
 const verifyOtp = async () => {
@@ -309,13 +329,35 @@ const verifyOtp = async () => {
         {{ errorMsg }}
       </div>
 
+      <div
+        v-if="resendMsg"
+        class="auth-success"
+        style="color: #10b981; margin-bottom: 1rem; font-size: 0.875rem; text-align: center;"
+      >
+        {{ resendMsg }}
+      </div>
+
       <button
         class="auth-submit"
         type="submit"
-        :disabled="isLoading"
+        :disabled="isLoading || resendLoading"
       >
         {{ isLoading ? 'Verifying...' : 'Continue Mautrade Onboarding' }}
         <UIcon name="lucide:arrow-right" />
+      </button>
+
+      <button
+        class="auth-submit"
+        type="button"
+        style="margin-top: 0.5rem; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8;"
+        :disabled="isLoading || resendLoading"
+        @click="handleResendOtp"
+      >
+        {{ resendLoading ? 'Sending...' : 'Resend OTP' }}
+        <UIcon
+          name="lucide:refresh-cw"
+          :class="{ 'animate-spin': resendLoading }"
+        />
       </button>
 
       <button
