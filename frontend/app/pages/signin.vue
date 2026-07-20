@@ -63,9 +63,11 @@ const submitLogin = async () => {
       @submit.prevent="submitLogin"
     >
       <div class="auth-field">
-        <label>Email Account</label>
+        <label for="email">Email Account</label>
         <input
+          id="email"
           v-model="email"
+          name="email"
           class="auth-input"
           type="text"
           inputmode="email"
@@ -81,10 +83,12 @@ const submitLogin = async () => {
       </div>
 
       <div class="auth-field">
-        <label>Password Account</label>
+        <label for="password">Password Account</label>
         <div class="password-wrap">
           <input
+            id="password"
             v-model="password"
+            name="password"
             class="auth-input"
             :type="passwordVisible ? 'text' : 'password'"
             placeholder="Enter Mautrade password"
@@ -104,9 +108,14 @@ const submitLogin = async () => {
       </div>
 
       <div class="auth-row">
-        <label class="auth-check">
+        <label
+          for="rememberMe"
+          class="auth-check"
+        >
           <input
+            id="rememberMe"
             v-model="rememberMe"
+            name="rememberMe"
             type="checkbox"
           >
           Remember me

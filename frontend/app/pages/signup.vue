@@ -124,9 +124,11 @@ const verifyOtp = async () => {
       @animationend="registerShake = false"
     >
       <div class="auth-field">
-        <label>Full Name</label>
+        <label for="fullName">Full Name</label>
         <input
+          id="fullName"
           v-model="fullName"
+          name="fullName"
           class="auth-input"
           :class="{ 'is-invalid': submitAttempted && fullNameInvalid }"
           type="text"
@@ -145,9 +147,11 @@ const verifyOtp = async () => {
       </div>
 
       <div class="auth-field">
-        <label>Email Account</label>
+        <label for="email">Email Account</label>
         <input
+          id="email"
           v-model="email"
+          name="email"
           class="auth-input"
           :class="{ 'is-invalid': submitAttempted && emailInvalid }"
           type="text"
@@ -170,10 +174,12 @@ const verifyOtp = async () => {
       </div>
 
       <div class="auth-field">
-        <label>Create Password</label>
+        <label for="password">Create Password</label>
         <div class="password-wrap">
           <input
+            id="password"
             v-model="password"
+            name="password"
             class="auth-input"
             :class="{ 'is-invalid': submitAttempted && passwordInvalid }"
             :type="passwordVisible ? 'text' : 'password'"
@@ -200,10 +206,12 @@ const verifyOtp = async () => {
       </div>
 
       <div class="auth-field">
-        <label>Confirm Password</label>
+        <label for="confirmPassword">Confirm Password</label>
         <div class="password-wrap">
           <input
+            id="confirmPassword"
             v-model="confirmPassword"
+            name="confirmPassword"
             class="auth-input"
             :class="{ 'is-invalid': submitAttempted && confirmPasswordInvalid }"
             :type="confirmPasswordVisible ? 'text' : 'password'"
@@ -269,9 +277,11 @@ const verifyOtp = async () => {
       </div>
 
       <div class="auth-field">
-        <label>Mautrade Email OTP</label>
+        <label for="otp">Mautrade Email OTP</label>
         <input
+          id="otp"
           v-model="otp"
+          name="otp"
           class="auth-input otp-input"
           :class="{ 'is-invalid': submitAttempted && otpInvalid, 'is-shaking': otpShake }"
           type="text"
