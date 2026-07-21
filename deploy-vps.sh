@@ -145,7 +145,7 @@ else
             frontend/*)
                 FRONTEND_CHANGED=true
                 ;;
-            docker-compose.prod.yml|deploy-vps.sh|.env.production*)
+            docker-compose.prod.yml|deploy-vps.sh|.env.production*|.github/workflows/*)
                 INFRA_CHANGED=true
                 ;;
         esac
