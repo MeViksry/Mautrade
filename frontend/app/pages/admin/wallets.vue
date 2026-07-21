@@ -16,17 +16,21 @@ useSeoMeta({
 const loading = ref(true)
 
 const walletStats = ref({
-  totalBalance: 450000,
-  dailyInflow: 12500,
-  dailyOutflow: 3200,
-  activeWallets: 3
+  totalBalance: 0,
+  dailyInflow: 0,
+  dailyOutflow: 0,
+  activeWallets: 0
 })
 
-const companyWallets = ref([
-  { id: 'W-01', network: 'TRC20', address: 'TEkxN9p5F7...XyP9q', balance: 125000, status: 'Active' },
-  { id: 'W-02', network: 'ERC20', address: '0x8F34B7C5...7F9012', balance: 250000, status: 'Active' },
-  { id: 'W-03', network: 'BEP20', address: '0x3c4d5e6f...8e7d6c', balance: 75000, status: 'Active' }
-])
+interface CompanyWallet {
+  id: string
+  network: string
+  address: string
+  balance: number
+  status: string
+}
+
+const companyWallets = ref<CompanyWallet[]>([])
 
 onMounted(() => {
   setTimeout(() => {

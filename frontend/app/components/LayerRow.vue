@@ -2,14 +2,13 @@
 defineProps<{
   layer: {
     id: string
-    pair: string
-    entryPrice: number
-    currentPrice: number
+    symbol: string
+    type: string
     allocationPct: number
-    allocatedUsdt: number
-    unrealizedPnl: number
-    unrealizedPnlPct: number
-    openedAt: string
+    status: string
+    createdAt: string
+    totalLayers: number
+    totalVolumeQuote: number
   }
 }>()
 
@@ -23,51 +22,53 @@ const formatDate = (dateString: string) => {
   <div class="layer-row">
     <div class="layer-row__info">
       <div class="layer-row__pair">
-        {{ layer.pair }}
+        {{ layer.symbol }}
       </div>
       <div class="layer-row__meta">
-        <span class="layer-row__id">{{ layer.id }}</span>
+        <span class="layer-row__id">{{ layer.id.split('-')[0] }}</span>
         <span class="layer-row__dot" />
-        <span class="layer-row__time">{{ formatDate(layer.openedAt) }}</span>
+        <span class="layer-row__time">{{ formatDate(layer.createdAt) }}</span>
       </div>
     </div>
 
     <div class="layer-row__stats">
       <div class="layer-row__stat-group">
         <div class="layer-row__label">
-          Entry
+          Layers
         </div>
         <div class="layer-row__val">
-          ${{ layer.entryPrice.toLocaleString() }}
+          {{ layer.totalLayers }}
         </div>
       </div>
       <div class="layer-row__stat-group">
         <div class="layer-row__label">
-          Current
+          Volume
         </div>
         <div class="layer-row__val">
-          ${{ layer.currentPrice.toLocaleString() }}
+          ${{ layer.totalVolumeQuote.toLocaleString() }}
         </div>
       </div>
       <div class="layer-row__stat-group">
         <div class="layer-row__label">
-          Allocation ({{ layer.allocationPct }}%)
+          Allocation
         </div>
         <div class="layer-row__val">
-          ${{ layer.allocatedUsdt.toLocaleString() }}
+          {{ layer.allocationPct }}%
         </div>
       </div>
     </div>
 
     <div
       class="layer-row__pnl"
-      :class="layer.unrealizedPnl >= 0 ? 'pnl-positive' : 'pnl-negative'"
     >
-      <div class="layer-row__pnl-amount">
-        {{ layer.unrealizedPnl >= 0 ? '+' : '' }}${{ Math.abs(layer.unrealizedPnl).toFixed(2) }}
+      <div
+        class="layer-row__pnl-amount"
+        :class="layer.type === 'buy' ? 'text-green' : 'text-red'"
+      >
+        {{ layer.type.toUpperCase() }}
       </div>
       <div class="layer-row__pnl-pct">
-        {{ layer.unrealizedPnlPct >= 0 ? '+' : '' }}{{ layer.unrealizedPnlPct.toFixed(2) }}%
+        {{ layer.status.toUpperCase() }}
       </div>
     </div>
   </div>

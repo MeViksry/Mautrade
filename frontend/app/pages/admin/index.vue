@@ -129,11 +129,40 @@ const chartOptions = {
   }
 }
 
-onMounted(() => {
-  // Simulate data fetch
-  setTimeout(() => {
+interface AdminOverviewResponse {
+  registeredUsers: number
+  activeUsers: number
+  gasFeeRevenueToday: string
+  openLayers: number
+}
+
+const { tokenCookie } = useAdminAuth()
+
+onMounted(async () => {
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    const data = await $fetch<AdminOverviewResponse>(`${apiBase}/admin/overview`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
+
+    stats.value = {
+      totalUser: data.registeredUsers || 0,
+      activeUser: data.activeUsers || 0,
+      totalRevenue: Number(data.gasFeeRevenueToday) || 0, // Using revenue today as placeholder for total
+      gasFeeDepositPending: data.openLayers || 0, // Placeholder
+      newUserToday: 0,
+      revenue7Day: 0,
+      revenue30Day: 0,
+      revenue365Day: 0
+    }
+
+    // We'll leave the activeLayers mock for now since it's not provided by overview
+  } catch (err) {
+    console.error('Failed to load admin overview:', err)
+  } finally {
     loading.value = false
-  }, 1000)
+  }
 })
 </script>
 

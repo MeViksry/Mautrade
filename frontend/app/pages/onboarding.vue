@@ -136,6 +136,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
+const { completeOnboarding } = useAuth()
+
 const submitOnboarding = async () => {
   submitAttempted.value = true
 
@@ -145,7 +147,19 @@ const submitOnboarding = async () => {
 
   if (onboardingBlocked.value) return
 
-  await navigateTo('/dashboard')
+  try {
+    await completeOnboarding({
+      age: Number(age.value),
+      countryCode: selectedCountry.value,
+      exchanges: selectedExchanges.value,
+      amount: String(depositAmount.value),
+      gasFeeAsset: selectedDepositCoin.value
+    })
+    await navigateTo('/dashboard')
+  } catch (error) {
+    console.error('Failed to complete onboarding:', error)
+    // could display error toast here
+  }
 }
 </script>
 

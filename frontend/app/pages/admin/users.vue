@@ -15,24 +15,62 @@ useSeoMeta({
 
 const loading = ref(true)
 
+const { tokenCookie } = useAdminAuth()
+
 const usersStats = ref({
-  totalUsers: 12450,
-  verified: 9800,
-  activeBots: 4320,
-  pendingGasFee: 450
+  totalUsers: 0,
+  verified: 0,
+  activeBots: 0,
+  pendingGasFee: 0
 })
 
-const users = ref([
-  { id: '1011', name: 'John Doe', email: 'john@example.com', registered: '2026-05-12', status: 'Verified', gasFee: 'Paid', bot: 'Active' },
-  { id: '1012', name: 'Jane Smith', email: 'jane@example.com', registered: '2026-06-01', status: 'Pending', gasFee: 'Pending', bot: 'Inactive' },
-  { id: '1013', name: 'Bob Johnson', email: 'bob@example.com', registered: '2026-06-15', status: 'Verified', gasFee: 'Paid', bot: 'Active' },
-  { id: '1014', name: 'Alice Williams', email: 'alice@example.com', registered: '2026-07-02', status: 'Verified', gasFee: 'Pending', bot: 'Inactive' }
-])
+interface AdminUserResponse {
+  id: string
+  displayName?: string
+  email: string
+  createdAt: string
+  status: string
+  onboardingCompleted: boolean
+}
 
-onMounted(() => {
-  setTimeout(() => {
+interface FormattedUser {
+  id: string
+  name?: string
+  email: string
+  registered: string
+  status: string
+  gasFee: string
+  bot: string
+}
+
+const users = ref<FormattedUser[]>([])
+
+onMounted(async () => {
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    const data = await $fetch<AdminUserResponse[]>(`${apiBase}/admin/users`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
+
+    users.value = data.map(u => ({
+      id: u.id.split('-')[0] ?? '', // show short id
+      name: u.displayName,
+      email: u.email,
+      registered: new Date(u.createdAt).toISOString().split('T')[0] ?? '',
+      status: u.status === 'active' ? 'Verified' : 'Pending',
+      gasFee: 'Paid', // TODO: backend should return this
+      bot: u.onboardingCompleted ? 'Active' : 'Inactive'
+    }))
+
+    usersStats.value.totalUsers = users.value.length
+    usersStats.value.verified = users.value.filter(u => u.status === 'Verified').length
+    usersStats.value.activeBots = users.value.filter(u => u.bot === 'Active').length
+  } catch (error) {
+    console.error('Failed to load users:', error)
+  } finally {
     loading.value = false
-  }, 1000)
+  }
 })
 </script>
 

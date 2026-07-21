@@ -63,7 +63,7 @@ type RegisterUserResult struct {
 	User         AuthUserView `json:"user"`
 	OTPRequired  bool         `json:"otpRequired"`
 	OTPExpiresAt time.Time    `json:"otpExpiresAt"`
-	DevOTP       string       `json:"devOtp,omitempty"`
+	DevOTP       string       `json:"-"`
 }
 
 type LoginUserParams struct {
@@ -81,7 +81,7 @@ type LoginUserResult struct {
 	Session      *SessionView `json:"session,omitempty"`
 	OTPRequired  bool         `json:"otpRequired"`
 	OTPExpiresAt *time.Time   `json:"otpExpiresAt,omitempty"`
-	DevOTP       string       `json:"devOtp,omitempty"`
+	DevOTP       string       `json:"-"`
 }
 
 type VerifyEmailOTPParams struct {

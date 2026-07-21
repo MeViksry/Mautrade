@@ -185,29 +185,72 @@ const recentTrades = ref(Array.from({ length: 16 }, (_, i) => ({
   type: Math.random() > 0.5 ? 'buy' : 'sell'
 })))
 
-const activeLayers = ref([
-  {
-    id: 'layer-btc-1',
-    pair: 'BTC/USDT',
-    entryPrice: 65400,
-    currentPrice: 66200,
-    allocationPct: 15,
-    allocatedUsdt: 1500,
-    unrealizedPnl: 18.3,
-    unrealizedPnlPct: 1.2,
-    openedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    status: 'ACTIVE'
-  }
-])
+interface ActiveLayerResponse {
+  id: string
+  symbol: string
+  type: string
+  allocationPct: number
+  status: string
+  createdAt: string
+  totalLayers: number
+  totalVolumeQuote: number
+}
 
-const completedLayers = ref([
+interface OpenOrderResponse {
+  id: string
+  symbol: string
+  action: string
+  quantity: number
+  price: number
+  status: string
+  exchange: string
+  createdAt: string
+}
+
+const { tokenCookie } = useAdminAuth()
+
+interface CompletedLayer {
+  id: string
+  pair: string
+  entryPrice: number
+  closePrice: number
+  pnl: number
+  date: string
+}
+
+const activeLayers = ref<ActiveLayerResponse[]>([])
+const openOrders = ref<OpenOrderResponse[]>([])
+const completedLayers = ref<CompletedLayer[]>([
   { id: 'layer-eth-c', pair: 'ETH/USDT', entryPrice: 3400, closePrice: 3550, pnl: 4.4, date: '2026-07-18' }
 ])
+const loading = ref(true)
 
-const openOrders = ref([
-  { id: 'EX-091', pair: 'BTC/USDT', type: 'Limit Buy', side: 'Buy', price: '64,500.00', amount: '0.0185', filled: '62%', status: 'Working' },
-  { id: 'EX-092', pair: 'ETH/USDT', type: 'Limit Sell', side: 'Sell', price: '3,520.00', amount: '1.2400', filled: '18%', status: 'Queued' }
-])
+const loadExecutionData = async () => {
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    const [signalsRes, ordersRes] = await Promise.all([
+      $fetch<ActiveLayerResponse[]>(`${apiBase}/admin/signals/active`, {
+        headers: { Authorization: `Bearer ${tokenCookie.value}` }
+      }),
+      $fetch<OpenOrderResponse[]>(`${apiBase}/admin/signals/orders`, {
+        headers: { Authorization: `Bearer ${tokenCookie.value}` }
+      })
+    ])
+
+    activeLayers.value = signalsRes
+    openOrders.value = ordersRes
+  } catch (err) {
+    console.error('Failed to load execution data', err)
+  }
+}
+
+onMounted(() => {
+  loadExecutionData()
+  setTimeout(() => {
+    loading.value = false
+  }, 1000)
+})
 
 let intervalId: ReturnType<typeof setInterval>
 
@@ -621,13 +664,13 @@ const cancelAllLayers = () => {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Pair</th>
-              <th>Type</th>
-              <th>Side</th>
+              <th>Symbol</th>
+              <th>Action</th>
+              <th>Quantity</th>
               <th>Price</th>
-              <th>Amount</th>
-              <th>Filled</th>
+              <th>Exchange</th>
               <th>Status</th>
+              <th>Created</th>
             </tr>
           </thead>
           <tbody>
@@ -635,16 +678,16 @@ const cancelAllLayers = () => {
               v-for="order in openOrders"
               :key="order.id"
             >
-              <td>{{ order.id }}</td>
-              <td>{{ order.pair }}</td>
-              <td>{{ order.type }}</td>
-              <td :class="order.side === 'Buy' ? 'price-buy' : 'price-sell'">
-                {{ order.side }}
+              <td>{{ order.id.split('-')[0] }}</td>
+              <td>{{ order.symbol }}</td>
+              <td :class="order.action === 'buy' ? 'price-buy' : 'price-sell'">
+                {{ order.action.toUpperCase() }}
               </td>
+              <td>{{ order.quantity }}</td>
               <td>{{ order.price }}</td>
-              <td>{{ order.amount }}</td>
-              <td>{{ order.filled }}</td>
+              <td>{{ order.exchange }}</td>
               <td>{{ order.status }}</td>
+              <td>{{ new Date(order.createdAt).toLocaleDateString() }}</td>
             </tr>
           </tbody>
         </table>

@@ -15,35 +15,114 @@ useSeoMeta({
 
 const loading = ref(true)
 
-const depositsStats = ref({
-  totalDeposits: 452000,
-  pending: 12500,
-  verified: 420000,
-  rejected: 19500
-})
-
-const deposits = ref([
-  { id: 'DP-091', userId: '1011', amount: 500, txId: '0x1a2b3c4d5e6f...', date: '2026-07-18', status: 'Pending' },
-  { id: 'DP-090', userId: '1045', amount: 1200, txId: '0x9f8e7d6c5b4a...', date: '2026-07-17', status: 'Verified' },
-  { id: 'DP-089', userId: '1088', amount: 200, txId: '0x2b3c4d5e6f7a...', date: '2026-07-17', status: 'Rejected' },
-  { id: 'DP-088', userId: '1012', amount: 3500, txId: '0x8e7d6c5b4a3b...', date: '2026-07-16', status: 'Verified' }
-])
-
-const handleVerify = (id: string) => {
-  const deposit = deposits.value.find(d => d.id === id)
-  if (deposit) deposit.status = 'Verified'
+interface DepositResponse {
+  id: string
+  userId: string
+  amount: string
+  asset: string
+  txId: string
+  status: string
+  createdAt: string
+  confirmedAt?: string
 }
 
-const handleReject = (id: string) => {
-  const deposit = deposits.value.find(d => d.id === id)
-  if (deposit) deposit.status = 'Rejected'
+interface FormattedDeposit {
+  id: string
+  userId: string
+  amount: number
+  txId: string
+  date: string
+  status: string
+  fullId: string
+}
+
+const { tokenCookie } = useAdminAuth()
+
+const depositsStats = ref({
+  totalDeposits: 0,
+  pending: 0,
+  verified: 0,
+  rejected: 0
+})
+
+const deposits = ref<FormattedDeposit[]>([])
+
+const loadDeposits = async () => {
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    const data = await $fetch<DepositResponse[]>(`${apiBase}/admin/gas-fee/deposits`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
+
+    deposits.value = data.map(d => ({
+      fullId: d.id,
+      id: d.id.split('-')[0] ?? '',
+      userId: d.userId.split('-')[0] ?? '',
+      amount: Number(d.amount),
+      txId: d.txId || 'N/A',
+      date: new Date(d.createdAt).toISOString().split('T')[0] ?? '',
+      status: d.status.charAt(0).toUpperCase() + d.status.slice(1)
+    }))
+
+    depositsStats.value = {
+      totalDeposits: deposits.value.reduce((sum, d) => sum + d.amount, 0),
+      pending: deposits.value.filter(d => d.status === 'Pending').length,
+      verified: deposits.value.filter(d => d.status === 'Confirmed').length,
+      rejected: deposits.value.filter(d => d.status === 'Rejected').length
+    }
+  } catch (err) {
+    console.error('Failed to load deposits', err)
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
-  setTimeout(() => {
-    loading.value = false
-  }, 1000)
+  loadDeposits()
 })
+
+const handleVerify = async (id: string) => {
+  const deposit = deposits.value.find(d => d.id === id)
+  if (!deposit) return
+
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    await $fetch(`${apiBase}/admin/gas-fee/deposits/${deposit.fullId}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${tokenCookie.value}` },
+      body: { status: 'confirmed' }
+    })
+    deposit.status = 'Confirmed'
+    depositsStats.value.pending--
+    depositsStats.value.verified++
+  } catch (err) {
+    console.error('Failed to verify deposit', err)
+    alert('Failed to verify deposit')
+  }
+}
+
+const handleReject = async (id: string) => {
+  const deposit = deposits.value.find(d => d.id === id)
+  if (!deposit) return
+
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    await $fetch(`${apiBase}/admin/gas-fee/deposits/${deposit.fullId}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${tokenCookie.value}` },
+      body: { status: 'rejected' }
+    })
+    deposit.status = 'Rejected'
+    depositsStats.value.pending--
+    depositsStats.value.rejected++
+  } catch (err) {
+    console.error('Failed to reject deposit', err)
+    alert('Failed to reject deposit')
+  }
+}
 </script>
 
 <template>

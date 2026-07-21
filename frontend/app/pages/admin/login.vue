@@ -27,8 +27,25 @@ const unlockReadonlyInput = (event: Event) => {
   input.readOnly = false
 }
 
+const { loginAdmin } = useAdminAuth()
+const isLoading = ref(false)
+const errorMsg = ref('')
+
 const submitLogin = async () => {
-  await navigateTo('/admin')
+  try {
+    isLoading.value = true
+    errorMsg.value = ''
+    await loginAdmin({ email: email.value, password: password.value })
+    await navigateTo('/admin')
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      errorMsg.value = err.message
+    } else {
+      errorMsg.value = 'Failed to login'
+    }
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -103,11 +120,20 @@ const submitLogin = async () => {
           </label>
         </div>
 
+        <div
+          v-if="errorMsg"
+          class="auth-error"
+          style="color: red; margin-bottom: 1rem; font-size: 0.875rem;"
+        >
+          {{ errorMsg }}
+        </div>
+
         <button
           class="auth-submit"
           type="submit"
+          :disabled="isLoading"
         >
-          Secure Sign In
+          {{ isLoading ? 'Signing in...' : 'Access Admin Portal' }}
           <UIcon name="lucide:arrow-right" />
         </button>
       </form>
