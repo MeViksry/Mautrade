@@ -229,7 +229,7 @@ const verifyOtp = async () => {
         </label>
         <NuxtLink
           class="auth-link"
-          to="/login"
+          to="/signin"
         >
           Reset account password
         </NuxtLink>

@@ -291,7 +291,7 @@ const verifyOtp = async () => {
         Already have Mautrade access?
         <NuxtLink
           class="auth-link"
-          to="/login"
+          to="/signin"
         >
           Sign In
         </NuxtLink>
