@@ -12,7 +12,7 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import CoinPairDropdown from '~/components/CoinPairDropdown.vue'
-import LayerRow from '~/components/LayerRow.vue'
+import AdminActiveSignalRow from '~/components/AdminActiveSignalRow.vue'
 
 ChartJS.register(
   CategoryScale,
@@ -694,7 +694,7 @@ const cancelAllLayers = () => {
       </div>
 
       <div class="layers-list">
-        <LayerRow
+        <AdminActiveSignalRow
           v-for="layer in activeLayers"
           :key="layer.id"
           :layer="layer"
