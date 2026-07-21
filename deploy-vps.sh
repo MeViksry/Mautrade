@@ -241,6 +241,16 @@ if [ -n "${SMTP_HOST:-}" ]; then
     audit_log "smtp_injected" "host=${SMTP_HOST}"
 fi
 
+if [ -n "${DB_PASSWORD:-}" ]; then
+    if grep -q "^DB_PASSWORD=" "$PROJECT_DIR/backend/.env"; then
+        sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" "$PROJECT_DIR/backend/.env"
+    else
+        echo "DB_PASSWORD=${DB_PASSWORD}" >> "$PROJECT_DIR/backend/.env"
+    fi
+    echo -e "${GREEN}  ✓ Injected DB_PASSWORD into backend/.env${NC}"
+    audit_log "db_password_injected" "status=success"
+fi
+
 # ──────────────────────────────────────────────
 #  [4/7] Build & Deploy Docker services
 # ──────────────────────────────────────────────

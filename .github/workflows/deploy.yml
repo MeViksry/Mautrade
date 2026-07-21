@@ -295,6 +295,7 @@ jobs:
             export SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}'
             _FROM="${{ secrets.SMTP_FROM }}"
             export SMTP_FROM="${_FROM:-support@mautrade.com}"
+            export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
             
             ./deploy-vps.sh
           DEPLOY_EOF
