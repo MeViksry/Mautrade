@@ -35,7 +35,7 @@ const submitAttempted = ref(false)
 
 const otpInvalid = computed(() => otp.value.trim().length !== 6)
 
-const { login, verifyOtp: verifyAuthOtp, devOtp } = useAuth()
+const { login, verifyOtp: verifyAuthOtp } = useAuth()
 const errorMsg = ref('')
 const isLoading = ref(false)
 const resendLoading = ref(false)
@@ -289,14 +289,6 @@ const verifyOtp = async () => {
           autocomplete="one-time-code"
           @animationend="otpShake = false"
         >
-      </div>
-
-      <div
-        v-if="devOtp"
-        class="auth-error"
-        style="color: #10b981; margin-bottom: 1rem; font-size: 0.875rem; text-align: center;"
-      >
-        Dev OTP: {{ devOtp }}
       </div>
 
       <div

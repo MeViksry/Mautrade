@@ -42,7 +42,7 @@ const unlockReadonlyInput = (event: Event) => {
   input.readOnly = false
 }
 
-const { register, login, verifyOtp: verifyAuthOtp, devOtp } = useAuth()
+const { register, login, verifyOtp: verifyAuthOtp } = useAuth()
 const errorMsg = ref('')
 const isLoading = ref(false)
 const resendLoading = ref(false)
@@ -324,14 +324,6 @@ const verifyOtp = async () => {
           autocomplete="one-time-code"
           @animationend="otpShake = false"
         >
-      </div>
-
-      <div
-        v-if="devOtp"
-        class="auth-error"
-        style="color: #10b981; margin-bottom: 1rem; font-size: 0.875rem; text-align: center;"
-      >
-        Dev OTP: {{ devOtp }}
       </div>
 
       <div
