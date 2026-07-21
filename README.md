@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Mautrade-1a1a1a?style=for-the-badge&logo=mautrade&logoColor=FF6B00" alt="Mautrade Logo" />
   
-  # Mautrade Trading Platform
+  <img src="Banner-Readme.md.png" alt="Mautrade Banner" width="100%" />
 
   <p align="center">
     <img src="https://img.shields.io/badge/Status-Active-success?style=flat-square" alt="Status" />
