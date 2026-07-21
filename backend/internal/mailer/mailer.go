@@ -128,22 +128,22 @@ func (m *Mailer) SendOTP(toEmail, firstName, otp, reason string) error {
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   </style>
 </head>
-<body style="margin:0;padding:40px 16px;background-color:#0b0f0e;font-family:'Inter',sans-serif;color:#e2e8f0;">
-  <div style="max-width:560px;margin:0 auto;background-color:#111916;border:1px solid #1e2d25;border-radius:20px;overflow:hidden;">
-    <div style="height:4px;background:linear-gradient(90deg,#00ff88 0%%,#00d4ff 50%%,#00ff88 100%%);"></div>
+<body style="margin:0;padding:40px 16px;background-color:#0a0a0a;font-family:'Inter',sans-serif;color:#ebebeb;">
+  <div style="max-width:560px;margin:0 auto;background-color:#121212;border:1px solid #2a2a2a;border-radius:20px;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#ff5a00 0%%,#cc4700 50%%,#ff5a00 100%%);"></div>
     <div style="padding:32px;">
-      <h2 style="font-size:24px;font-weight:700;color:#e2e8f0;margin:0 0 20px 0;">MAU<span style="color:#00ff88;">TRADE</span></h2>
-      <div style="display:inline-block;background-color:#0d2818;border:1px solid #00ff88;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:#00ff88;margin-bottom:18px;">%s</div>
-      <h3 style="font-size:22px;color:#f1f5f9;margin:0 0 14px 0;">%s</h3>
+      <h2 style="font-size:24px;font-weight:700;color:#ebebeb;margin:0 0 20px 0;">MAU<span style="color:#ff5a00;">TRADE</span></h2>
+      <div style="display:inline-block;background-color:#2a1400;border:1px solid #ff5a00;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:#ff5a00;margin-bottom:18px;">%s</div>
+      <h3 style="font-size:22px;color:#ebebeb;margin:0 0 14px 0;">%s</h3>
       <p style="font-size:15px;margin:0 0 16px 0;">Hi <strong>%s</strong>,</p>
-      <p style="font-size:14px;color:#94a3b8;line-height:1.7;margin:0 0 20px 0;">%s</p>
+      <p style="font-size:14px;color:#888888;line-height:1.7;margin:0 0 20px 0;">%s</p>
 
-      <div style="background-color:#0c1a24;border:1px solid #164e63;border-radius:16px;padding:18px 18px 8px 18px;margin-bottom:22px;">
-        <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9;margin-bottom:14px;">%s</div>
-        <div style="background-color:#162220;border:1px solid #1e3a2f;border-radius:14px;padding:22px 16px;text-align:center;margin-bottom:10px;">
-          <span style="font-size:34px;font-weight:700;letter-spacing:8px;color:#00ff88;">%s</span>
+      <div style="background-color:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:18px 18px 8px 18px;margin-bottom:22px;">
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#c8c8c8;margin-bottom:14px;">%s</div>
+        <div style="background-color:#121212;border:1px solid #2a2a2a;border-radius:14px;padding:22px 16px;text-align:center;margin-bottom:10px;">
+          <span style="font-size:34px;font-weight:700;letter-spacing:8px;color:#ff5a00;">%s</span>
         </div>
-        <div style="font-size:12px;color:#94a3b8;line-height:1.6;">%s</div>
+        <div style="font-size:12px;color:#888888;line-height:1.6;">%s</div>
       </div>
 
       <div style="background-color:#1a1407;border:1px solid #6b4f1d;border-radius:14px;padding:14px 16px;margin-bottom:20px;">
@@ -152,7 +152,7 @@ func (m *Mailer) SendOTP(toEmail, firstName, otp, reason string) error {
         </p>
       </div>
 
-      <p style="font-size:12px;color:#64748b;margin:0;">This is an automated security message from Mautrade.</p>
+      <p style="font-size:12px;color:#555555;margin:0;">This is an automated security message from Mautrade.</p>
     </div>
   </div>
 </body>
