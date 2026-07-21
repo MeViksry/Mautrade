@@ -170,7 +170,6 @@ const verifyOtp = async () => {
         </div>
       </div>
 
-
       <div class="auth-row">
         <label
           for="rememberMe"
