@@ -165,8 +165,8 @@ const submitOnboarding = async () => {
       </div>
 
       <div class="onboarding-heading">
-        <p>Mautrade Onboarding</p>
-        <h1>Prepare your dashboard profile</h1>
+        <p>Welcome to Mautrade</p>
+        <h1>Configure Your Trading Environment</h1>
       </div>
 
       <form
@@ -174,7 +174,7 @@ const submitOnboarding = async () => {
         @submit.prevent="submitOnboarding"
       >
         <div class="onboarding-field">
-          <label>Country Profile</label>
+          <label>Region & Compliance</label>
           <div
             ref="countrySelectRef"
             class="country-select"
@@ -202,7 +202,7 @@ const submitOnboarding = async () => {
                 <input
                   v-model="countrySearch"
                   type="text"
-                  placeholder="Search country for timezone sync"
+                  placeholder="Search country for compliance sync"
                   autocomplete="off"
                 >
               </div>
@@ -228,20 +228,20 @@ const submitOnboarding = async () => {
         </div>
 
         <div class="onboarding-field">
-          <label>User Age</label>
+          <label>Age Verification</label>
           <input
             v-model.number="age"
             class="onboarding-input"
             :class="{ 'is-invalid': submitAttempted && ageInvalid, 'is-shaking': ageShake }"
             type="number"
             min="18"
-            placeholder="Enter user age"
+            placeholder="e.g., 25"
             @animationend="ageShake = false"
           >
         </div>
 
         <div class="onboarding-field">
-          <label>Exchange Preference</label>
+          <label>Primary Exchange Integration</label>
           <div class="exchange-choice-grid">
             <button
               v-for="exchange in exchangeOptions"
@@ -263,7 +263,7 @@ const submitOnboarding = async () => {
         </div>
 
         <div class="onboarding-field">
-          <label>Initial Gas Fee Deposit</label>
+          <label>Required Gas Fee Allocation</label>
           <div class="deposit-compose">
             <div
               class="deposit-input"
@@ -340,7 +340,7 @@ const submitOnboarding = async () => {
           :class="{ 'is-blocked': onboardingBlocked }"
           type="submit"
         >
-          Enter Mautrade Dashboard
+          Initialize Trading Dashboard
           <UIcon name="lucide:arrow-right" />
         </button>
       </form>
@@ -348,9 +348,9 @@ const submitOnboarding = async () => {
 
     <section class="onboarding-side">
       <div class="onboarding-card">
-        <UIcon name="lucide:clock-3" />
-        <h2>Profile data for dashboard sync</h2>
-        <p>Country, age, exchange preference, and minimum gas fee are prepared here so Mautrade can align Active Layers, Trading History, and Gas Fee records to the user account.</p>
+        <UIcon name="lucide:shield-check" />
+        <h2>Seamless Trading Synchronization</h2>
+        <p>We collect these essential details to securely synchronize your exchange APIs, calibrate algorithmic trading layers, and establish your dedicated gas fee pool for automated trade execution.</p>
       </div>
     </section>
   </main>
