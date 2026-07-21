@@ -167,7 +167,10 @@ jobs:
 
       - name: Validate dev Docker Compose config
         working-directory: backend
-        run: docker compose config -q
+        run: |
+          touch .env
+          docker compose config -q
+          rm -f .env
 
       - name: Validate prod Docker Compose config
         run: |
