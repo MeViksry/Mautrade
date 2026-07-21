@@ -200,6 +200,9 @@ const submitOnboarding = async () => {
               <div class="country-search">
                 <UIcon name="lucide:search" />
                 <input
+                  id="countrySearch"
+                  name="countrySearch"
+                  aria-label="Search country"
                   v-model="countrySearch"
                   type="text"
                   placeholder="Search country for compliance sync"
@@ -228,8 +231,10 @@ const submitOnboarding = async () => {
         </div>
 
         <div class="onboarding-field">
-          <label>Age Verification</label>
+          <label for="age">Age Verification</label>
           <input
+            id="age"
+            name="age"
             v-model.number="age"
             class="onboarding-input"
             :class="{ 'is-invalid': submitAttempted && ageInvalid, 'is-shaking': ageShake }"
@@ -262,7 +267,7 @@ const submitOnboarding = async () => {
         </div>
 
         <div class="onboarding-field">
-          <label>Required Gas Fee Allocation</label>
+          <label for="depositAmount">Required Gas Fee Allocation</label>
           <div class="deposit-compose">
             <div
               class="deposit-input"
@@ -270,6 +275,8 @@ const submitOnboarding = async () => {
               @animationend="depositShake = false"
             >
               <input
+                id="depositAmount"
+                name="depositAmount"
                 v-model.number="depositAmount"
                 type="number"
                 min="500"
