@@ -26,9 +26,7 @@ const countrySelectRef = ref<HTMLElement | null>(null)
 const selectedCountry = ref('ID')
 const age = ref<number | null>(null)
 const depositAmount = ref(500)
-const depositCoinDropdownOpen = ref(false)
-const depositCoinSelectRef = ref<HTMLElement | null>(null)
-const selectedDepositCoin = ref('USDT')
+
 const selectedExchanges = ref<string[]>([])
 const submitAttempted = ref(false)
 const depositShake = ref(false)
@@ -42,16 +40,8 @@ const exchangeOptions = [
   { id: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg' }
 ]
 
-const depositCoinOptions = [
-  { code: 'USDT', name: 'Tether USD', network: 'TRC20 / ERC20 / BEP20', min: 500, icon: '/UserDashboard/USDT_logo.svg' }
-]
-
 const selectedCountryData = computed(() => {
   return countries.find(country => country.code === selectedCountry.value)
-})
-
-const selectedDepositCoinData = computed(() => {
-  return depositCoinOptions.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions[0]
 })
 
 const countrySearchTerm = computed(() => countrySearch.value.trim().toLowerCase())
@@ -107,18 +97,9 @@ const selectCountry = (countryCode: string) => {
   countryDropdownOpen.value = false
 }
 
-const selectDepositCoin = (coinCode: string) => {
-  selectedDepositCoin.value = coinCode
-  depositCoinDropdownOpen.value = false
-}
-
 const handleClickOutside = (event: MouseEvent) => {
   if (!countrySelectRef.value?.contains(event.target as Node)) {
     countryDropdownOpen.value = false
-  }
-
-  if (!depositCoinSelectRef.value?.contains(event.target as Node)) {
-    depositCoinDropdownOpen.value = false
   }
 }
 
@@ -147,7 +128,7 @@ const submitOnboarding = async () => {
       countryCode: selectedCountry.value,
       exchanges: selectedExchanges.value,
       amount: String(depositAmount.value),
-      gasFeeAsset: selectedDepositCoin.value
+      gasFeeAsset: 'USDT'
     })
     await navigateTo('/dashboard')
   } catch (error) {
@@ -257,88 +238,36 @@ const submitOnboarding = async () => {
               @click="toggleExchange(exchange.id)"
             >
               <img
-                v-if="exchange.logo"
                 :src="exchange.logo"
                 :alt="`${exchange.id} logo`"
               >
-              <span v-else>{{ exchange.label }}</span>
             </button>
           </div>
         </div>
 
         <div class="onboarding-field">
           <label for="depositAmount">Required Gas Fee Allocation</label>
-          <div class="deposit-compose">
-            <div
-              class="deposit-input"
-              :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
-              @animationend="depositShake = false"
+          <div
+            class="deposit-input"
+            :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
+            @animationend="depositShake = false"
+          >
+            <input
+              id="depositAmount"
+              v-model.number="depositAmount"
+              name="depositAmount"
+              type="number"
+              min="500"
+              step="1"
+              @blur="depositAmount = Math.max(500, depositAmount || 500)"
             >
-              <input
-                id="depositAmount"
-                v-model.number="depositAmount"
-                name="depositAmount"
-                type="number"
-                min="500"
-                step="1"
-                @blur="depositAmount = Math.max(500, depositAmount || 500)"
+            <span>
+              <img
+                src="/UserDashboard/USDT_logo.svg"
+                alt="USDT"
+                style="width: 24px; height: 24px;"
               >
-              <span>{{ selectedDepositCoin }}</span>
-            </div>
-
-            <div
-              ref="depositCoinSelectRef"
-              class="coin-select"
-            >
-              <button
-                class="coin-select__trigger"
-                type="button"
-                :aria-expanded="depositCoinDropdownOpen"
-                aria-haspopup="listbox"
-                @click="depositCoinDropdownOpen = !depositCoinDropdownOpen"
-              >
-                <span class="coin-select__asset">
-                  <img
-                    v-if="selectedDepositCoinData?.icon"
-                    :src="selectedDepositCoinData.icon"
-                    :alt="`${selectedDepositCoinData.code} logo`"
-                  >
-                  <strong>{{ selectedDepositCoinData?.code }}</strong>
-                  <small>{{ selectedDepositCoinData?.network }}</small>
-                </span>
-                <UIcon name="lucide:chevrons-up-down" />
-              </button>
-
-              <div
-                v-if="depositCoinDropdownOpen"
-                class="coin-select__dropdown"
-                role="listbox"
-              >
-                <button
-                  v-for="coin in depositCoinOptions"
-                  :key="coin.code"
-                  class="coin-option"
-                  :class="{ 'is-selected': coin.code === selectedDepositCoin }"
-                  type="button"
-                  role="option"
-                  :aria-selected="coin.code === selectedDepositCoin"
-                  @click="selectDepositCoin(coin.code)"
-                >
-                  <span class="coin-option__identity">
-                    <img
-                      v-if="coin.icon"
-                      :src="coin.icon"
-                      :alt="`${coin.code} logo`"
-                    >
-                    <span>
-                      <strong>{{ coin.code }}</strong>
-                      <small>{{ coin.name }}</small>
-                    </span>
-                  </span>
-                  <em>Min {{ coin.min }}</em>
-                </button>
-              </div>
-            </div>
+            </span>
           </div>
         </div>
 
