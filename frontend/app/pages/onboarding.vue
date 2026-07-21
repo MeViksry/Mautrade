@@ -39,17 +39,11 @@ const exchangeOptions = [
   { id: 'Binance', logo: '/UserDashboard/Binance_logo.svg' },
   { id: 'OKX', logo: '/UserDashboard/OKX_logo_dark.svg' },
   { id: 'Bybit', logo: '/UserDashboard/Bybit_logo_dark.svg' },
-  { id: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg' },
-  { id: 'KuCoin', label: 'KuCoin' },
-  { id: 'Coinbase', label: 'Coinbase' },
-  { id: 'Kraken', label: 'Kraken' },
-  { id: 'Bitget', label: 'Bitget' }
+  { id: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg' }
 ]
 
 const depositCoinOptions = [
-  { code: 'USDT', name: 'Tether USD', network: 'TRC20 / ERC20 / BEP20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
-  { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
-  { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
+  { code: 'USDT', name: 'Tether USD', network: 'TRC20 / ERC20 / BEP20', min: 500, icon: '/UserDashboard/USDT_logo.svg' }
 ]
 
 const selectedCountryData = computed(() => {
