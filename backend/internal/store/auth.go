@@ -164,36 +164,41 @@ func (s *DashboardStore) RegisterUser(ctx context.Context, params RegisterUserPa
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, `
+	row, errFetch := userByEmailForAuth(ctx, tx, email)
+	if errFetch == nil {
+		if row.OnboardingAt == nil {
+			// Allow re-registration by updating password and name for accounts that haven't completed onboarding
+			if _, errUpdate := tx.Exec(ctx, `
+UPDATE users 
+SET password_hash = $2, display_name = $3, updated_at = $4
+WHERE id = $1::uuid`, row.User.ID, string(passwordHash), displayName, now); errUpdate != nil {
+				return RegisterUserResult{}, fmt.Errorf("store: update unverified user: %w", errUpdate)
+			}
+			userIDText = row.User.ID
+		} else {
+			return RegisterUserResult{}, ErrDuplicateAccount
+		}
+	} else if errors.Is(errFetch, pgx.ErrNoRows) {
+		if _, err := tx.Exec(ctx, `
 INSERT INTO users (
   id, email, username, password_hash, display_name, timezone, status, created_at, updated_at
 ) VALUES (
   $1::uuid, $2, $3, $4, $5, 'UTC', 'active', $6, $6
 )`,
-		userIDText,
-		email,
-		username,
-		string(passwordHash),
-		displayName,
-		now,
-	); err != nil {
-		if isUniqueViolation(err) {
-			row, errFetch := userByEmailForAuth(ctx, tx, email)
-			if errFetch == nil && row.OnboardingAt == nil {
-				// Allow re-registration by updating password and name for accounts that haven't completed onboarding
-				if _, errUpdate := tx.Exec(ctx, `
-UPDATE users 
-SET password_hash = $2, display_name = $3, updated_at = $4
-WHERE id = $1::uuid`, row.User.ID, string(passwordHash), displayName, now); errUpdate != nil {
-					return RegisterUserResult{}, fmt.Errorf("store: update unverified user: %w", errUpdate)
-				}
-				userIDText = row.User.ID
-			} else {
+			userIDText,
+			email,
+			username,
+			string(passwordHash),
+			displayName,
+			now,
+		); err != nil {
+			if isUniqueViolation(err) {
 				return RegisterUserResult{}, ErrDuplicateAccount
 			}
-		} else {
 			return RegisterUserResult{}, fmt.Errorf("store: insert user: %w", err)
 		}
+	} else {
+		return RegisterUserResult{}, fmt.Errorf("store: check existing user: %w", errFetch)
 	}
 
 	code, expiresAt, err := createEmailOTP(ctx, tx, userIDText, email, EmailOTPPurposeRegisterVerify, params.OTPTTL, now)
