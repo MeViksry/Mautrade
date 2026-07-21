@@ -274,6 +274,7 @@ const submitOnboarding = async () => {
                 type="number"
                 min="500"
                 step="1"
+                @blur="depositAmount = Math.max(500, depositAmount || 500)"
               >
               <span>{{ selectedDepositCoin }}</span>
             </div>
