@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useAuth } from '../composables/useAuth'
+import { ref, computed } from 'vue'
+import { useAuth } from '~/composables/useAuth'
 
 definePageMeta({
   layout: 'default'
@@ -125,6 +125,50 @@ const verifyOtp = async () => {
       autocomplete="off"
       @submit.prevent="submitLogin"
     >
+      <div class="auth-field">
+        <label for="email">Email Account</label>
+        <input
+          id="email"
+          v-model="email"
+          name="email"
+          class="auth-input"
+          type="text"
+          inputmode="email"
+          placeholder="Enter Mautrade email"
+          autocomplete="off"
+          autocapitalize="none"
+          autocorrect="off"
+          readonly
+          spellcheck="false"
+          @focus="unlockReadonlyInput"
+          @pointerdown="unlockReadonlyInput"
+        >
+      </div>
+
+      <div class="auth-field">
+        <label for="password">Password Account</label>
+        <div class="password-wrap">
+          <input
+            id="password"
+            v-model="password"
+            name="password"
+            class="auth-input"
+            :type="passwordVisible ? 'text' : 'password'"
+            placeholder="Enter Mautrade password"
+            autocomplete="current-password"
+            readonly
+            @focus="unlockReadonlyInput"
+            @pointerdown="unlockReadonlyInput"
+          >
+          <button
+            type="button"
+            :aria-label="passwordVisible ? 'Hide password' : 'Show password'"
+            @click="passwordVisible = !passwordVisible"
+          >
+            <UIcon :name="passwordVisible ? 'lucide:eye-off' : 'lucide:eye'" />
+          </button>
+        </div>
+      </div>
       <div class="auth-field">
         <label for="email">Email Account</label>
         <input

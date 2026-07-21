@@ -13,6 +13,10 @@ export const useAuth = () => {
   // We can track the dev OTP to show it temporarily if needed
   const devOtp = useState('auth_dev_otp', () => '')
 
+  const isAccountComplete = computed(() => {
+    return user.value?.emailVerified && user.value?.onboardingCompleted
+  })
+
   const login = async (payload: { email: string, password: string }) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,6 +137,29 @@ export const useAuth = () => {
     }
   }
 
+  const completeAuthFlow = async (email: string): Promise<{ success: boolean, otpRequired?: boolean, expiresAt?: Date }> => {
+    try {
+      const response = await $fetch<any>(`${apiBase}/auth/register`, {
+        method: 'POST',
+        body: {
+          email,
+          name: 'Complete Auth Flow',
+          password: 'tempPassword123',
+          confirm_password: 'tempPassword123'
+        }
+      })
+      return { success: true, otpRequired: response.otpRequired, expiresAt: response.otpExpiresAt ? new Date(response.otpExpiresAt) : undefined }
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        const res = await login({ email, password: 'tempPassword123' })
+        if (res?.otpRequired) {
+          return { success: true, otpRequired: true, expiresAt: res?.expiresAt ? new Date(res.expiresAt) : undefined }
+        }
+      }
+      throw error
+    }
+  }
+
   return {
     user,
     tokenCookie,
@@ -141,6 +168,7 @@ export const useAuth = () => {
     register,
     verifyOtp,
     logout,
-    fetchUser
+    fetchUser,
+    completeAuthFlow
   }
 }

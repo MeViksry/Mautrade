@@ -1,17 +1,28 @@
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const tokenCookie = useCookie('auth_token')
+  const { fetchUser, isAccountComplete } = useAuth()
   const isAuthRoute = to.path === '/signin' || to.path === '/signup'
 
-  // If user is accessing protected routes without a token, redirect to signin
-  if (!tokenCookie.value && !isAuthRoute) {
-    // Only redirect if it's explicitly a protected route (dashboard, onboarding)
-    if (to.path.startsWith('/dashboard') || to.path.startsWith('/onboarding')) {
-      return navigateTo('/signin')
+  await fetchUser()
+
+  if (!tokenCookie.value) {
+    if (!isAuthRoute && (to.path.startsWith('/dashboard') || to.path.startsWith('/onboarding'))) {
+      return navigateTo('/signup')
+    }
+    return
+  }
+
+  if (tokenCookie.value && isAuthRoute) {
+    if (isAccountComplete.value) {
+      return navigateTo('/dashboard')
+    } else {
+      return navigateTo('/onboarding')
     }
   }
 
-  // If user is authenticated and tries to access signin/signup, redirect to dashboard
-  if (tokenCookie.value && isAuthRoute) {
-    return navigateTo('/dashboard')
+  if (tokenCookie.value && !isAccountComplete.value) {
+    if (!to.path.startsWith('/signup') && !to.path.startsWith('/onboarding')) {
+      return navigateTo('/signup')
+    }
   }
 })
