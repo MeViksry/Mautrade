@@ -105,7 +105,14 @@ func (m *Mailer) sendHTML(from, to mail.Address, subject, htmlBody string) error
 
 // SendOTP sends a 6-digit OTP to the user
 func (m *Mailer) SendOTP(toEmail, firstName, otp, reason string) error {
-	from := mail.Address{Name: "Mautrade", Address: m.cfg.SMTPFrom}
+	fromAddress := m.cfg.SMTPFrom
+	if reason == "register" {
+		fromAddress = "verify@mautrade.com"
+	} else if reason == "login" {
+		fromAddress = "otp@mautrade.com"
+	}
+
+	from := mail.Address{Name: "Mautrade", Address: fromAddress}
 	to := mail.Address{Name: firstName, Address: toEmail}
 
 	content := buildOTPEmailContent(reason)
