@@ -330,9 +330,9 @@ done
 # Check API via internal port
 echo -e "${CYAN}  Checking Go API...${NC}"
 for i in $(seq 1 30); do
-    # API is internal only, check via docker exec
-    if dc_cmd exec -T api wget -q -O /dev/null http://localhost:8080/health 2>/dev/null; then
-        echo -e "${GREEN}  ✓ API is healthy (${i}s)${NC}"
+    # API container is distroless (no wget/curl), so we check if it's running via docker
+    if dc_cmd ps --services --filter "status=running" | grep -q "^api$"; then
+        echo -e "${GREEN}  ✓ API container is running (${i}s)${NC}"
         break
     fi
     if [ "$i" -eq 30 ]; then
