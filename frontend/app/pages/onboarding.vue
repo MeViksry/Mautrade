@@ -842,9 +842,12 @@ const submitOnboarding = async () => {
     grid-template-columns: 1fr;
   }
 
-  .onboarding-panel,
-  .onboarding-side {
+  .onboarding-panel {
     padding: 2rem;
+  }
+
+  .onboarding-side {
+    display: none;
   }
 }
 
