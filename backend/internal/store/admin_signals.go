@@ -18,14 +18,14 @@ type AdminActiveSignalView struct {
 }
 
 type AdminOpenOrderView struct {
-	ID         string    `json:"id"`
-	Symbol     string    `json:"symbol"`
-	Action     string    `json:"action"`
-	Quantity   float64   `json:"quantity"`
-	Price      float64   `json:"price"`
-	Status     string    `json:"status"`
-	Exchange   string    `json:"exchange"`
-	CreatedAt  time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Symbol    string    `json:"symbol"`
+	Action    string    `json:"action"`
+	Quantity  float64   `json:"quantity"`
+	Price     float64   `json:"price"`
+	Status    string    `json:"status"`
+	Exchange  string    `json:"exchange"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func (s *DashboardStore) AdminListActiveSignals(ctx context.Context, limit, offset int) ([]AdminActiveSignalView, error) {
