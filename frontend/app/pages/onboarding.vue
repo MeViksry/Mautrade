@@ -29,7 +29,7 @@ const depositAmount = ref(500)
 const depositCoinDropdownOpen = ref(false)
 const depositCoinSelectRef = ref<HTMLElement | null>(null)
 const selectedDepositCoin = ref('USDT')
-const selectedExchanges = ref<string[]>(['Binance'])
+const selectedExchanges = ref<string[]>([])
 const submitAttempted = ref(false)
 const depositShake = ref(false)
 const ageShake = ref(false)
@@ -241,7 +241,7 @@ const submitOnboarding = async () => {
         </div>
 
         <div class="onboarding-field">
-          <label>Primary Exchange Integration</label>
+          <label>Frequently Used Exchanges</label>
           <div class="exchange-choice-grid">
             <button
               v-for="exchange in exchangeOptions"
@@ -257,7 +257,6 @@ const submitOnboarding = async () => {
                 :alt="`${exchange.id} logo`"
               >
               <span v-else>{{ exchange.label }}</span>
-              <UIcon name="lucide:check" />
             </button>
           </div>
         </div>
