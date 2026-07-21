@@ -283,14 +283,18 @@ jobs:
               ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'DEPLOY_EOF'
             cd ~/Mautrade
             chmod +x deploy-vps.sh
-            GITHUB_ACTOR='${{ github.actor }}' \
-            GITHUB_WORKFLOW='${{ github.workflow }}' \
-            GITHUB_SHA='${{ github.sha }}' \
-            GITHUB_BEFORE='${{ github.event.before }}' \
-            SMTP_HOST='${{ secrets.SMTP_HOST || 'smtp.hostinger.com' }}' \
-            SMTP_PORT='${{ secrets.SMTP_PORT }}' \
-            SMTP_USERNAME='${{ secrets.SMTP_USERNAME }}' \
-            SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}' \
-            SMTP_FROM='${{ secrets.SMTP_FROM || 'support@mautrade.com' }}' \
+            export GITHUB_ACTOR='${{ github.actor }}'
+            export GITHUB_WORKFLOW='${{ github.workflow }}'
+            export GITHUB_SHA='${{ github.sha }}'
+            export GITHUB_BEFORE='${{ github.event.before }}'
+            
+            _HOST="${{ secrets.SMTP_HOST }}"
+            export SMTP_HOST="${_HOST:-smtp.hostinger.com}"
+            export SMTP_PORT='${{ secrets.SMTP_PORT }}'
+            export SMTP_USERNAME='${{ secrets.SMTP_USERNAME }}'
+            export SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}'
+            _FROM="${{ secrets.SMTP_FROM }}"
+            export SMTP_FROM="${_FROM:-support@mautrade.com}"
+            
             ./deploy-vps.sh
           DEPLOY_EOF
