@@ -327,32 +327,6 @@ const submitPayment = async () => {
         class="onboarding-form payment-step"
         @submit.prevent="submitPayment"
       >
-        <div class="onboarding-field">
-          <label for="depositAmount">Deposit Amount</label>
-          <div
-            class="deposit-input"
-            :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
-            @animationend="depositShake = false"
-          >
-            <input
-              id="depositAmount"
-              v-model.number="depositAmount"
-              name="depositAmount"
-              type="number"
-              min="500"
-              step="1"
-              @blur="handleDepositBlur"
-            >
-            <span>
-              <img
-                src="/UserDashboard/USDT_logo.svg"
-                alt="USDT"
-                style="width: 24px; height: 24px;"
-              >
-            </span>
-          </div>
-        </div>
-
         <div class="payment-instructions">
           <p>
             To initialize your dashboard, please deposit a minimum of <strong>{{ depositAmount }} USDT</strong> (BEP-20) to the following address:
@@ -383,6 +357,32 @@ const submitPayment = async () => {
             >
               <UIcon name="lucide:copy" />
             </button>
+          </div>
+        </div>
+
+        <div class="onboarding-field">
+          <label for="depositAmount">Deposit Amount</label>
+          <div
+            class="deposit-input"
+            :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
+            @animationend="depositShake = false"
+          >
+            <input
+              id="depositAmount"
+              v-model.number="depositAmount"
+              name="depositAmount"
+              type="number"
+              min="500"
+              step="1"
+              @blur="handleDepositBlur"
+            >
+            <span>
+              <img
+                src="/UserDashboard/USDT_logo.svg"
+                alt="USDT"
+                style="width: 24px; height: 24px;"
+              >
+            </span>
           </div>
         </div>
 
