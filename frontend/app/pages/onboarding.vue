@@ -37,6 +37,7 @@ const submitAttempted = ref(false)
 const depositShake = ref(false)
 const ageShake = ref(false)
 const countryShake = ref(false)
+const exchangeShake = ref(false)
 
 const exchangeOptions = [
   { id: 'Binance', logo: '/UserDashboard/Binance_logo.svg' },
@@ -62,7 +63,8 @@ const filteredCountries = computed(() => {
 const countryInvalid = computed(() => !selectedCountry.value)
 const ageInvalid = computed(() => !age.value || age.value < 18)
 const depositInvalid = computed(() => Number(depositAmount.value) < 500)
-const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.value || depositInvalid.value || selectedExchanges.value.length === 0)
+const exchangeInvalid = computed(() => selectedExchanges.value.length === 0)
+const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.value || depositInvalid.value || exchangeInvalid.value)
 const txidInvalid = computed(() => currentStep.value === 2 && !txid.value.trim())
 
 const toggleExchange = (exchange: string) => {
@@ -74,7 +76,7 @@ const toggleExchange = (exchange: string) => {
   selectedExchanges.value = [...selectedExchanges.value, exchange]
 }
 
-const triggerShake = (target: 'country' | 'age' | 'deposit') => {
+const triggerShake = (target: 'country' | 'age' | 'deposit' | 'exchange') => {
   if (target === 'country') {
     countryShake.value = false
     window.requestAnimationFrame(() => {
@@ -93,6 +95,13 @@ const triggerShake = (target: 'country' | 'age' | 'deposit') => {
     depositShake.value = false
     window.requestAnimationFrame(() => {
       depositShake.value = true
+    })
+  }
+
+  if (target === 'exchange') {
+    exchangeShake.value = false
+    window.requestAnimationFrame(() => {
+      exchangeShake.value = true
     })
   }
 }
@@ -147,6 +156,7 @@ const nextStep = () => {
   if (countryInvalid.value) triggerShake('country')
   if (ageInvalid.value) triggerShake('age')
   if (depositInvalid.value) triggerShake('deposit')
+  if (exchangeInvalid.value) triggerShake('exchange')
 
   if (onboardingBlocked.value) return
 
@@ -281,7 +291,11 @@ const submitPayment = async () => {
 
         <div class="onboarding-field">
           <label>Frequently Used Exchanges</label>
-          <div class="exchange-choice-grid">
+          <div
+            class="exchange-choice-grid"
+            :class="{ 'is-invalid-grid': submitAttempted && exchangeInvalid, 'is-shaking': exchangeShake }"
+            @animationend="exchangeShake = false"
+          >
             <button
               v-for="exchange in exchangeOptions"
               :key="exchange.id"
@@ -803,6 +817,11 @@ const submitPayment = async () => {
 
 .is-invalid {
   border-color: #ef4444;
+}
+
+.is-invalid-grid {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px #ef4444;
 }
 
 .is-shaking {
