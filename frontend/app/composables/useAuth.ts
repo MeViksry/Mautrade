@@ -55,7 +55,7 @@ export const useAuth = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status === 401) {
-        throw new Error('Invalid email or password', { cause: error })
+        throw new Error(error.data?.error || 'Invalid email or password', { cause: error })
       }
       throw new Error(error.data?.error || error.message || 'Failed to login', { cause: error })
     }
