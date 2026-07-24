@@ -254,34 +254,19 @@ func (s *DashboardStore) LoginUser(ctx context.Context, params LoginUserParams) 
 	if err := bcrypt.CompareHashAndPassword([]byte(row.PasswordHash), []byte(params.Password)); err != nil {
 		return LoginUserResult{}, ErrInvalidCredential
 	}
-	if row.EmailVerifiedAt == nil {
-		code, expiresAt, err := createEmailOTP(ctx, tx, row.User.ID, row.User.Email, EmailOTPPurposeRegisterVerify, params.OTPTTL, now)
-		if err != nil {
-			return LoginUserResult{}, err
-		}
-		if err := tx.Commit(ctx); err != nil {
-			return LoginUserResult{}, fmt.Errorf("store: commit login otp: %w", err)
-		}
-		return LoginUserResult{
-			User:         row.User,
-			OTPRequired:  true,
-			OTPExpiresAt: &expiresAt,
-			DevOTP:       code,
-		}, nil
-	}
-
-	session, err := createSession(ctx, tx, row.User.ID, params.SessionTTL, params.UserAgent, params.IPAddress, now)
+	code, expiresAt, err := createEmailOTP(ctx, tx, row.User.ID, row.User.Email, EmailOTPPurposeLoginVerify, params.OTPTTL, now)
 	if err != nil {
 		return LoginUserResult{}, err
 	}
-	if err := insertAuthAudit(ctx, tx, "user_login", row.User.ID, map[string]any{"session_id": session.ID}); err != nil {
-		return LoginUserResult{}, err
-	}
 	if err := tx.Commit(ctx); err != nil {
-		return LoginUserResult{}, fmt.Errorf("store: commit login: %w", err)
+		return LoginUserResult{}, fmt.Errorf("store: commit login otp: %w", err)
 	}
-
-	return LoginUserResult{User: row.User, Session: &session}, nil
+	return LoginUserResult{
+		User:         row.User,
+		OTPRequired:  true,
+		OTPExpiresAt: &expiresAt,
+		DevOTP:       code,
+	}, nil
 }
 
 func (s *DashboardStore) VerifyEmailOTP(ctx context.Context, params VerifyEmailOTPParams) (VerifyEmailOTPResult, error) {
