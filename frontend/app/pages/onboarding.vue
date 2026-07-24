@@ -30,7 +30,7 @@ const depositAmount = ref(500)
 const currentStep = ref(1)
 const txid = ref('')
 const txidShake = ref(false)
-const walletAddress = 'TYxMyPlaceholderWalletAddressTRC20'
+const walletAddress = '0xA6574277ABF624DDfd442c5D35B3d7c342416989'
 
 const selectedExchanges = ref<string[]>([])
 const submitAttempted = ref(false)
@@ -191,7 +191,7 @@ const submitPayment = async () => {
           Welcome to Mautrade
         </p>
         <p v-else>
-          Payment Gateway
+          Gas Fee Deposit
         </p>
         <h1 v-if="currentStep === 1">
           Configure Your Trading Environment
@@ -342,7 +342,7 @@ const submitPayment = async () => {
       >
         <div class="payment-instructions">
           <p>
-            To initialize your dashboard, please deposit exactly <strong>{{ depositAmount }} USDT</strong> (TRC20/BEP20) to the following address:
+            To initialize your dashboard, please deposit exactly <strong>{{ depositAmount }} USDT</strong> (BEP-20) to the following address:
           </p>
         </div>
 

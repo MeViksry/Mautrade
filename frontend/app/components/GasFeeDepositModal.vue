@@ -21,9 +21,9 @@ const depositAmountShake = ref(false)
 const depositTxIdShake = ref(false)
 const depositSubmitAttempted = ref(false)
 const depositSubmitted = ref(false)
-const depositWalletAddress = '0x8F34B7C59A5D4E21F6C789DAB0132E45C67F9012'
+const depositWalletAddress = '0xA6574277ABF624DDfd442c5D35B3d7c342416989'
 const depositCoinOptions = [
-  { code: 'USDT', name: 'Tether USD', network: 'TRC20 / ERC20 / BEP20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
+  { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
   { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
   { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
 ]
