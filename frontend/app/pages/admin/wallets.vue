@@ -126,6 +126,59 @@ onMounted(async () => {
           :value="walletStats.activeWallets.toString()"
         />
       </div>
+
+      <div class="personal-wallets-section">
+        <h2 class="section-title">
+          Personal Wallets
+        </h2>
+        <div class="personal-wallets-grid">
+          <div class="wallet-card">
+            <div class="wallet-header">
+              <h3 class="wallet-name">
+                WALLET VIKSRY
+              </h3>
+              <button
+                class="icon-btn"
+                title="Settings"
+              >
+                <UIcon name="lucide:settings" />
+              </button>
+            </div>
+            <div class="wallet-balance">
+              <span class="currency">$</span>0.00
+            </div>
+            <div class="wallet-actions">
+              <button class="primary-btn withdraw-btn">
+                <UIcon name="lucide:arrow-up-right" />
+                Withdraw
+              </button>
+            </div>
+          </div>
+
+          <div class="wallet-card">
+            <div class="wallet-header">
+              <h3 class="wallet-name">
+                WALLET ARYANTO HONG
+              </h3>
+              <button
+                class="icon-btn"
+                title="Settings"
+              >
+                <UIcon name="lucide:settings" />
+              </button>
+            </div>
+            <div class="wallet-balance">
+              <span class="currency">$</span>0.00
+            </div>
+            <div class="wallet-actions">
+              <button class="primary-btn withdraw-btn">
+                <UIcon name="lucide:arrow-up-right" />
+                Withdraw
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -213,6 +266,132 @@ onMounted(async () => {
 .skeleton-stat-value {
   width: 80%;
   height: 28px;
+}
+
+.personal-wallets-section {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+
+.personal-wallets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.wallet-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), #ff7a33);
+  opacity: 0.8;
+}
+
+.wallet-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-name {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--silver);
+  font-weight: 600;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-mute);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wallet-balance {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.wallet-balance .currency {
+  font-size: 1.5rem;
+  color: var(--text-mute);
+}
+
+.wallet-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.primary-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primary-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 @media (max-width: 1180px) {
