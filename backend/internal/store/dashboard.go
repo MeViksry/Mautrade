@@ -26,9 +26,11 @@ type UserStats struct {
 	RealizedProfit    string `json:"realizedProfit"`
 	TotalGasFeePaid   string `json:"totalGasFeePaid"`
 	ActiveLayersCount int64  `json:"activeLayersCount"`
-	PrecisionPolicy   string `json:"precisionPolicy"`
-	DefaultCurrency   string `json:"defaultCurrency"`
-	GasFeeShareRate   string `json:"gasFeeShareRate"`
+	PrecisionPolicy     string  `json:"precisionPolicy"`
+	DefaultCurrency     string  `json:"defaultCurrency"`
+	GasFeeShareRate     string  `json:"gasFeeShareRate"`
+	GasFeeDepositStatus string  `json:"gasFeeDepositStatus"`
+	GasFeeDepositTxID   *string `json:"gasFeeDepositTxId,omitempty"`
 }
 
 func (s *DashboardStore) UserStats(ctx context.Context, userID, defaultCurrency, gasFeeShareRate string) (UserStats, error) {
@@ -61,8 +63,17 @@ layer_sum AS (
   FROM layers
   WHERE user_id = $2::uuid
     AND status IN ('open', 'partial')
+),
+latest_deposit AS (
+  SELECT status, tx_id
+  FROM gas_fee_deposits
+  WHERE user_id = $2::uuid
+  ORDER BY created_at DESC
+  LIMIT 1
 )
-SELECT balance_sum.total_balance, gas_sum.realized_profit, gas_sum.total_gas_fee_paid, layer_sum.active_layers_count
+SELECT balance_sum.total_balance, gas_sum.realized_profit, gas_sum.total_gas_fee_paid, layer_sum.active_layers_count,
+       COALESCE((SELECT status FROM latest_deposit), 'none') AS gas_fee_deposit_status,
+       (SELECT tx_id FROM latest_deposit) AS gas_fee_deposit_tx_id
 FROM balance_sum, gas_sum, layer_sum`
 
 	stats := UserStats{
@@ -75,6 +86,8 @@ FROM balance_sum, gas_sum, layer_sum`
 		&stats.RealizedProfit,
 		&stats.TotalGasFeePaid,
 		&stats.ActiveLayersCount,
+		&stats.GasFeeDepositStatus,
+		&stats.GasFeeDepositTxID,
 	); err != nil {
 		return UserStats{}, fmt.Errorf("store: user stats: %w", err)
 	}

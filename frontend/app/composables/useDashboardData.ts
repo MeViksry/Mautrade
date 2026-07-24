@@ -1,12 +1,37 @@
 export const useDashboardData = () => {
   // Mock data structure, ready to be replaced with real API calls using useFetch or $fetch
 
+  const config = useRuntimeConfig()
+  const apiBase = config.public.apiBase
+  const tokenCookie = useCookie<string | null>('auth_token')
+
   const getUserStats = async () => {
-    return {
-      totalBalance: 12450.75,
-      realizedProfit: 3240.50,
-      totalGasFeePaid: 1620.25,
-      activeLayersCount: 18
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stats = await $fetch<any>(`${apiBase}/user/stats`, {
+        headers: {
+          Authorization: `Bearer ${tokenCookie.value}`
+        }
+      })
+      // Convert string numbers to numbers for the frontend
+      return {
+        totalBalance: parseFloat(stats.totalBalance || '0'),
+        realizedProfit: parseFloat(stats.realizedProfit || '0'),
+        totalGasFeePaid: parseFloat(stats.totalGasFeePaid || '0'),
+        activeLayersCount: stats.activeLayersCount || 0,
+        gasFeeDepositStatus: stats.gasFeeDepositStatus || 'none',
+        gasFeeDepositTxId: stats.gasFeeDepositTxId || ''
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user stats, falling back to mock:', error)
+      return {
+        totalBalance: 12450.75,
+        realizedProfit: 3240.50,
+        totalGasFeePaid: 1620.25,
+        activeLayersCount: 18,
+        gasFeeDepositStatus: 'none',
+        gasFeeDepositTxId: ''
+      }
     }
   }
 

@@ -25,6 +25,8 @@ interface UserStats {
   realizedProfit: number
   totalGasFeePaid: number
   activeLayersCount: number
+  gasFeeDepositStatus: string
+  gasFeeDepositTxId?: string
 }
 
 interface ExchangeBinding {
@@ -80,10 +82,27 @@ const depositCoinOptions = [
   { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
 ]
 let layersResizeObserver: ResizeObserver | null = null
+let pollInterval: ReturnType<typeof setInterval> | null = null
 
 const syncExchangeListHeight = () => {
   if (!layersContainer.value) return
   exchangeListHeight.value = Math.round(layersContainer.value.getBoundingClientRect().height)
+}
+
+const startPollingGasFee = () => {
+  if (pollInterval) return
+  pollInterval = setInterval(async () => {
+    try {
+      const statsData = await getUserStats()
+      stats.value = statsData
+      if (statsData.gasFeeDepositStatus !== 'pending') {
+        if (pollInterval) clearInterval(pollInterval)
+        pollInterval = null
+      }
+    } catch (e) {
+      console.error('Poll error', e)
+    }
+  }, 5000)
 }
 
 onMounted(async () => {
@@ -103,6 +122,10 @@ onMounted(async () => {
     stats.value = statsData
     exchanges.value = exchangesData
     layers.value = layersData
+
+    if (statsData.gasFeeDepositStatus === 'pending') {
+      startPollingGasFee()
+    }
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
   } finally {
@@ -123,6 +146,7 @@ onBeforeUnmount(() => {
   layersResizeObserver?.disconnect()
   document.removeEventListener('click', handleDepositCoinClickOutside)
   window.removeEventListener('resize', syncExchangeListHeight)
+  if (pollInterval) clearInterval(pollInterval)
 })
 
 const formatLastSynced = (lastSynced: string | null) => {
@@ -256,6 +280,27 @@ const submitDeposit = () => {
 
 <template>
   <div class="dashboard-page">
+    <!-- Verification Status Overlay -->
+    <div v-if="!loading && stats && (stats.gasFeeDepositStatus === 'pending' || stats.gasFeeDepositStatus === 'failed' || stats.gasFeeDepositStatus === 'rejected')" class="verification-overlay">
+      <div class="verification-card">
+        <div v-if="stats.gasFeeDepositStatus === 'pending'" class="verification-content pending">
+          <div class="spinner-container">
+             <div class="loader"></div>
+          </div>
+          <h3>Verifying Payment on Blockchain</h3>
+          <p>Please wait, we are verifying your TXID ({{ stats.gasFeeDepositTxId }}).</p>
+          <p class="verification-subtext">This usually takes ~30 seconds. This page will automatically refresh.</p>
+        </div>
+        <div v-else class="verification-content failed">
+          <div class="icon-container">
+             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <h3>Verification Failed</h3>
+          <p>We could not verify your TXID. It might be invalid, from the wrong network, or already used.</p>
+          <NuxtLink to="/onboarding" class="btn-primary mt-4 inline-flex">Enter New TXID</NuxtLink>
+        </div>
+      </div>
+    </div>
     <div
       v-if="loading"
       class="skeleton-loading"
@@ -2146,5 +2191,102 @@ const submitDeposit = () => {
     width: 70px;
     height: 18px;
   }
+}
+
+/* Verification Overlay */
+.verification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+html[data-theme='light'] .verification-overlay {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.verification-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 2.5rem;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.verification-content.pending .spinner-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-bottom-color: var(--primary);
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.verification-content.failed .icon-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.verification-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.verification-card p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.verification-subtext {
+  font-size: 0.85rem !important;
+  color: var(--text-muted) !important;
+  margin-top: 1rem;
+}
+
+.btn-primary.inline-flex {
+  display: inline-flex;
+  margin-top: 1.5rem;
 }
 </style>

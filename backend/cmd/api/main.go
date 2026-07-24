@@ -10,10 +10,12 @@ import (
 	"syscall"
 
 	"github.com/MeViksry/Mautrade/backend/internal/config"
+	"github.com/MeViksry/Mautrade/backend/internal/workers"
 	"github.com/MeViksry/Mautrade/backend/internal/httpapi"
 	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/postgres"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
+	"github.com/MeViksry/Mautrade/backend/internal/store"
 )
 
 func main() {
@@ -56,6 +58,15 @@ func main() {
 		logger.Warn("execution result consumer unavailable", "error", err)
 	} else {
 		defer stopExecutionResults()
+	}
+
+	if cfg.BscScanAPIKey != "" {
+		dashboardStore := store.NewDashboardStore(db)
+		verifier := workers.NewVerifier(dashboardStore, cfg.BscScanAPIKey, cfg.GasFeeDepositAddress, logger)
+		go verifier.Start(rootCtx)
+		logger.Info("gasfee verifier started")
+	} else {
+		logger.Warn("BSCSCAN_API_KEY is not set, automatic gasfee verification is disabled")
 	}
 
 	server := &http.Server{

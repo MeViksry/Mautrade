@@ -421,6 +421,163 @@ WHERE id = $1::uuid`, params.DepositID, status, now); err != nil {
 	return s.gasFeeDepositByID(ctx, params.DepositID)
 }
 
+func (s *DashboardStore) PendingGasFeeDeposits(ctx context.Context, limit int) ([]GasFeeDepositView, error) {
+	if !s.Ready() {
+		return nil, fmt.Errorf("store: pending gas fee deposits requires postgres")
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	const query = `
+SELECT
+  d.id::text,
+  d.user_id::text,
+  u.email,
+  u.display_name,
+  d.amount::text,
+  d.asset,
+  d.deposit_address,
+  d.tx_id,
+  d.status,
+  d.created_at,
+  d.confirmed_at
+FROM gas_fee_deposits d
+JOIN users u ON u.id = d.user_id
+WHERE d.status = 'pending' AND d.tx_id IS NOT NULL AND d.tx_id != ''
+ORDER BY d.created_at ASC
+LIMIT $1`
+	rows, err := s.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("store: pending gas fee deposits: %w", err)
+	}
+	defer rows.Close()
+
+	var deposits []GasFeeDepositView
+	for rows.Next() {
+		var deposit GasFeeDepositView
+		if err := rows.Scan(
+			&deposit.ID,
+			&deposit.UserID,
+			&deposit.UserEmail,
+			&deposit.UserDisplay,
+			&deposit.Amount,
+			&deposit.Asset,
+			&deposit.DepositAddress,
+			&deposit.TxID,
+			&deposit.Status,
+			&deposit.CreatedAt,
+			&deposit.ConfirmedAt,
+		); err != nil {
+			return nil, fmt.Errorf("store: scan pending gas fee deposit: %w", err)
+		}
+		deposits = append(deposits, deposit)
+	}
+	if deposits == nil {
+		deposits = []GasFeeDepositView{}
+	}
+	return deposits, rows.Err()
+}
+
+type SystemUpdateGasFeeDepositStatusParams struct {
+	DepositID      string
+	Status         string
+	ResolutionNote string
+	Now            time.Time
+}
+
+func (s *DashboardStore) SystemUpdateGasFeeDepositStatus(ctx context.Context, params SystemUpdateGasFeeDepositStatusParams) (GasFeeDepositView, error) {
+	if !s.Ready() {
+		return GasFeeDepositView{}, fmt.Errorf("store: system update gas fee deposit requires postgres")
+	}
+	now := normalizedNow(params.Now)
+	status := strings.ToLower(strings.TrimSpace(params.Status))
+	if status != "confirmed" && status != "rejected" && status != "failed" {
+		return GasFeeDepositView{}, ErrGasFeeDepositStatus
+	}
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return GasFeeDepositView{}, fmt.Errorf("store: begin system update gas fee deposit: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var previous GasFeeDepositView
+	if err := tx.QueryRow(ctx, `
+SELECT
+  d.id::text,
+  d.user_id::text,
+  u.email,
+  u.display_name,
+  d.amount::text,
+  d.asset,
+  d.deposit_address,
+  d.tx_id,
+  d.status,
+  d.created_at,
+  d.confirmed_at
+FROM gas_fee_deposits d
+JOIN users u ON u.id = d.user_id
+WHERE d.id = $1::uuid
+FOR UPDATE`, params.DepositID).Scan(
+		&previous.ID,
+		&previous.UserID,
+		&previous.UserEmail,
+		&previous.UserDisplay,
+		&previous.Amount,
+		&previous.Asset,
+		&previous.DepositAddress,
+		&previous.TxID,
+		&previous.Status,
+		&previous.CreatedAt,
+		&previous.ConfirmedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return GasFeeDepositView{}, ErrGasFeeDepositNotFound
+		}
+		return GasFeeDepositView{}, fmt.Errorf("store: lock gas fee deposit: %w", err)
+	}
+	if previous.Status != "pending" {
+		return GasFeeDepositView{}, ErrGasFeeDepositTransition
+	}
+
+	// Prevent duplicate successful TXID
+	if status == "confirmed" && previous.TxID != nil {
+		var exists bool
+		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM gas_fee_deposits WHERE tx_id = $1 AND status = 'confirmed' AND id != $2::uuid)`, *previous.TxID, params.DepositID).Scan(&exists)
+		if err != nil {
+			return GasFeeDepositView{}, fmt.Errorf("store: check duplicate tx_id: %w", err)
+		}
+		if exists {
+			// TXID already confirmed by someone else, we must fail this one
+			status = "failed"
+			params.ResolutionNote = "TXID already claimed by another user."
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `
+UPDATE gas_fee_deposits
+SET status = $2,
+    confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3 ELSE NULL END
+WHERE id = $1::uuid`, params.DepositID, status, now); err != nil {
+		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
+	}
+
+	if err := insertGasFeeDepositAudit(ctx, tx, "system", "", "gas_fee_deposit_"+status, params.DepositID, map[string]any{
+		"previous_status": previous.Status,
+		"status":          status,
+		"amount":          previous.Amount,
+		"asset":           previous.Asset,
+		"user_id":         previous.UserID,
+		"note":            strings.TrimSpace(params.ResolutionNote),
+	}, now); err != nil {
+		return GasFeeDepositView{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return GasFeeDepositView{}, fmt.Errorf("store: commit system update gas fee deposit: %w", err)
+	}
+	return s.gasFeeDepositByID(ctx, params.DepositID)
+}
+
 func (s *DashboardStore) gasFeeDepositByID(ctx context.Context, depositID string) (GasFeeDepositView, error) {
 	var deposit GasFeeDepositView
 	err := s.db.QueryRow(ctx, `

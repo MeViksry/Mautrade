@@ -29,13 +29,14 @@ func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 
 func mockUserStats(defaultCurrency, gasFeeShareRate string) map[string]any {
 	return map[string]any{
-		"totalBalance":      "12450.75",
-		"realizedProfit":    "3240.50",
-		"totalGasFeePaid":   "1620.25",
-		"activeLayersCount": 18,
-		"precisionPolicy":   "qdecimal",
-		"defaultCurrency":   defaultCurrency,
-		"gasFeeShareRate":   gasFeeShareRate,
+		"totalBalance":        "12450.75",
+		"realizedProfit":      "3240.50",
+		"totalGasFeePaid":     "1620.25",
+		"activeLayersCount":   18,
+		"precisionPolicy":     "qdecimal",
+		"defaultCurrency":     defaultCurrency,
+		"gasFeeShareRate":     gasFeeShareRate,
+		"gasFeeDepositStatus": "pending",
 	}
 }
 
