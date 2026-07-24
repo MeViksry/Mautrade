@@ -82,27 +82,10 @@ const depositCoinOptions = [
   { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
 ]
 let layersResizeObserver: ResizeObserver | null = null
-let pollInterval: ReturnType<typeof setInterval> | null = null
 
 const syncExchangeListHeight = () => {
   if (!layersContainer.value) return
   exchangeListHeight.value = Math.round(layersContainer.value.getBoundingClientRect().height)
-}
-
-const startPollingGasFee = () => {
-  if (pollInterval) return
-  pollInterval = setInterval(async () => {
-    try {
-      const statsData = await getUserStats()
-      stats.value = statsData
-      if (statsData.gasFeeDepositStatus !== 'pending') {
-        if (pollInterval) clearInterval(pollInterval)
-        pollInterval = null
-      }
-    } catch (e) {
-      console.error('Poll error', e)
-    }
-  }, 5000)
 }
 
 onMounted(async () => {
@@ -122,10 +105,6 @@ onMounted(async () => {
     stats.value = statsData
     exchanges.value = exchangesData
     layers.value = layersData
-
-    if (statsData.gasFeeDepositStatus === 'pending') {
-      startPollingGasFee()
-    }
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
   } finally {
@@ -146,7 +125,6 @@ onBeforeUnmount(() => {
   layersResizeObserver?.disconnect()
   document.removeEventListener('click', handleDepositCoinClickOutside)
   window.removeEventListener('resize', syncExchangeListHeight)
-  if (pollInterval) clearInterval(pollInterval)
 })
 
 const formatLastSynced = (lastSynced: string | null) => {
@@ -280,64 +258,6 @@ const submitDeposit = () => {
 
 <template>
   <div class="dashboard-page">
-    <!-- Verification Status Overlay -->
-    <div
-      v-if="!loading && stats && (stats.gasFeeDepositStatus === 'pending' || stats.gasFeeDepositStatus === 'failed' || stats.gasFeeDepositStatus === 'rejected')"
-      class="verification-overlay"
-    >
-      <div class="verification-card">
-        <div
-          v-if="stats.gasFeeDepositStatus === 'pending'"
-          class="verification-content pending"
-        >
-          <div class="spinner-container">
-            <div class="loader" />
-          </div>
-          <h3>Verifying Payment on Blockchain</h3>
-          <p>Please wait, we are verifying your TXID ({{ stats.gasFeeDepositTxId }}).</p>
-          <p class="verification-subtext">
-            This usually takes ~30 seconds. This page will automatically refresh.
-          </p>
-        </div>
-        <div
-          v-else
-          class="verification-content failed"
-        >
-          <div class="icon-container">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#ef4444"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ><circle
-              cx="12"
-              cy="12"
-              r="10"
-            /><line
-              x1="12"
-              y1="8"
-              x2="12"
-              y2="12"
-            /><line
-              x1="12"
-              y1="16"
-              x2="12.01"
-              y2="16"
-            /></svg>
-          </div>
-          <h3>Verification Failed</h3>
-          <p>We could not verify your TXID. It might be invalid, from the wrong network, or already used.</p>
-          <NuxtLink
-            to="/onboarding"
-            class="btn-primary mt-4 inline-flex"
-          >Enter New TXID</NuxtLink>
-        </div>
-      </div>
-    </div>
     <div
       v-if="loading"
       class="skeleton-loading"
