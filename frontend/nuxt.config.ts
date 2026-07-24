@@ -13,7 +13,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:8080/api/v1'
+      apiBase: process.env.API_BASE || 'http://localhost:8080/api/v1',
+      gasFeeDepositAddress: process.env.GAS_FEE_DEPOSIT_ADDRESS
     }
   },
   srcDir: 'app/',
