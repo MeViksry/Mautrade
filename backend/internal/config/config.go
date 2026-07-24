@@ -21,10 +21,13 @@ type Config struct {
 	EmailOTPTTL            time.Duration
 	GasFeeDepositAddress   string
 	ExchangeCredentialKey  string
-	AdminBootstrapEmail    string
-	AdminBootstrapPassword string
-	AdminBootstrapName     string
-	AdminBootstrapRole     string
+	AdminOneEmail    string
+	AdminOneName     string
+	AdminOnePassword string
+	
+	AdminTwoEmail    string
+	AdminTwoName     string
+	AdminTwoPassword string
 	SMTPHost               string
 	SMTPPort               string
 	SMTPUsername           string
@@ -60,10 +63,13 @@ func Load() (Config, error) {
 		EmailOTPTTL:            time.Duration(otpMinutes) * time.Minute,
 		GasFeeDepositAddress:   stringEnv("GAS_FEE_DEPOSIT_ADDRESS", "MAUTRADE-USDT-DEPOSIT-PENDING"),
 		ExchangeCredentialKey:  stringEnv("EXCHANGE_CREDENTIAL_KEY", ""),
-		AdminBootstrapEmail:    stringEnv("ADMIN_BOOTSTRAP_EMAIL", ""),
-		AdminBootstrapPassword: stringEnv("ADMIN_BOOTSTRAP_PASSWORD", ""),
-		AdminBootstrapName:     stringEnv("ADMIN_BOOTSTRAP_NAME", "Mautrade Super Admin"),
-		AdminBootstrapRole:     stringEnv("ADMIN_BOOTSTRAP_ROLE", "super_admin"),
+		AdminOneEmail:    stringEnv("ACCOUNT_ADMIN_ONE", ""),
+		AdminOneName:     stringEnv("ADMIN_ACCOUNT_ONE_SINGLE_NAME", ""),
+		AdminOnePassword: stringEnv("ADMIN_ACCOUNT_ONE_PASSWORD", ""),
+
+		AdminTwoEmail:    stringEnv("ACCOUNT_ADMIN_TWO", ""),
+		AdminTwoName:     stringEnv("ADMIN_ACCOUNT_TWO_SINGLE_NAME", ""),
+		AdminTwoPassword: stringEnv("ADMIN_ACCOUNT_TWO_PASSWORD", ""),
 		SMTPHost:               strings.TrimSpace(stringEnv("SMTP_HOST", "")),
 		SMTPPort:               strings.TrimSpace(stringEnv("SMTP_PORT", "587")),
 		SMTPUsername:           strings.TrimSpace(stringEnv("SMTP_USERNAME", "")),

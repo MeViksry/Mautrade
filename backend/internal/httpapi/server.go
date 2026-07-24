@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/MeViksry/Mautrade/backend/internal/config"
@@ -65,22 +66,40 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) bootstrapAdmin() error {
-	if !s.store.Ready() || s.config.AdminBootstrapEmail == "" {
-		return nil
+	// Admin Account One
+	if s.store.Ready() && s.config.AdminOneEmail != "" {
+		result, err := s.store.BootstrapAdmin(context.Background(), store.BootstrapAdminParams{
+			Email:       strings.TrimSpace(s.config.AdminOneEmail),
+			Password:    s.config.AdminOnePassword,
+			DisplayName: s.config.AdminOneName,
+			Role:        "super_admin",
+			Now:         time.Now().UTC(),
+		})
+		if err != nil {
+			return err
+		}
+		if result.Admin.ID != "" {
+			s.logger.Info("admin one bootstrap checked", "admin_id", result.Admin.ID, "created", result.Created, "email", s.config.AdminOneEmail)
+		}
 	}
-	result, err := s.store.BootstrapAdmin(context.Background(), store.BootstrapAdminParams{
-		Email:       s.config.AdminBootstrapEmail,
-		Password:    s.config.AdminBootstrapPassword,
-		DisplayName: s.config.AdminBootstrapName,
-		Role:        s.config.AdminBootstrapRole,
-		Now:         time.Now().UTC(),
-	})
-	if err != nil {
-		return err
+
+	// Admin Account Two
+	if s.store.Ready() && s.config.AdminTwoEmail != "" {
+		result, err := s.store.BootstrapAdmin(context.Background(), store.BootstrapAdminParams{
+			Email:       strings.TrimSpace(s.config.AdminTwoEmail),
+			Password:    s.config.AdminTwoPassword,
+			DisplayName: s.config.AdminTwoName,
+			Role:        "super_admin",
+			Now:         time.Now().UTC(),
+		})
+		if err != nil {
+			return err
+		}
+		if result.Admin.ID != "" {
+			s.logger.Info("admin two bootstrap checked", "admin_id", result.Admin.ID, "created", result.Created, "email", s.config.AdminTwoEmail)
+		}
 	}
-	if result.Admin.ID != "" {
-		s.logger.Info("admin bootstrap checked", "admin_id", result.Admin.ID, "created", result.Created)
-	}
+
 	return nil
 }
 
