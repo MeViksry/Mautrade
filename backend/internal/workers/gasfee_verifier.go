@@ -63,18 +63,11 @@ func (v *Verifier) processPending(ctx context.Context) {
 		var amount *big.Int
 		var err error
 
-		if strings.HasPrefix(txID, "BYPASS-TEST-") {
-			v.logger.Info("gasfee verifier: BYPASS TEST triggered", "deposit_id", dep.ID, "tx_id", txID)
-			// Mock 100,000 USDT so it always passes any >= expected amount check
-			amount, _ = new(big.Int).SetString("100000000000000000000000", 10)
-			err = nil
-		} else {
-			if v.wallet == "" {
-				v.logger.Warn("gasfee verifier: cannot verify real tx because wallet address is missing", "deposit_id", dep.ID, "tx_id", txID)
-				continue
-			}
-			amount, err = v.client.VerifyUSDTTransfer(ctx, txID, v.wallet)
+		if v.wallet == "" {
+			v.logger.Warn("gasfee verifier: cannot verify real tx because wallet address is missing", "deposit_id", dep.ID, "tx_id", txID)
+			continue
 		}
+		amount, err = v.client.VerifyUSDTTransfer(ctx, txID, v.wallet)
 		if err != nil {
 			v.logger.Info("gasfee verifier: tx verification failed", "deposit_id", dep.ID, "tx_id", txID, "error", err)
 

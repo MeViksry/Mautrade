@@ -67,7 +67,7 @@ func main() {
 	if cfg.BscScanAPIKey != "" {
 		logger.Info("gasfee verifier started")
 	} else {
-		logger.Warn("BSCSCAN_API_KEY is not set, real gasfee verification is disabled (BYPASS-TEST only)")
+		logger.Warn("BSCSCAN_API_KEY is not set, real gasfee verification is disabled")
 	}
 
 	server := &http.Server{
