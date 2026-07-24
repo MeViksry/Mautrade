@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRuntimeConfig } from '#app'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,34 +43,49 @@ useSeoMeta({
   twitterDescription: seoDescription
 })
 
+interface SignupChartData {
+  date: string
+  count: number
+}
+
+interface CountryDemographicData {
+  countryCode: string
+  count: number
+}
+
+interface AdminAnalyticsResponse {
+  totalRevenue: string | number
+  totalUsers: number
+  activeUsers: number
+  transactions: number
+  depositGasFeeTracker: string | number
+  recentSignups: number
+  signupsChartData: SignupChartData[]
+  countryDemographics: CountryDemographicData[]
+}
+
 const loading = ref(true)
 
+const { tokenCookie } = useAdminAuth()
+
 const analyticsStats = ref({
-  totalRevenue: 1540000,
-  totalUsers: 12450,
-  activeUsers: 8320,
-  transactions: 45291,
-  depositGasFeeTracker: 12850,
-  recentSignups: 42
+  totalRevenue: 0,
+  totalUsers: 0,
+  activeUsers: 0,
+  transactions: 0,
+  depositGasFeeTracker: 0,
+  recentSignups: 0
 })
 
 // Chart data
 const trafficData = ref({
-  labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  labels: [] as string[],
   datasets: [
-    {
-      label: 'Visitors',
-      backgroundColor: 'rgba(56, 189, 248, 0.2)',
-      borderColor: '#38bdf8',
-      data: [1200, 1900, 1500, 2200, 2800, 3100, 4200],
-      fill: true,
-      tension: 0.4
-    },
     {
       label: 'Signups',
       backgroundColor: 'rgba(255, 90, 0, 0.2)',
       borderColor: '#ff5a00',
-      data: [42, 68, 55, 89, 120, 145, 198],
+      data: [] as number[],
       fill: true,
       tension: 0.4
     }
@@ -77,13 +93,13 @@ const trafficData = ref({
 })
 
 const demographicData = ref({
-  labels: ['USA', 'UK', 'Indonesia', 'India', 'Brazil', 'Germany'],
+  labels: [] as string[],
   datasets: [
     {
       label: 'Users by Country',
       backgroundColor: '#ff5a00',
       borderRadius: 4,
-      data: [4500, 2100, 1800, 1200, 950, 600]
+      data: [] as number[]
     }
   ]
 })
@@ -108,10 +124,39 @@ const chartOptions = {
   }
 }
 
-onMounted(() => {
-  setTimeout(() => {
+onMounted(async () => {
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    const data = await $fetch<AdminAnalyticsResponse>(`${apiBase}/admin/analytics`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
+
+    analyticsStats.value.totalRevenue = typeof data.totalRevenue === 'string' ? parseFloat(data.totalRevenue) : (data.totalRevenue || 0)
+    analyticsStats.value.totalUsers = data.totalUsers || 0
+    analyticsStats.value.activeUsers = data.activeUsers || 0
+    analyticsStats.value.transactions = data.transactions || 0
+    analyticsStats.value.depositGasFeeTracker = typeof data.depositGasFeeTracker === 'string' ? parseFloat(data.depositGasFeeTracker) : (data.depositGasFeeTracker || 0)
+    analyticsStats.value.recentSignups = data.recentSignups || 0
+
+    if (data.signupsChartData && data.signupsChartData.length > 0) {
+      trafficData.value.labels = data.signupsChartData.map((d: SignupChartData) => d.date)
+      if (trafficData.value.datasets[0]) {
+        trafficData.value.datasets[0].data = data.signupsChartData.map((d: SignupChartData) => d.count)
+      }
+    }
+
+    if (data.countryDemographics && data.countryDemographics.length > 0) {
+      demographicData.value.labels = data.countryDemographics.map((d: CountryDemographicData) => d.countryCode)
+      if (demographicData.value.datasets[0]) {
+        demographicData.value.datasets[0].data = data.countryDemographics.map((d: CountryDemographicData) => d.count)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load admin analytics:', err)
+  } finally {
     loading.value = false
-  }, 1000)
+  }
 })
 </script>
 
@@ -180,7 +225,7 @@ onMounted(() => {
             Traffic Analytics
           </h2>
           <p class="section-desc">
-            Visitor and signups over time
+            Signups over time
           </p>
           <div class="chart-wrapper">
             <Line
