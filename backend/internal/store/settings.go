@@ -9,12 +9,12 @@ import (
 )
 
 type GlobalSettingsView struct {
-	MaintenanceMode        bool             `json:"maintenanceMode"`
-	AllowRegistrations     bool             `json:"allowRegistrations"`
-	GasFeePercentage       qdecimal.Decimal `json:"gasFeePercentage"`
-	MinDepositUsdt         qdecimal.Decimal `json:"minDepositUsdt"`
+	MaintenanceMode    bool             `json:"maintenanceMode"`
+	AllowRegistrations bool             `json:"allowRegistrations"`
+	GasFeePercentage   qdecimal.Decimal `json:"gasFeePercentage"`
+	MinDepositUsdt     qdecimal.Decimal `json:"minDepositUsdt"`
 
-	SupportEmail           string           `json:"supportEmail"`
+	SupportEmail string `json:"supportEmail"`
 }
 
 func (s *DashboardStore) GlobalSettings(ctx context.Context) (GlobalSettingsView, error) {
