@@ -64,7 +64,7 @@ const countryInvalid = computed(() => !selectedCountry.value)
 const ageInvalid = computed(() => !age.value || age.value < 18)
 const depositInvalid = computed(() => Number(depositAmount.value) < 500)
 const exchangeInvalid = computed(() => selectedExchanges.value.length === 0)
-const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.value || depositInvalid.value || exchangeInvalid.value)
+const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.value || exchangeInvalid.value)
 const txidInvalid = computed(() => currentStep.value === 2 && !txid.value.trim())
 
 const toggleExchange = (exchange: string) => {
@@ -155,7 +155,6 @@ const nextStep = () => {
 
   if (countryInvalid.value) triggerShake('country')
   if (ageInvalid.value) triggerShake('age')
-  if (depositInvalid.value) triggerShake('deposit')
   if (exchangeInvalid.value) triggerShake('exchange')
 
   if (onboardingBlocked.value) return
@@ -167,10 +166,10 @@ const nextStep = () => {
 const submitPayment = async () => {
   submitAttempted.value = true
 
-  if (txidInvalid.value) {
-    triggerTxidShake()
-    return
-  }
+  if (depositInvalid.value) triggerShake('deposit')
+  if (txidInvalid.value) triggerTxidShake()
+
+  if (depositInvalid.value || txidInvalid.value) return
 
   try {
     await completeOnboarding({
@@ -312,8 +311,24 @@ const submitPayment = async () => {
           </div>
         </div>
 
+        <button
+          class="onboarding-submit"
+          :class="{ 'is-blocked': onboardingBlocked }"
+          type="submit"
+        >
+          Initialize Trading Dashboard
+          <UIcon name="lucide:arrow-right" />
+        </button>
+      </form>
+
+      <!-- Step 2 -->
+      <form
+        v-if="currentStep === 2"
+        class="onboarding-form payment-step"
+        @submit.prevent="submitPayment"
+      >
         <div class="onboarding-field">
-          <label for="depositAmount">Required Gas Fee Allocation</label>
+          <label for="depositAmount">Deposit Amount</label>
           <div
             class="deposit-input"
             :class="{ 'is-invalid': submitAttempted && depositInvalid, 'is-shaking': depositShake }"
@@ -338,25 +353,9 @@ const submitPayment = async () => {
           </div>
         </div>
 
-        <button
-          class="onboarding-submit"
-          :class="{ 'is-blocked': onboardingBlocked }"
-          type="submit"
-        >
-          Initialize Trading Dashboard
-          <UIcon name="lucide:arrow-right" />
-        </button>
-      </form>
-
-      <!-- Step 2 -->
-      <form
-        v-if="currentStep === 2"
-        class="onboarding-form payment-step"
-        @submit.prevent="submitPayment"
-      >
         <div class="payment-instructions">
           <p>
-            To initialize your dashboard, please deposit exactly <strong>{{ depositAmount }} USDT</strong> (BEP-20) to the following address:
+            To initialize your dashboard, please deposit a minimum of <strong>{{ depositAmount }} USDT</strong> (BEP-20) to the following address:
           </p>
         </div>
 
