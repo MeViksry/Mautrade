@@ -21,7 +21,6 @@ const settings = ref({
   allowRegistrations: true,
   gasFeePercentage: 20,
   minDepositUsdt: 500,
-  maxActiveLayersPerUser: 10,
   supportEmail: 'support@mautrade.com'
 })
 
@@ -30,7 +29,6 @@ type SettingsData = {
   allowRegistrations: boolean
   gasFeePercentage: string | number
   minDepositUsdt: string | number
-  maxActiveLayersPerUser: number
   supportEmail: string
 }
 
@@ -43,7 +41,6 @@ const fetchSettings = async () => {
         allowRegistrations: data.allowRegistrations,
         gasFeePercentage: parseFloat(String(data.gasFeePercentage || 20)),
         minDepositUsdt: parseFloat(String(data.minDepositUsdt || 500)),
-        maxActiveLayersPerUser: data.maxActiveLayersPerUser,
         supportEmail: data.supportEmail
       }
     }
@@ -67,7 +64,6 @@ const handleSave = async () => {
         allowRegistrations: settings.value.allowRegistrations,
         gasFeePercentage: settings.value.gasFeePercentage.toString(),
         minDepositUsdt: settings.value.minDepositUsdt.toString(),
-        maxActiveLayersPerUser: settings.value.maxActiveLayersPerUser,
         supportEmail: settings.value.supportEmail
       }
     })
@@ -187,15 +183,6 @@ onMounted(() => {
                   class="form-input"
                 >
               </div>
-            </div>
-
-            <div class="form-group">
-              <label>Max Active Layers (Per User)</label>
-              <input
-                v-model="settings.maxActiveLayersPerUser"
-                type="number"
-                class="form-input"
-              >
             </div>
           </div>
         </div>

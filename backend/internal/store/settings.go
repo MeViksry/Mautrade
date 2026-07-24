@@ -13,7 +13,7 @@ type GlobalSettingsView struct {
 	AllowRegistrations     bool             `json:"allowRegistrations"`
 	GasFeePercentage       qdecimal.Decimal `json:"gasFeePercentage"`
 	MinDepositUsdt         qdecimal.Decimal `json:"minDepositUsdt"`
-	MaxActiveLayersPerUser int              `json:"maxActiveLayersPerUser"`
+
 	SupportEmail           string           `json:"supportEmail"`
 }
 
@@ -29,7 +29,6 @@ SELECT
   allow_registrations,
   gas_fee_percentage,
   min_deposit_usdt,
-  max_active_layers_per_user,
   support_email
 FROM global_settings
 WHERE id = 1
@@ -38,7 +37,6 @@ WHERE id = 1
 		&v.AllowRegistrations,
 		&v.GasFeePercentage,
 		&v.MinDepositUsdt,
-		&v.MaxActiveLayersPerUser,
 		&v.SupportEmail,
 	)
 	if err != nil {
@@ -49,13 +47,12 @@ WHERE id = 1
 }
 
 type UpdateGlobalSettingsParams struct {
-	MaintenanceMode        bool
-	AllowRegistrations     bool
-	GasFeePercentage       qdecimal.Decimal
-	MinDepositUsdt         qdecimal.Decimal
-	MaxActiveLayersPerUser int
-	SupportEmail           string
-	Now                    time.Time
+	MaintenanceMode    bool
+	AllowRegistrations bool
+	GasFeePercentage   qdecimal.Decimal
+	MinDepositUsdt     qdecimal.Decimal
+	SupportEmail       string
+	Now                time.Time
 }
 
 func (s *DashboardStore) UpdateGlobalSettings(ctx context.Context, params UpdateGlobalSettingsParams) (GlobalSettingsView, error) {
@@ -71,16 +68,15 @@ SET
   allow_registrations = $2,
   gas_fee_percentage = $3,
   min_deposit_usdt = $4,
-  max_active_layers_per_user = $5,
-  support_email = $6,
-  updated_at = $7
+  support_email = $5,
+  updated_at = $6
 WHERE id = 1
 `,
 		params.MaintenanceMode,
 		params.AllowRegistrations,
 		params.GasFeePercentage,
 		params.MinDepositUsdt,
-		params.MaxActiveLayersPerUser,
+
 		params.SupportEmail,
 		now,
 	); err != nil {
