@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-const { completeOnboarding, logout } = useAuth()
+const { completeOnboarding } = useAuth()
 
 const handleDepositBlur = () => {
   if (!depositAmount.value || depositAmount.value < 500) {
@@ -139,7 +139,26 @@ const handleDepositBlur = () => {
 
 const copyWalletAddress = async () => {
   try {
-    await navigator.clipboard.writeText(walletAddress)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(walletAddress)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = walletAddress
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      await new Promise<void>((res, rej) => {
+        if (document.execCommand('copy')) {
+          res()
+        } else {
+          rej()
+        }
+        textArea.remove()
+      })
+    }
     copied.value = true
     setTimeout(() => {
       copied.value = false
@@ -184,7 +203,8 @@ const submitPayment = async () => {
       exchanges: selectedExchanges.value,
       amount: String(depositAmount.value),
       gasFeeAsset: 'USDT',
-      txId: txid.value
+      txId: txid.value,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     })
     await navigateTo('/dashboard')
   } catch (error) {
@@ -197,18 +217,8 @@ const submitPayment = async () => {
 <template>
   <main class="onboarding-page">
     <section class="onboarding-panel">
-      <div
-        class="onboarding-brand"
-        style="justify-content: space-between; width: 100%;"
-      >
+      <div class="onboarding-brand">
         <span>MAUTRADE<span /></span>
-        <button
-          class="logout-link"
-          type="button"
-          @click="logout"
-        >
-          Sign out
-        </button>
       </div>
 
       <div class="onboarding-heading">
@@ -233,7 +243,12 @@ const submitPayment = async () => {
         @submit.prevent="nextStep"
       >
         <div class="onboarding-field">
-          <label for="countrySelect">Region & Compliance</label>
+          <span
+            id="countrySelectLabel"
+            class="field-label"
+          >
+            Region & Compliance
+          </span>
           <div
             ref="countrySelectRef"
             class="country-select"
@@ -244,6 +259,7 @@ const submitPayment = async () => {
               id="countrySelect"
               class="country-select__trigger"
               type="button"
+              aria-labelledby="countrySelectLabel"
               @click="countryDropdownOpen = !countryDropdownOpen"
             >
               <span>
@@ -259,11 +275,16 @@ const submitPayment = async () => {
             >
               <div class="country-search">
                 <UIcon name="lucide:search" />
+                <label
+                  for="countrySearch"
+                  class="sr-only"
+                >
+                  Search country
+                </label>
                 <input
                   id="countrySearch"
                   v-model="countrySearch"
                   name="countrySearch"
-                  aria-label="Search country"
                   type="text"
                   placeholder="Search country for compliance sync"
                   autocomplete="off"
@@ -1119,5 +1140,16 @@ const submitPayment = async () => {
     right: 0;
     width: 100%;
   }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

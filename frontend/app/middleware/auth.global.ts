@@ -21,12 +21,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
     if (isAccountComplete.value) {
       return navigateTo('/dashboard')
     } else {
-      return navigateTo('/onboarding')
+      tokenCookie.value = null
+      return
     }
   }
 
   if (tokenCookie.value && !isAccountComplete.value) {
-    if (!to.path.startsWith('/signup') && !to.path.startsWith('/onboarding')) {
+    if (to.path !== '/' && !to.path.startsWith('/signup') && !to.path.startsWith('/onboarding') && !to.path.startsWith('/signin')) {
       return navigateTo('/onboarding')
     }
   }

@@ -109,7 +109,7 @@ export const useAuth = () => {
       throw new Error(error.data?.error || error.message || 'Failed to verify OTP', { cause: error })
     }
   }
-  const completeOnboarding = async (payload: { age: number, countryCode: string, exchanges: string[], amount: string, gasFeeAsset: string, txId?: string }) => {
+  const completeOnboarding = async (payload: { age: number, countryCode: string, exchanges: string[], amount: string, gasFeeAsset: string, txId?: string, timezone?: string }) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await $fetch<any>(`${apiBase}/onboarding/complete`, {
