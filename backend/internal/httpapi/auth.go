@@ -115,8 +115,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Now:        time.Now().UTC(),
 	})
 	if err != nil {
+		if errors.Is(err, store.ErrUserNotFound) {
+			writeError(w, http.StatusUnauthorized, "invalid email")
+			return
+		}
 		if errors.Is(err, store.ErrInvalidCredential) {
-			writeError(w, http.StatusUnauthorized, "invalid email or password")
+			writeError(w, http.StatusUnauthorized, "invalid password")
 			return
 		}
 		s.logger.Error("login user", "error", err)

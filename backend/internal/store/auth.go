@@ -28,6 +28,7 @@ const (
 
 var (
 	ErrDuplicateAccount  = errors.New("store: account already exists")
+	ErrUserNotFound      = errors.New("store: user not found")
 	ErrInvalidCredential = errors.New("store: invalid credentials")
 	ErrInvalidOTP        = errors.New("store: invalid otp")
 	ErrExpiredOTP        = errors.New("store: expired otp")
@@ -243,7 +244,7 @@ func (s *DashboardStore) LoginUser(ctx context.Context, params LoginUserParams) 
 	row, err := userByEmailForAuth(ctx, tx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return LoginUserResult{}, ErrInvalidCredential
+			return LoginUserResult{}, ErrUserNotFound
 		}
 		return LoginUserResult{}, err
 	}
