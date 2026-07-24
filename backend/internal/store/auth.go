@@ -425,10 +425,15 @@ func (s *DashboardStore) CompleteOnboarding(ctx context.Context, params Complete
 		asset = "USDT"
 	}
 	amount := decimalOrZero(params.GasFeeAmount)
+	settings, err := s.GlobalSettings(ctx)
+	if err != nil {
+		return CompleteOnboardingResult{}, fmt.Errorf("store: fetch settings for onboarding: %w", err)
+	}
+
 	if parsed, err := qdecimal.Parse(amount); err != nil {
 		return CompleteOnboardingResult{}, fmt.Errorf("store: gas fee amount must be decimal: %w", err)
-	} else if parsed.Cmp(qdecimal.MustParse("500")) < 0 {
-		return CompleteOnboardingResult{}, fmt.Errorf("store: gas fee amount must be at least 500 %s", asset)
+	} else if parsed.Cmp(settings.MinDepositUsdt) < 0 {
+		return CompleteOnboardingResult{}, fmt.Errorf("store: gas fee amount must be at least %s %s", settings.MinDepositUsdt.String(), asset)
 	}
 
 	tx, err := s.db.Begin(ctx)
@@ -481,9 +486,6 @@ INSERT INTO user_exchange_preferences (
 		txID = strings.TrimSpace(params.TxID)
 	}
 	status := "pending"
-	if txID == "BYPASS-TEST-123" {
-		status = "completed"
-	}
 	if _, err := tx.Exec(ctx, `
 INSERT INTO gas_fee_deposits (
   id, user_id, amount, asset, deposit_address, tx_id, status, created_at

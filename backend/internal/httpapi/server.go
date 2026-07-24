@@ -121,6 +121,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/admin/signals/{signal_id}/executions", s.handleAdminSignalExecutions)
 	s.mux.HandleFunc("GET /api/v1/admin/reconciliation-events", s.handleAdminReconciliationEvents)
 	s.mux.HandleFunc("PATCH /api/v1/admin/reconciliation-events/{event_id}/resolve", s.handleResolveReconciliationEvent)
+	s.mux.HandleFunc("GET /api/v1/settings", s.handleGetGlobalSettings)
+	s.mux.HandleFunc("PUT /api/v1/admin/settings", s.handleAdminUpdateGlobalSettings)
 	s.mux.HandleFunc("POST /api/v1/internal/execution-results", s.handleExecutionResult)
 }
 

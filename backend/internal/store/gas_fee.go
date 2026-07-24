@@ -95,9 +95,13 @@ func (s *DashboardStore) UserGasFeeAccount(ctx context.Context, userID, asset st
 		limit = 100
 	}
 	asset = normalizeGasFeeAsset(asset)
+	settings, err := s.GlobalSettings(ctx)
+	if err != nil {
+		return GasFeeAccountView{}, fmt.Errorf("store: fetch settings for gas fee account: %w", err)
+	}
 	account := GasFeeAccountView{
 		Asset:          asset,
-		MinimumDeposit: "500",
+		MinimumDeposit: settings.MinDepositUsdt.String(),
 		ServerTime:     time.Now().UTC(),
 	}
 	const summaryQuery = `
@@ -237,9 +241,13 @@ func (s *DashboardStore) CreateGasFeeDeposit(ctx context.Context, params CreateG
 	now := normalizedNow(params.Now)
 	asset := normalizeGasFeeAsset(params.Asset)
 	amount := decimalOrZero(params.Amount)
+	settings, err := s.GlobalSettings(ctx)
+	if err != nil {
+		return GasFeeDepositView{}, fmt.Errorf("store: fetch settings for gas fee deposit: %w", err)
+	}
 	parsed, err := qdecimal.Parse(amount)
-	if err != nil || parsed.Cmp(qdecimal.MustParse("500")) < 0 {
-		return GasFeeDepositView{}, ErrGasFeeDepositAmount
+	if err != nil || parsed.Cmp(settings.MinDepositUsdt) < 0 {
+		return GasFeeDepositView{}, fmt.Errorf("store: gas fee deposit amount must be at least %s %s", settings.MinDepositUsdt.String(), asset)
 	}
 	txID := strings.TrimSpace(params.TxID)
 	if txID == "" {
@@ -260,22 +268,18 @@ func (s *DashboardStore) CreateGasFeeDeposit(ctx context.Context, params CreateG
 	}
 	defer tx.Rollback(ctx)
 
-	status := "pending"
-	if txID == "BYPASS-TEST-123" {
-		status = "completed"
-	}
 	if _, err := tx.Exec(ctx, `
 INSERT INTO gas_fee_deposits (
   id, user_id, amount, asset, deposit_address, tx_id, status, created_at
 ) VALUES (
-  $1::uuid, $2::uuid, $3::numeric, $4, $5, $6, $7, $8
-)`, depositID, params.UserID, amount, asset, address, txID, status, now); err != nil {
+  $1::uuid, $2::uuid, $3::numeric, $4, $5, $6, 'pending', $7
+)`, depositID, params.UserID, amount, asset, address, txID, now); err != nil {
 		return GasFeeDepositView{}, fmt.Errorf("store: insert gas fee deposit: %w", err)
 	}
 	if err := insertGasFeeDepositAudit(ctx, tx, "user", params.UserID, "gas_fee_deposit_created", depositID, map[string]any{
 		"amount": amount,
 		"asset":  asset,
-		"status": status,
+		"status": "pending",
 		"tx_id":  txID,
 	}, now); err != nil {
 		return GasFeeDepositView{}, err

@@ -13,26 +13,64 @@ useSeoMeta({
 })
 
 const loading = ref(true)
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 
 const settings = ref({
   maintenanceMode: false,
   allowRegistrations: true,
   gasFeePercentage: 20,
-  minDepositUsdt: 50,
+  minDepositUsdt: 500,
   maxActiveLayersPerUser: 10,
   supportEmail: 'support@mautrade.com'
 })
 
-const handleSave = () => {
-  // Simulate save API call
-  console.log('Saving settings:', settings.value)
-  alert('Settings saved successfully!')
+const fetchSettings = async () => {
+  try {
+    const data = await $fetch<any>(`${apiBase}/settings`)
+    if (data) {
+      settings.value = {
+        maintenanceMode: data.maintenanceMode,
+        allowRegistrations: data.allowRegistrations,
+        gasFeePercentage: parseFloat(data.gasFeePercentage || 20),
+        minDepositUsdt: parseFloat(data.minDepositUsdt || 500),
+        maxActiveLayersPerUser: data.maxActiveLayersPerUser,
+        supportEmail: data.supportEmail
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch settings', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSave = async () => {
+  try {
+    const adminToken = useCookie('admin_token')
+    const res = await $fetch<any>(`${apiBase}/admin/settings`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${adminToken.value}`
+      },
+      body: {
+        maintenanceMode: settings.value.maintenanceMode,
+        allowRegistrations: settings.value.allowRegistrations,
+        gasFeePercentage: settings.value.gasFeePercentage.toString(),
+        minDepositUsdt: settings.value.minDepositUsdt.toString(),
+        maxActiveLayersPerUser: settings.value.maxActiveLayersPerUser,
+        supportEmail: settings.value.supportEmail
+      }
+    })
+    alert('Settings saved successfully!')
+  } catch (err) {
+    console.error('Failed to save settings', err)
+    alert('Failed to save settings. Check console for details.')
+  }
 }
 
 onMounted(() => {
-  setTimeout(() => {
-    loading.value = false
-  }, 800)
+  fetchSettings()
 })
 </script>
 
