@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  redirect: '/dashboard'
+  redirect: '/signup'
 })
 </script>
 

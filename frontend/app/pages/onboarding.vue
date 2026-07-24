@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-const { completeOnboarding } = useAuth()
+const { completeOnboarding, logout } = useAuth()
 
 const handleDepositBlur = () => {
   if (!depositAmount.value || depositAmount.value < 500) {
@@ -197,8 +197,18 @@ const submitPayment = async () => {
 <template>
   <main class="onboarding-page">
     <section class="onboarding-panel">
-      <div class="onboarding-brand">
-        MAUTRADE<span />
+      <div
+        class="onboarding-brand"
+        style="justify-content: space-between; width: 100%;"
+      >
+        <span>MAUTRADE<span /></span>
+        <button
+          class="logout-link"
+          type="button"
+          @click="logout"
+        >
+          Sign out
+        </button>
       </div>
 
       <div class="onboarding-heading">
@@ -489,6 +499,24 @@ const submitPayment = async () => {
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.logout-link {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-mute);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.logout-link:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .onboarding-heading h1 {
