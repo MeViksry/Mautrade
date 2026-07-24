@@ -288,7 +288,7 @@ const verifyOtp = async () => {
       <button
         class="auth-submit"
         type="button"
-        style="margin-top: 0.5rem; background: transparent; border: 1px solid var(--line-strong); color: var(--silver);"
+        style="margin-top: 0.5rem;"
         :disabled="isLoading || resendLoading"
         @click="handleResendOtp"
       >
