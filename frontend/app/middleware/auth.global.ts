@@ -2,12 +2,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const tokenCookie = useCookie('auth_token')
   const { fetchUser, isAccountComplete } = useAuth()
   const isAuthRoute = to.path === '/signin' || to.path === '/signup'
+  const isAdminRoute = to.path.startsWith('/admin')
+
+  if (isAdminRoute) {
+    return
+  }
 
   await fetchUser()
 
   if (!tokenCookie.value) {
     if (!isAuthRoute && (to.path.startsWith('/dashboard') || to.path.startsWith('/onboarding'))) {
-      return navigateTo('/signup')
+      return navigateTo('/signin')
     }
     return
   }
@@ -22,7 +27,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (tokenCookie.value && !isAccountComplete.value) {
     if (!to.path.startsWith('/signup') && !to.path.startsWith('/onboarding')) {
-      return navigateTo('/signup')
+      return navigateTo('/onboarding')
     }
   }
 })
