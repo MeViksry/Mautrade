@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/MeViksry/Mautrade/backend/internal/platform/bscscan"
