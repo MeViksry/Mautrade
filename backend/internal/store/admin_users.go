@@ -36,19 +36,38 @@ func (s *DashboardStore) AdminListUsers(ctx context.Context, limit, offset int) 
 	var users []AdminEndUserView
 	for rows.Next() {
 		var u AdminEndUserView
-		var age *int
-		var country *string
-		var updated_at *time.Time
+		var (
+			email       *string
+			displayName *string
+			status      *string
+			country     *string
+			age         *int
+			createdAt   *time.Time
+			updatedAt   *time.Time
+		)
 		if err := rows.Scan(
-			&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.EmailVerified, &u.OnboardingCompleted, &country, &age, &u.CreatedAt, &updated_at,
+			&u.ID, &email, &displayName, &status, &u.EmailVerified, &u.OnboardingCompleted, &country, &age, &createdAt, &updatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("store: scan user: %w", err)
+		}
+
+		if email != nil {
+			u.Email = *email
+		}
+		if displayName != nil {
+			u.DisplayName = *displayName
+		}
+		if status != nil {
+			u.Status = *status
 		}
 		if age != nil {
 			u.Age = *age
 		}
 		if country != nil {
 			u.CountryCode = *country
+		}
+		if createdAt != nil {
+			u.CreatedAt = *createdAt
 		}
 		users = append(users, u)
 	}
