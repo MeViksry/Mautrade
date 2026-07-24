@@ -25,15 +25,24 @@ const settings = ref({
   supportEmail: 'support@mautrade.com'
 })
 
+type SettingsData = {
+  maintenanceMode: boolean
+  allowRegistrations: boolean
+  gasFeePercentage: string | number
+  minDepositUsdt: string | number
+  maxActiveLayersPerUser: number
+  supportEmail: string
+}
+
 const fetchSettings = async () => {
   try {
-    const data = await $fetch<any>(`${apiBase}/settings`)
+    const data = await $fetch<SettingsData>(`${apiBase}/settings`)
     if (data) {
       settings.value = {
         maintenanceMode: data.maintenanceMode,
         allowRegistrations: data.allowRegistrations,
-        gasFeePercentage: parseFloat(data.gasFeePercentage || 20),
-        minDepositUsdt: parseFloat(data.minDepositUsdt || 500),
+        gasFeePercentage: parseFloat(String(data.gasFeePercentage || 20)),
+        minDepositUsdt: parseFloat(String(data.minDepositUsdt || 500)),
         maxActiveLayersPerUser: data.maxActiveLayersPerUser,
         supportEmail: data.supportEmail
       }
@@ -48,10 +57,10 @@ const fetchSettings = async () => {
 const handleSave = async () => {
   try {
     const adminToken = useCookie('admin_token')
-    const res = await $fetch<any>(`${apiBase}/admin/settings`, {
+    await $fetch<SettingsData>(`${apiBase}/admin/settings`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${adminToken.value}`
+        Authorization: `Bearer ${adminToken.value}`
       },
       body: {
         maintenanceMode: settings.value.maintenanceMode,
