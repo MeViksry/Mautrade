@@ -22,7 +22,7 @@ type AdminEndUserView struct {
 	GasFeeBalance       qdecimal.Decimal `json:"gasFeeBalance"`
 }
 
-func (s *DashboardStore) AdminListUsers(ctx context.Context, limit, offset int) ([]AdminEndUserView, error) {
+func (s *DashboardStore) AdminListUsers(ctx context.Context, search string, limit, offset int) ([]AdminEndUserView, error) {
 	const query = `
 		SELECT
 			id::text, email, display_name, status, (email_verified_at IS NOT NULL) AS email_verified, (onboarding_completed_at IS NOT NULL) AS onboarding_completed, country_code, age, created_at, updated_at,
@@ -31,10 +31,11 @@ func (s *DashboardStore) AdminListUsers(ctx context.Context, limit, offset int) 
 				COALESCE((SELECT SUM(gas_fee_amount) FROM gas_fee_ledger WHERE user_id = users.id), 0)
 			)::numeric AS gas_fee_balance
 		FROM users
+		WHERE $1 = '' OR (email ILIKE '%' || $1 || '%' OR display_name ILIKE '%' || $1 || '%' OR id::text ILIKE '%' || $1 || '%')
 		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2
+		LIMIT $2 OFFSET $3
 	`
-	rows, err := s.db.Query(ctx, query, limit, offset)
+	rows, err := s.db.Query(ctx, query, search, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("store: list users: %w", err)
 	}

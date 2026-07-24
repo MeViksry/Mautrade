@@ -11,8 +11,9 @@ func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 		}
 		limit := positiveIntQuery(r, "limit", 50, 100)
 		offset := nonNegativeIntQuery(r, "offset", 0)
+		search := r.URL.Query().Get("search")
 
-		users, err := s.store.AdminListUsers(r.Context(), limit, offset)
+		users, err := s.store.AdminListUsers(r.Context(), search, limit, offset)
 		if err != nil {
 			s.logger.Error("read admin users", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to read users")

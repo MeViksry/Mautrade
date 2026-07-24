@@ -65,11 +65,19 @@ const closeModal = () => {
   selectedUser.value = null
 }
 
-onMounted(async () => {
+const searchQuery = ref('')
+let searchTimeout: ReturnType<typeof setTimeout>
+
+const fetchUsers = async () => {
+  loading.value = true
   try {
     const config = useRuntimeConfig()
     const apiBase = config.public.apiBase
-    const data = await $fetch<AdminUserResponse[]>(`${apiBase}/admin/users`, {
+    const params = new URLSearchParams()
+    if (searchQuery.value) {
+      params.append('search', searchQuery.value)
+    }
+    const data = await $fetch<AdminUserResponse[]>(`${apiBase}/admin/users?${params.toString()}`, {
       headers: { Authorization: `Bearer ${tokenCookie.value}` }
     })
 
@@ -87,14 +95,28 @@ onMounted(async () => {
       gasFeeBalance: typeof u.gasFeeBalance === 'string' ? u.gasFeeBalance : (u.gasFeeBalance?.toString() || '0')
     }))
 
-    usersStats.value.totalUsers = users.value.length
-    usersStats.value.verified = users.value.filter(u => u.status === 'Verified').length
-    usersStats.value.gasfeeDepleted = users.value.filter(u => u.gasFee === 'Depleted').length
+    // Only update stats on initial load (when search is empty) to avoid stats changing based on search
+    if (!searchQuery.value) {
+      usersStats.value.totalUsers = users.value.length
+      usersStats.value.verified = users.value.filter(u => u.status === 'Verified').length
+      usersStats.value.gasfeeDepleted = users.value.filter(u => u.gasFee === 'Depleted').length
+    }
   } catch (error) {
     console.error('Failed to load users:', error)
   } finally {
     loading.value = false
   }
+}
+
+watch(searchQuery, () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    fetchUsers()
+  }, 300)
+})
+
+onMounted(() => {
+  fetchUsers()
 })
 </script>
 
@@ -156,6 +178,7 @@ onMounted(async () => {
           </h2>
           <div class="search-bar">
             <input
+              v-model="searchQuery"
               type="text"
               placeholder="Search by name, email, or ID..."
               class="search-input"
