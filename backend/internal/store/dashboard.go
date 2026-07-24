@@ -276,14 +276,14 @@ type ChartPoint struct {
 }
 
 type AdminOverview struct {
-	RegisteredUsers      int64  `json:"registeredUsers"`
-	ActiveUsers          int64  `json:"activeUsers"`
-	OpenLayers           int64  `json:"openLayers"`
-	EstimatedAUM         string `json:"estimatedAUM"`
-	GasFeeRevenueToday   string `json:"gasFeeRevenueToday"`
-	OrphanedLayers       int64  `json:"orphanedLayers"`
-	ExecutionQueueState  string `json:"executionQueueState"`
-	
+	RegisteredUsers     int64  `json:"registeredUsers"`
+	ActiveUsers         int64  `json:"activeUsers"`
+	OpenLayers          int64  `json:"openLayers"`
+	EstimatedAUM        string `json:"estimatedAUM"`
+	GasFeeRevenueToday  string `json:"gasFeeRevenueToday"`
+	OrphanedLayers      int64  `json:"orphanedLayers"`
+	ExecutionQueueState string `json:"executionQueueState"`
+
 	NewUsersToday        int64  `json:"newUsersToday"`
 	GasFeeDepositPending int64  `json:"gasFeeDepositPending"`
 	Revenue7Day          string `json:"revenue7Day"`
@@ -291,8 +291,8 @@ type AdminOverview struct {
 	Revenue365Day        string `json:"revenue365Day"`
 	TotalRevenue         string `json:"totalRevenue"`
 
-	UserGrowthChart      []ChartPoint `json:"userGrowthChart"`
-	RevenueChart         []ChartPoint `json:"revenueChart"`
+	UserGrowthChart []ChartPoint `json:"userGrowthChart"`
+	RevenueChart    []ChartPoint `json:"revenueChart"`
 }
 
 func (s *DashboardStore) AdminOverview(ctx context.Context, defaultCurrency string) (AdminOverview, error) {
