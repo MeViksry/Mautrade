@@ -994,6 +994,7 @@ const submitPayment = async () => {
 
 .btn-back {
   padding: 0 1.5rem;
+  min-height: 58px;
   background: transparent;
   border: 1px solid var(--line);
   color: var(--text-mute);
