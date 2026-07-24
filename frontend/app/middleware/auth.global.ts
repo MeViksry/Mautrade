@@ -1,46 +1,27 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const tokenCookie = useCookie('auth_token')
-  const { fetchUser, isAccountComplete } = useAuth()
-  const isAuthRoute = to.path === '/signin' || to.path === '/signup'
-  const isAdminRoute = to.path.startsWith('/admin')
-
-  if (isAdminRoute) {
-    return
-  }
-
-  await fetchUser()
-
-  const isRoot = to.path === '/'
+  const { isAccountComplete, logout } = useAuth()
   const isOnboarding = to.path.startsWith('/onboarding')
+  const isDashboard = to.path.startsWith('/dashboard')
 
-  // Completely unauthenticated
   if (!tokenCookie.value) {
-    if (isRoot) return navigateTo('/signup')
-    if (isOnboarding) return navigateTo('/signup')
-    if (!isAuthRoute && to.path.startsWith('/dashboard')) return navigateTo('/signin')
-    return
-  }
-
-  // Authenticated
-  if (isAccountComplete.value) {
-    if (isRoot || isAuthRoute || isOnboarding) {
-      return navigateTo('/dashboard')
+    if (isOnboarding || isDashboard) {
+      return navigateTo('/signin')
     }
     return
   }
 
-  // Authenticated but incomplete (e.g. verified OTP but hasn't finished onboarding)
-  if (!isAccountComplete.value) {
-    if (isRoot) {
-      tokenCookie.value = null
+  if (tokenCookie.value && !isAccountComplete.value) {
+    if (isDashboard) {
+      await logout()
       return navigateTo('/signup')
-    }
-    if (isAuthRoute) {
-      tokenCookie.value = null
-      return
     }
     if (!isOnboarding) {
       return navigateTo('/onboarding')
     }
+  }
+
+  if (tokenCookie.value && isAccountComplete.value && isOnboarding) {
+    return navigateTo('/dashboard')
   }
 })
