@@ -9,31 +9,31 @@ import (
 )
 
 type Config struct {
-	Environment            string
-	HTTPAddr               string
-	DatabaseURL            string
-	NATSURL                string
-	ShutdownTimeout        time.Duration
-	GasFeeShareRate        string
-	DefaultCurrency        string
-	AllowedCORSOrigin      string
-	AuthSessionTTL         time.Duration
-	EmailOTPTTL            time.Duration
-	GasFeeDepositAddress   string
-	ExchangeCredentialKey  string
-	AdminOneEmail    string
-	AdminOneName     string
-	AdminOnePassword string
-	
+	Environment           string
+	HTTPAddr              string
+	DatabaseURL           string
+	NATSURL               string
+	ShutdownTimeout       time.Duration
+	GasFeeShareRate       string
+	DefaultCurrency       string
+	AllowedCORSOrigin     string
+	AuthSessionTTL        time.Duration
+	EmailOTPTTL           time.Duration
+	GasFeeDepositAddress  string
+	ExchangeCredentialKey string
+	AdminOneEmail         string
+	AdminOneName          string
+	AdminOnePassword      string
+
 	AdminTwoEmail    string
 	AdminTwoName     string
 	AdminTwoPassword string
-	SMTPHost               string
-	SMTPPort               string
-	SMTPUsername           string
-	SMTPPassword           string
-	SMTPFrom               string
-	BscScanAPIKey          string
+	SMTPHost         string
+	SMTPPort         string
+	SMTPUsername     string
+	SMTPPassword     string
+	SMTPFrom         string
+	BscScanAPIKey    string
 }
 
 func Load() (Config, error) {
@@ -51,31 +51,31 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		Environment:            stringEnv("APP_ENV", "development"),
-		HTTPAddr:               stringEnv("HTTP_ADDR", ":8080"),
-		DatabaseURL:            stringEnv("DATABASE_URL", ""),
-		NATSURL:                stringEnv("NATS_URL", "nats://localhost:4222"),
-		ShutdownTimeout:        time.Duration(shutdownSeconds) * time.Second,
-		GasFeeShareRate:        stringEnv("GAS_FEE_SHARE_RATE", "0.5"),
-		DefaultCurrency:        stringEnv("DEFAULT_CURRENCY", "USDT"),
-		AllowedCORSOrigin:      stringEnv("ALLOWED_CORS_ORIGIN", "*"),
-		AuthSessionTTL:         time.Duration(sessionHours) * time.Hour,
-		EmailOTPTTL:            time.Duration(otpMinutes) * time.Minute,
-		GasFeeDepositAddress:   stringEnv("GAS_FEE_DEPOSIT_ADDRESS", "MAUTRADE-USDT-DEPOSIT-PENDING"),
-		ExchangeCredentialKey:  stringEnv("EXCHANGE_CREDENTIAL_KEY", ""),
-		AdminOneEmail:    stringEnv("ACCOUNT_ADMIN_ONE", ""),
-		AdminOneName:     stringEnv("ADMIN_ACCOUNT_ONE_SINGLE_NAME", ""),
-		AdminOnePassword: stringEnv("ADMIN_ACCOUNT_ONE_PASSWORD", ""),
+		Environment:           stringEnv("APP_ENV", "development"),
+		HTTPAddr:              stringEnv("HTTP_ADDR", ":8080"),
+		DatabaseURL:           stringEnv("DATABASE_URL", ""),
+		NATSURL:               stringEnv("NATS_URL", "nats://localhost:4222"),
+		ShutdownTimeout:       time.Duration(shutdownSeconds) * time.Second,
+		GasFeeShareRate:       stringEnv("GAS_FEE_SHARE_RATE", "0.5"),
+		DefaultCurrency:       stringEnv("DEFAULT_CURRENCY", "USDT"),
+		AllowedCORSOrigin:     stringEnv("ALLOWED_CORS_ORIGIN", "*"),
+		AuthSessionTTL:        time.Duration(sessionHours) * time.Hour,
+		EmailOTPTTL:           time.Duration(otpMinutes) * time.Minute,
+		GasFeeDepositAddress:  stringEnv("GAS_FEE_DEPOSIT_ADDRESS", "MAUTRADE-USDT-DEPOSIT-PENDING"),
+		ExchangeCredentialKey: stringEnv("EXCHANGE_CREDENTIAL_KEY", ""),
+		AdminOneEmail:         stringEnv("ACCOUNT_ADMIN_ONE", ""),
+		AdminOneName:          stringEnv("ADMIN_ACCOUNT_ONE_SINGLE_NAME", ""),
+		AdminOnePassword:      stringEnv("ADMIN_ACCOUNT_ONE_PASSWORD", ""),
 
 		AdminTwoEmail:    stringEnv("ACCOUNT_ADMIN_TWO", ""),
 		AdminTwoName:     stringEnv("ADMIN_ACCOUNT_TWO_SINGLE_NAME", ""),
 		AdminTwoPassword: stringEnv("ADMIN_ACCOUNT_TWO_PASSWORD", ""),
-		SMTPHost:               strings.TrimSpace(stringEnv("SMTP_HOST", "")),
-		SMTPPort:               strings.TrimSpace(stringEnv("SMTP_PORT", "587")),
-		SMTPUsername:           strings.TrimSpace(stringEnv("SMTP_USERNAME", "")),
-		SMTPPassword:           strings.TrimSpace(stringEnv("SMTP_PASSWORD", "")),
-		SMTPFrom:               strings.TrimSpace(stringEnv("SMTP_FROM", "verify@mautrade.com")),
-		BscScanAPIKey:          strings.TrimSpace(stringEnv("BSCSCAN_API_KEY", "")),
+		SMTPHost:         strings.TrimSpace(stringEnv("SMTP_HOST", "")),
+		SMTPPort:         strings.TrimSpace(stringEnv("SMTP_PORT", "587")),
+		SMTPUsername:     strings.TrimSpace(stringEnv("SMTP_USERNAME", "")),
+		SMTPPassword:     strings.TrimSpace(stringEnv("SMTP_PASSWORD", "")),
+		SMTPFrom:         strings.TrimSpace(stringEnv("SMTP_FROM", "verify@mautrade.com")),
+		BscScanAPIKey:    strings.TrimSpace(stringEnv("BSCSCAN_API_KEY", "")),
 	}, nil
 }
 
