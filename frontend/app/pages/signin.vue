@@ -35,7 +35,7 @@ const submitAttempted = ref(false)
 
 const otpInvalid = computed(() => otp.value.trim().length !== 6)
 
-const { login, verifyOtp: verifyAuthOtp } = useAuth()
+const { login, verifyOtp: verifyAuthOtp, isAccountComplete } = useAuth()
 const errorMsg = ref('')
 const isLoading = ref(false)
 const resendLoading = ref(false)
@@ -60,10 +60,19 @@ const submitLogin = async () => {
       submitAttempted.value = false
       otp.value = ''
     } else {
-      await navigateTo('/dashboard')
+      if (!isAccountComplete.value) {
+        await navigateTo('/onboarding')
+      } else {
+        await navigateTo('/dashboard')
+      }
     }
   } catch (err: unknown) {
-    errorMsg.value = (err as Error).message || 'Login failed. Please try again.'
+    const errorMsgText = (err as Error).message || ''
+    if (errorMsgText.toLowerCase().includes('invalid email')) {
+      await navigateTo('/signup')
+    } else {
+      errorMsg.value = errorMsgText || 'Login failed. Please try again.'
+    }
   } finally {
     isLoading.value = false
   }
@@ -103,7 +112,11 @@ const verifyOtp = async () => {
       code: otp.value,
       purpose: 'login_verify'
     })
-    await navigateTo('/dashboard')
+    if (!isAccountComplete.value) {
+      await navigateTo('/onboarding')
+    } else {
+      await navigateTo('/dashboard')
+    }
   } catch (err: unknown) {
     errorMsg.value = (err as Error).message
     triggerOtpShake()
