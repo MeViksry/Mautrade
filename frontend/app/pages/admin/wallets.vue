@@ -186,17 +186,23 @@ onMounted(async () => {
             Inflow & Outflow Tracking
           </h2>
           <div class="filter-controls">
-            <select class="filter-select">
-              <option value="all">
-                All Wallets
-              </option>
-              <option value="viksry">
-                WALLET VIKSRY
-              </option>
-              <option value="aryanto">
-                WALLET ARYANTO HONG
-              </option>
-            </select>
+            <div class="custom-select-wrapper">
+              <select class="filter-select">
+                <option value="all">
+                  All Wallets
+                </option>
+                <option value="viksry">
+                  WALLET VIKSRY
+                </option>
+                <option value="aryanto">
+                  WALLET ARYANTO HONG
+                </option>
+              </select>
+              <UIcon
+                name="lucide:chevron-down"
+                class="select-icon"
+              />
+            </div>
           </div>
         </div>
 
@@ -387,7 +393,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -401,12 +406,6 @@ onMounted(async () => {
   height: 4px;
   background: linear-gradient(90deg, var(--accent), #ff7a33);
   opacity: 0.8;
-}
-
-.wallet-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .wallet-header {
@@ -500,15 +499,44 @@ onMounted(async () => {
   align-items: center;
 }
 
+.custom-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .filter-select {
-  background: var(--charcoal);
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--line);
   color: var(--text);
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.6rem 2.5rem 0.6rem 1rem;
+  border-radius: 8px;
   font-family: var(--sans);
   font-size: 0.9rem;
+  font-weight: 500;
   outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-select:hover, .filter-select:focus {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+}
+
+.filter-select option {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.select-icon {
+  position: absolute;
+  right: 1rem;
+  pointer-events: none;
+  color: var(--text-mute);
+  font-size: 1.1rem;
 }
 
 .table-container {
