@@ -222,7 +222,7 @@ const submitPayment = async () => {
         @submit.prevent="nextStep"
       >
         <div class="onboarding-field">
-          <label>Region & Compliance</label>
+          <label for="countrySelect">Region & Compliance</label>
           <div
             ref="countrySelectRef"
             class="country-select"
@@ -230,6 +230,7 @@ const submitPayment = async () => {
             @animationend="countryShake = false"
           >
             <button
+              id="countrySelect"
               class="country-select__trigger"
               type="button"
               @click="countryDropdownOpen = !countryDropdownOpen"
@@ -294,7 +295,7 @@ const submitPayment = async () => {
         </div>
 
         <div class="onboarding-field">
-          <label>Frequently Used Exchanges</label>
+          <span class="field-label">Frequently Used Exchanges</span>
           <div
             class="exchange-choice-grid"
             :class="{ 'is-invalid-grid': submitAttempted && exchangeInvalid, 'is-shaking': exchangeShake }"
@@ -347,9 +348,10 @@ const submitPayment = async () => {
         </div>
 
         <div class="wallet-address-container">
-          <label>Wallet Address</label>
+          <label for="walletAddress">Wallet Address</label>
           <div class="wallet-input-group">
             <input
+              id="walletAddress"
               class="onboarding-input wallet-input"
               type="text"
               readonly
@@ -506,7 +508,8 @@ const submitPayment = async () => {
   gap: 0.65rem;
 }
 
-.onboarding-field label {
+.onboarding-field label,
+.onboarding-field .field-label {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--silver);
