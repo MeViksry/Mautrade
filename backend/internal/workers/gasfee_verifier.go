@@ -29,11 +29,6 @@ func NewVerifier(st *store.DashboardStore, apiKey, walletAddress string, logger 
 }
 
 func (v *Verifier) Start(ctx context.Context) {
-	if v.wallet == "" {
-		v.logger.Warn("gasfee verifier: no central wallet address configured, skipping verification")
-		return
-	}
-
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -74,6 +69,10 @@ func (v *Verifier) processPending(ctx context.Context) {
 			amount, _ = new(big.Int).SetString("100000000000000000000000", 10)
 			err = nil
 		} else {
+			if v.wallet == "" {
+				v.logger.Warn("gasfee verifier: cannot verify real tx because wallet address is missing", "deposit_id", dep.ID, "tx_id", txID)
+				continue
+			}
 			amount, err = v.client.VerifyUSDTTransfer(ctx, txID, v.wallet)
 		}
 		if err != nil {

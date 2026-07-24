@@ -60,13 +60,14 @@ func main() {
 		defer stopExecutionResults()
 	}
 
+	dashboardStore := store.NewDashboardStore(db)
+	verifier := workers.NewVerifier(dashboardStore, cfg.BscScanAPIKey, cfg.GasFeeDepositAddress, logger)
+	go verifier.Start(rootCtx)
+
 	if cfg.BscScanAPIKey != "" {
-		dashboardStore := store.NewDashboardStore(db)
-		verifier := workers.NewVerifier(dashboardStore, cfg.BscScanAPIKey, cfg.GasFeeDepositAddress, logger)
-		go verifier.Start(rootCtx)
 		logger.Info("gasfee verifier started")
 	} else {
-		logger.Warn("BSCSCAN_API_KEY is not set, automatic gasfee verification is disabled")
+		logger.Warn("BSCSCAN_API_KEY is not set, real gasfee verification is disabled (BYPASS-TEST only)")
 	}
 
 	server := &http.Server{
