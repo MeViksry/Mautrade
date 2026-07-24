@@ -10,24 +10,36 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   await fetchUser()
 
+  const isRoot = to.path === '/'
+  const isOnboarding = to.path.startsWith('/onboarding')
+
+  // Completely unauthenticated
   if (!tokenCookie.value) {
-    if (!isAuthRoute && (to.path.startsWith('/dashboard') || to.path.startsWith('/onboarding'))) {
-      return navigateTo('/signin')
+    if (isRoot) return navigateTo('/signup')
+    if (isOnboarding) return navigateTo('/signup')
+    if (!isAuthRoute && to.path.startsWith('/dashboard')) return navigateTo('/signin')
+    return
+  }
+
+  // Authenticated
+  if (isAccountComplete.value) {
+    if (isRoot || isAuthRoute || isOnboarding) {
+      return navigateTo('/dashboard')
     }
     return
   }
 
-  if (tokenCookie.value && isAuthRoute) {
-    if (isAccountComplete.value) {
-      return navigateTo('/dashboard')
-    } else {
+  // Authenticated but incomplete (e.g. verified OTP but hasn't finished onboarding)
+  if (!isAccountComplete.value) {
+    if (isRoot) {
+      tokenCookie.value = null
+      return navigateTo('/signup')
+    }
+    if (isAuthRoute) {
       tokenCookie.value = null
       return
     }
-  }
-
-  if (tokenCookie.value && !isAccountComplete.value) {
-    if (to.path !== '/' && !to.path.startsWith('/signup') && !to.path.startsWith('/onboarding') && !to.path.startsWith('/signin')) {
+    if (!isOnboarding) {
       return navigateTo('/onboarding')
     }
   }
