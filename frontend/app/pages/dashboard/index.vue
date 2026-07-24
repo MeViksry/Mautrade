@@ -281,23 +281,60 @@ const submitDeposit = () => {
 <template>
   <div class="dashboard-page">
     <!-- Verification Status Overlay -->
-    <div v-if="!loading && stats && (stats.gasFeeDepositStatus === 'pending' || stats.gasFeeDepositStatus === 'failed' || stats.gasFeeDepositStatus === 'rejected')" class="verification-overlay">
+    <div
+      v-if="!loading && stats && (stats.gasFeeDepositStatus === 'pending' || stats.gasFeeDepositStatus === 'failed' || stats.gasFeeDepositStatus === 'rejected')"
+      class="verification-overlay"
+    >
       <div class="verification-card">
-        <div v-if="stats.gasFeeDepositStatus === 'pending'" class="verification-content pending">
+        <div
+          v-if="stats.gasFeeDepositStatus === 'pending'"
+          class="verification-content pending"
+        >
           <div class="spinner-container">
-             <div class="loader"></div>
+            <div class="loader" />
           </div>
           <h3>Verifying Payment on Blockchain</h3>
           <p>Please wait, we are verifying your TXID ({{ stats.gasFeeDepositTxId }}).</p>
-          <p class="verification-subtext">This usually takes ~30 seconds. This page will automatically refresh.</p>
+          <p class="verification-subtext">
+            This usually takes ~30 seconds. This page will automatically refresh.
+          </p>
         </div>
-        <div v-else class="verification-content failed">
+        <div
+          v-else
+          class="verification-content failed"
+        >
           <div class="icon-container">
-             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ef4444"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ><circle
+              cx="12"
+              cy="12"
+              r="10"
+            /><line
+              x1="12"
+              y1="8"
+              x2="12"
+              y2="12"
+            /><line
+              x1="12"
+              y1="16"
+              x2="12.01"
+              y2="16"
+            /></svg>
           </div>
           <h3>Verification Failed</h3>
           <p>We could not verify your TXID. It might be invalid, from the wrong network, or already used.</p>
-          <NuxtLink to="/onboarding" class="btn-primary mt-4 inline-flex">Enter New TXID</NuxtLink>
+          <NuxtLink
+            to="/onboarding"
+            class="btn-primary mt-4 inline-flex"
+          >Enter New TXID</NuxtLink>
         </div>
       </div>
     </div>
