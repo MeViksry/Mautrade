@@ -179,6 +179,96 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+
+      <div class="transactions-section">
+        <div class="section-header-controls">
+          <h2 class="section-title">
+            Inflow & Outflow Tracking
+          </h2>
+          <div class="filter-controls">
+            <select class="filter-select">
+              <option value="all">
+                All Wallets
+              </option>
+              <option value="viksry">
+                WALLET VIKSRY
+              </option>
+              <option value="aryanto">
+                WALLET ARYANTO HONG
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Wallet</th>
+                <th>User / Detail</th>
+                <th>Amount (USDT)</th>
+                <th>Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Mock Data for Display -->
+              <tr>
+                <td>
+                  <div class="tx-type inflow">
+                    <UIcon name="lucide:arrow-down-left" /> Inflow
+                  </div>
+                </td>
+                <td>
+                  WALLET VIKSRY
+                </td>
+                <td>
+                  <div class="user-detail">
+                    <span class="user-name">John Doe</span>
+                    <span class="user-email">john@example.com</span>
+                  </div>
+                </td>
+                <td class="col-amount positive">
+                  +$1,500.00
+                </td>
+                <td class="col-time">
+                  Today, 10:45 AM
+                </td>
+                <td>
+                  <span class="status-badge active">Completed</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="tx-type outflow">
+                    <UIcon name="lucide:arrow-up-right" /> Outflow
+                  </div>
+                </td>
+                <td>
+                  WALLET ARYANTO HONG
+                </td>
+                <td>
+                  <div class="user-detail">
+                    <span class="user-name">Jane Smith (WD)</span>
+                    <span class="user-email">jane@example.com</span>
+                  </div>
+                </td>
+                <td class="col-amount negative">
+                  -$450.00
+                </td>
+                <td class="col-time">
+                  Today, 09:12 AM
+                </td>
+                <td>
+                  <span class="status-badge active">Completed</span>
+                </td>
+              </tr>
+              <!-- End Mock -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -392,6 +482,128 @@ onMounted(async () => {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+.transactions-section {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-select {
+  background: var(--charcoal);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th,
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table th {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  font-weight: normal;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tx-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.tx-type.inflow {
+  color: #4ade80;
+}
+
+.tx-type.outflow {
+  color: #f87171;
+}
+
+.user-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.user-email {
+  font-size: 0.8rem;
+  color: var(--text-mute);
+}
+
+.col-amount {
+  font-weight: 600;
+  font-family: var(--mono);
+}
+
+.col-amount.positive {
+  color: #4ade80;
+}
+
+.col-amount.negative {
+  color: #f87171;
+}
+
+.col-time {
+  font-size: 0.85rem;
+  color: var(--silver);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
 }
 
 @media (max-width: 1180px) {
