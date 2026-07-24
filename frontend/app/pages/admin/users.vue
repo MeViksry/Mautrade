@@ -31,6 +31,10 @@ interface AdminUserResponse {
   createdAt: string
   status: string
   onboardingCompleted: boolean
+  countryCode?: string
+  age?: number
+  emailVerified: boolean
+  gasFeeBalance: string | number
 }
 
 interface FormattedUser {
@@ -41,9 +45,25 @@ interface FormattedUser {
   status: string
   gasFee: string
   bot: string
+  countryCode: string
+  age: string | number
+  emailVerified: boolean
+  gasFeeBalance: string
 }
 
 const users = ref<FormattedUser[]>([])
+const selectedUser = ref<FormattedUser | null>(null)
+const isModalOpen = ref(false)
+
+const openModal = (user: FormattedUser) => {
+  selectedUser.value = user
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+  selectedUser.value = null
+}
 
 onMounted(async () => {
   try {
@@ -60,7 +80,11 @@ onMounted(async () => {
       registered: new Date(u.createdAt).toISOString().split('T')[0] ?? '',
       status: u.status === 'active' ? 'Verified' : 'Pending',
       gasFee: 'Paid', // TODO: backend should return this
-      bot: u.onboardingCompleted ? 'Active' : 'Inactive'
+      bot: u.onboardingCompleted ? 'Active' : 'Inactive',
+      countryCode: u.countryCode || 'N/A',
+      age: u.age || 'N/A',
+      emailVerified: u.emailVerified,
+      gasFeeBalance: typeof u.gasFeeBalance === 'string' ? u.gasFeeBalance : (u.gasFeeBalance?.toString() || '0')
     }))
 
     usersStats.value.totalUsers = users.value.length
@@ -187,7 +211,10 @@ onMounted(async () => {
                   </span>
                 </td>
                 <td class="col-actions">
-                  <button class="action-btn view-btn">
+                  <button
+                    class="action-btn view-btn"
+                    @click="openModal(user)"
+                  >
                     View Details
                   </button>
                 </td>
@@ -205,6 +232,82 @@ onMounted(async () => {
         </div>
       </div>
     </template>
+
+    <!-- Details Modal -->
+    <div
+      v-if="isModalOpen"
+      class="modal-overlay"
+      @click.self="closeModal"
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            User Details
+          </h3>
+          <button
+            class="close-btn"
+            @click="closeModal"
+          >
+            &times;
+          </button>
+        </div>
+        <div
+          v-if="selectedUser"
+          class="modal-body"
+        >
+          <div class="detail-group">
+            <span class="detail-label">ID</span>
+            <span class="detail-value">#{{ selectedUser.id }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Name</span>
+            <span class="detail-value">{{ selectedUser.name || 'N/A' }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Email</span>
+            <span class="detail-value">
+              {{ selectedUser.email }}
+              <span
+                v-if="selectedUser.emailVerified"
+                class="text-success"
+              >
+                (Verified)
+              </span>
+              <span
+                v-else
+                class="text-warning"
+              >
+                (Unverified)
+              </span>
+            </span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Country</span>
+            <span class="detail-value">{{ selectedUser.countryCode }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Age</span>
+            <span class="detail-value">{{ selectedUser.age }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Registered Date</span>
+            <span class="detail-value">{{ selectedUser.registered }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Account Status</span>
+            <span class="detail-value">{{ selectedUser.status }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Onboarding (Bot)</span>
+            <span class="detail-value">{{ selectedUser.bot }}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Gas Fee Balance</span>
+            <span class="detail-value text-accent">${{ selectedUser.gasFeeBalance }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -465,4 +568,98 @@ onMounted(async () => {
     width: 100%;
   }
 }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  animation: modalIn 0.2s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.25rem;
+  color: var(--text);
+  margin: 0;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--silver);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.close-btn:hover {
+  color: var(--accent);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.detail-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.detail-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.detail-label {
+  color: var(--text-mute);
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.text-success { color: #4ade80; }
+.text-warning { color: #fbbf24; }
+.text-accent { color: var(--accent); font-weight: 600; font-size: 1.1rem; }
 </style>
