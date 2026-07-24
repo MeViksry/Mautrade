@@ -22,10 +22,10 @@ func (s *DashboardStore) Ready() bool {
 }
 
 type UserStats struct {
-	TotalBalance      string `json:"totalBalance"`
-	RealizedProfit    string `json:"realizedProfit"`
-	TotalGasFeePaid   string `json:"totalGasFeePaid"`
-	ActiveLayersCount int64  `json:"activeLayersCount"`
+	TotalBalance        string  `json:"totalBalance"`
+	RealizedProfit      string  `json:"realizedProfit"`
+	TotalGasFeePaid     string  `json:"totalGasFeePaid"`
+	ActiveLayersCount   int64   `json:"activeLayersCount"`
 	PrecisionPolicy     string  `json:"precisionPolicy"`
 	DefaultCurrency     string  `json:"defaultCurrency"`
 	GasFeeShareRate     string  `json:"gasFeeShareRate"`

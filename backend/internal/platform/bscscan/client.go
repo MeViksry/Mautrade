@@ -94,8 +94,8 @@ func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient
 	// Example: 0xa9059cbb 000000000000000000000000 1234567890123456789012345678901234567890 00000...
 	recipientData := input[10:74]
 	// Address is the last 40 chars of the 64 char recipient block
-	recipientHex := recipientData[24:] 
-	
+	recipientHex := recipientData[24:]
+
 	if recipientHex != expectedRecipient {
 		return nil, fmt.Errorf("bscscan: recipient mismatch (got %s, expected %s)", recipientHex, expectedRecipient)
 	}

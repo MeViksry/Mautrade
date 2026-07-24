@@ -10,12 +10,12 @@ import (
 	"syscall"
 
 	"github.com/MeViksry/Mautrade/backend/internal/config"
-	"github.com/MeViksry/Mautrade/backend/internal/workers"
 	"github.com/MeViksry/Mautrade/backend/internal/httpapi"
 	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/postgres"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 	"github.com/MeViksry/Mautrade/backend/internal/store"
+	"github.com/MeViksry/Mautrade/backend/internal/workers"
 )
 
 func main() {

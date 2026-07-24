@@ -31,7 +31,7 @@ func (v *Verifier) Start(ctx context.Context) {
 		v.logger.Warn("gasfee verifier: no central wallet address configured, skipping verification")
 		return
 	}
-	
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -66,7 +66,7 @@ func (v *Verifier) processPending(ctx context.Context) {
 		amount, err := v.client.VerifyUSDTTransfer(ctx, txID, v.wallet)
 		if err != nil {
 			v.logger.Info("gasfee verifier: tx verification failed", "deposit_id", dep.ID, "tx_id", txID, "error", err)
-			
+
 			// Optional: We could mark it as failed immediately, or retry later.
 			// Let's mark it as failed if it's explicitly rejected by BscScan.
 			_, updateErr := v.store.SystemUpdateGasFeeDepositStatus(ctx, store.SystemUpdateGasFeeDepositStatusParams{
@@ -90,7 +90,7 @@ func (v *Verifier) processPending(ctx context.Context) {
 			v.logger.Error("gasfee verifier: invalid decimal conversion", "deposit_id", dep.ID, "error", decErr)
 			continue
 		}
-		
+
 		expectedDec, err := qdecimal.Parse(dep.Amount)
 		if err != nil {
 			v.logger.Error("gasfee verifier: invalid deposit amount in db", "deposit_id", dep.ID, "amount", dep.Amount)
