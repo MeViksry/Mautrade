@@ -22,16 +22,6 @@ const walletStats = ref({
   activeWallets: 0
 })
 
-interface CompanyWallet {
-  id: string
-  network: string
-  address: string
-  balance: number
-  status: string
-}
-
-const companyWallets = ref<CompanyWallet[]>([])
-
 onMounted(async () => {
   const config = useRuntimeConfig()
   const gasFeeAddress = config.public.gasFeeDepositAddress as string || ''
@@ -73,18 +63,6 @@ onMounted(async () => {
     } catch (err) {
       console.error('Failed to fetch USDT BEP20 balance:', err)
     }
-  }
-
-  if (gasFeeAddress) {
-    companyWallets.value = [
-      {
-        id: 'CW-GAS-FEE',
-        network: 'BSC (BEP20)',
-        address: gasFeeAddress,
-        balance: balanceVal,
-        status: 'Active'
-      }
-    ]
   }
 
   walletStats.value = {
@@ -148,80 +126,6 @@ onMounted(async () => {
           :value="walletStats.activeWallets.toString()"
         />
       </div>
-
-      <div class="wallets-section">
-        <div class="section-header-controls">
-          <h2 class="section-title">
-            Wallet Addresses
-          </h2>
-          <button class="action-btn add-btn">
-            <UIcon name="lucide:plus" />
-            Add New Wallet
-          </button>
-        </div>
-
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Wallet ID</th>
-                <th>Network</th>
-                <th>Address</th>
-                <th>Balance (USDT)</th>
-                <th>Status</th>
-                <th class="actions-col">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="wallet in companyWallets"
-                :key="wallet.id"
-              >
-                <td class="col-id">
-                  {{ wallet.id }}
-                </td>
-                <td class="col-network">
-                  <span class="network-badge">{{ wallet.network }}</span>
-                </td>
-                <td class="col-address">
-                  <div class="address-wrap">
-                    <span class="addr-text">{{ wallet.address }}</span>
-                    <button
-                      class="copy-btn"
-                      title="Copy Address"
-                    >
-                      <UIcon name="lucide:copy" />
-                    </button>
-                  </div>
-                </td>
-                <td class="col-amount">
-                  ${{ wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 }) }}
-                </td>
-                <td class="col-status">
-                  <span :class="['status-badge', wallet.status.toLowerCase()]">
-                    {{ wallet.status }}
-                  </span>
-                </td>
-                <td class="col-actions">
-                  <button class="action-btn view-btn">
-                    Manage
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="companyWallets.length === 0">
-                <td
-                  colspan="6"
-                  class="empty-state"
-                >
-                  No company wallets found.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </template>
   </div>
 </template>
@@ -255,164 +159,6 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
-}
-
-.wallets-section {
-  background: var(--bg-elevated);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.section-header-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.section-title {
-  font-family: 'Oswald', sans-serif;
-  font-size: 1.25rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  color: var(--text);
-}
-
-.add-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--accent) !important;
-  color: #fff !important;
-  border: none !important;
-}
-
-.add-btn:hover {
-  background: #ff7a33 !important;
-}
-
-.table-container {
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.data-table th,
-.data-table td {
-  padding: 1rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.data-table th {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-mute);
-  font-weight: normal;
-}
-
-.data-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.col-id {
-  font-family: var(--mono);
-  font-size: 0.9rem;
-  color: var(--silver);
-}
-
-.network-badge {
-  background: var(--charcoal);
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  color: var(--text);
-  border: 1px solid var(--line);
-}
-
-.address-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.addr-text {
-  font-family: var(--mono);
-  font-size: 0.9rem;
-  color: var(--silver);
-}
-
-.copy-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-mute);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-
-.copy-btn:hover {
-  color: var(--accent);
-}
-
-.col-amount {
-  font-weight: 500;
-  color: var(--text);
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.status-badge.active {
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
-}
-
-.actions-col, .col-actions {
-  text-align: right;
-}
-
-.action-btn {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--silver);
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.action-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.empty-state {
-  text-align: center;
-  color: var(--text-mute);
-  padding: 3rem !important;
-  font-style: italic;
 }
 
 /* Skeleton Loading */
@@ -478,11 +224,6 @@ onMounted(async () => {
 @media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: 1fr;
-  }
-  .section-header-controls {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
   }
 }
 </style>
