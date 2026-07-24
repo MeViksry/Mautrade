@@ -22,7 +22,7 @@ type AdminEndUserView struct {
 func (s *DashboardStore) AdminListUsers(ctx context.Context, limit, offset int) ([]AdminEndUserView, error) {
 	const query = `
 		SELECT
-			id, email, display_name, status, email_verified, onboarding_completed, country_code, age, created_at, updated_at
+			id, email, display_name, status, (email_verified_at IS NOT NULL) AS email_verified, (onboarding_completed_at IS NOT NULL) AS onboarding_completed, country_code, age, created_at, updated_at
 		FROM users
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2

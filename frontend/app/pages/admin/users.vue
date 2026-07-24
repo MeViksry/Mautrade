@@ -20,7 +20,7 @@ const { tokenCookie } = useAdminAuth()
 const usersStats = ref({
   totalUsers: 0,
   verified: 0,
-  activeBots: 0,
+  gasfeeDepleted: 0,
   pendingGasFee: 0
 })
 
@@ -65,7 +65,7 @@ onMounted(async () => {
 
     usersStats.value.totalUsers = users.value.length
     usersStats.value.verified = users.value.filter(u => u.status === 'Verified').length
-    usersStats.value.activeBots = users.value.filter(u => u.bot === 'Active').length
+    usersStats.value.gasfeeDepleted = users.value.filter(u => u.gasFee === 'Depleted').length
   } catch (error) {
     console.error('Failed to load users:', error)
   } finally {
@@ -116,8 +116,8 @@ onMounted(async () => {
           :value="usersStats.verified.toLocaleString()"
         />
         <StatCard
-          title="Active Bots"
-          :value="usersStats.activeBots.toLocaleString()"
+          title="Gasfee Depleted"
+          :value="usersStats.gasfeeDepleted.toLocaleString()"
         />
         <StatCard
           title="Pending Gas Fee"
