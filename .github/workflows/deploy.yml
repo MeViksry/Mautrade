@@ -298,6 +298,14 @@ jobs:
             export DB_PASSWORD='${{ fromJson(toJson(secrets)).DB_PASSWORD }}'
             export BSCSCAN_API_KEY='${{ fromJson(toJson(secrets)).BSCSCAN_API_KEY }}'
             export GAS_FEE_DEPOSIT_ADDRESS='${{ fromJson(toJson(secrets)).GAS_FEE_DEPOSIT_ADDRESS }}'
+
+            export ACCOUNT_ADMIN_ONE='${{ fromJson(toJson(secrets)).ACCOUNT_ADMIN_ONE }}'
+            export ADMIN_ACCOUNT_ONE_SINGLE_NAME='${{ fromJson(toJson(secrets)).ADMIN_ACCOUNT_ONE_SINGLE_NAME }}'
+            export ADMIN_ACCOUNT_ONE_PASSWORD='${{ fromJson(toJson(secrets)).ADMIN_ACCOUNT_ONE_PASSWORD }}'
+            
+            export ACCOUNT_ADMIN_TWO='${{ fromJson(toJson(secrets)).ACCOUNT_ADMIN_TWO }}'
+            export ADMIN_ACCOUNT_TWO_SINGLE_NAME='${{ fromJson(toJson(secrets)).ADMIN_ACCOUNT_TWO_SINGLE_NAME }}'
+            export ADMIN_ACCOUNT_TWO_PASSWORD='${{ fromJson(toJson(secrets)).ADMIN_ACCOUNT_TWO_PASSWORD }}'
             
             ./deploy-vps.sh
           DEPLOY_EOF

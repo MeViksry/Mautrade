@@ -271,6 +271,20 @@ if [ -n "${GAS_FEE_DEPOSIT_ADDRESS:-}" ]; then
     audit_log "gas_fee_deposit_address_injected" "status=success"
 fi
 
+if [ -n "${ACCOUNT_ADMIN_ONE:-}" ] || [ -n "${ACCOUNT_ADMIN_TWO:-}" ]; then
+    for VAR in "ACCOUNT_ADMIN_ONE" "ADMIN_ACCOUNT_ONE_SINGLE_NAME" "ADMIN_ACCOUNT_ONE_PASSWORD" \
+               "ACCOUNT_ADMIN_TWO" "ADMIN_ACCOUNT_TWO_SINGLE_NAME" "ADMIN_ACCOUNT_TWO_PASSWORD"; do
+        if [ -n "${!VAR:-}" ]; then
+            if grep -q "^${VAR}=" "$PROJECT_DIR/backend/.env"; then
+                sed -i "s|^${VAR}=.*|${VAR}=${!VAR}|" "$PROJECT_DIR/backend/.env"
+            else
+                echo "${VAR}=${!VAR}" >> "$PROJECT_DIR/backend/.env"
+            fi
+        fi
+    done
+    echo -e "${GREEN}  ✓ Injected Super Admin config into backend/.env${NC}"
+fi
+
 # ──────────────────────────────────────────────
 #  [4/7] Build & Deploy Docker services
 # ──────────────────────────────────────────────
