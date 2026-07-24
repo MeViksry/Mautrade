@@ -39,6 +39,7 @@ const depositShake = ref(false)
 const ageShake = ref(false)
 const countryShake = ref(false)
 const exchangeShake = ref(false)
+const qrLoaded = ref(false)
 
 const exchangeOptions = [
   { id: 'Binance', logo: '/UserDashboard/Binance_logo.svg' },
@@ -340,10 +341,16 @@ const submitPayment = async () => {
         </div>
 
         <div class="qr-container">
+          <div
+            v-show="!qrLoaded"
+            class="qr-skeleton"
+          />
           <img
+            v-show="qrLoaded"
             :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${walletAddress}&color=FF5A00&bgcolor=000`"
             alt="Wallet QR Code"
             class="qr-image"
+            @load="qrLoaded = true"
           >
         </div>
 
@@ -932,6 +939,25 @@ const submitPayment = async () => {
   padding: 8px;
   width: 180px;
   height: 180px;
+}
+
+.qr-skeleton {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: linear-gradient(90deg, var(--charcoal) 25%, var(--bg-elevated) 50%, var(--charcoal) 75%);
+  background-size: 200% 100%;
+  animation: qr-skeleton-loading 1.5s infinite;
+}
+
+@keyframes qr-skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .wallet-address-container label {
