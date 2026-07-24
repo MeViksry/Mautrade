@@ -321,10 +321,6 @@ onMounted(() => {
             <span class="detail-value">{{ selectedUser.status }}</span>
           </div>
           <div class="detail-group">
-            <span class="detail-label">Onboarding (Bot)</span>
-            <span class="detail-value">{{ selectedUser.bot }}</span>
-          </div>
-          <div class="detail-group">
             <span class="detail-label">Gas Fee Balance</span>
             <span class="detail-value text-accent">${{ selectedUser.gasFeeBalance }}</span>
           </div>
