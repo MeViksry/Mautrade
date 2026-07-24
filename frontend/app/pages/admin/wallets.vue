@@ -32,10 +32,69 @@ interface CompanyWallet {
 
 const companyWallets = ref<CompanyWallet[]>([])
 
-onMounted(() => {
-  setTimeout(() => {
-    loading.value = false
-  }, 1000)
+onMounted(async () => {
+  const config = useRuntimeConfig()
+  const gasFeeAddress = config.public.gasFeeDepositAddress as string || ''
+
+  let balanceVal = 0
+
+  if (gasFeeAddress && gasFeeAddress.startsWith('0x')) {
+    try {
+      const cleanAddress = gasFeeAddress.toLowerCase().replace('0x', '')
+      const paddedAddress = cleanAddress.padStart(64, '0')
+      const data = '0x70a08231' + paddedAddress
+
+      const response = await fetch('https://bsc-dataseed.binance.org/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_call',
+          params: [
+            {
+              to: '0x55d398326f99059fF775485246999027B3197955', // USDT BEP20 contract on BSC
+              data
+            },
+            'latest'
+          ]
+        })
+      })
+      const res = await response.json()
+      if (res.result && res.result !== '0x') {
+        const balanceBig = BigInt(res.result)
+        const balanceStr = balanceBig.toString().padStart(19, '0')
+        const intPart = balanceStr.slice(0, -18) || '0'
+        const decPart = balanceStr.slice(-18)
+        balanceVal = parseFloat(`${intPart}.${decPart}`)
+      }
+    } catch (err) {
+      console.error('Failed to fetch USDT BEP20 balance:', err)
+    }
+  }
+
+  if (gasFeeAddress) {
+    companyWallets.value = [
+      {
+        id: 'CW-GAS-FEE',
+        network: 'BSC (BEP20)',
+        address: gasFeeAddress,
+        balance: balanceVal,
+        status: 'Active'
+      }
+    ]
+  }
+
+  walletStats.value = {
+    totalBalance: balanceVal,
+    dailyInflow: 0,
+    dailyOutflow: 0,
+    activeWallets: gasFeeAddress ? 1 : 0
+  }
+
+  loading.value = false
 })
 </script>
 
@@ -74,7 +133,7 @@ onMounted(() => {
       <div class="stats-grid">
         <StatCard
           title="Total Balance"
-          :value="`$${walletStats.totalBalance.toLocaleString()}`"
+          :value="`$${walletStats.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`"
         />
         <StatCard
           title="Daily Inflow"
@@ -138,7 +197,7 @@ onMounted(() => {
                   </div>
                 </td>
                 <td class="col-amount">
-                  ${{ wallet.balance.toLocaleString() }}
+                  ${{ wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 }) }}
                 </td>
                 <td class="col-status">
                   <span :class="['status-badge', wallet.status.toLowerCase()]">
