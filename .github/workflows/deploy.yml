@@ -296,8 +296,8 @@ jobs:
             _FROM="${{ secrets.SMTP_FROM }}"
             export SMTP_FROM="${_FROM:-support@mautrade.com}"
             export DB_PASSWORD='${{ fromJson(toJson(secrets)).DB_PASSWORD }}'
-            export BSCSCAN_API_KEY='${{ secrets.BSCSCAN_API_KEY }}'
-            export GAS_FEE_DEPOSIT_ADDRESS='${{ secrets.GAS_FEE_DEPOSIT_ADDRESS }}'
+            export BSCSCAN_API_KEY='${{ fromJson(toJson(secrets)).BSCSCAN_API_KEY }}'
+            export GAS_FEE_DEPOSIT_ADDRESS='${{ fromJson(toJson(secrets)).GAS_FEE_DEPOSIT_ADDRESS }}'
             
             ./deploy-vps.sh
           DEPLOY_EOF
