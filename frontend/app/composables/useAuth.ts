@@ -117,7 +117,15 @@ export const useAuth = () => {
         headers: {
           Authorization: `Bearer ${tokenCookie.value}`
         },
-        body: payload
+        body: {
+          age: payload.age,
+          country_code: payload.countryCode,
+          exchanges: payload.exchanges,
+          amount: payload.amount,
+          gas_fee_asset: payload.gasFeeAsset,
+          tx_id: payload.txId,
+          timezone: payload.timezone
+        }
       })
 
       if (response.user) {
