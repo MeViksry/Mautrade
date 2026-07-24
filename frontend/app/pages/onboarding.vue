@@ -27,6 +27,11 @@ const selectedCountry = ref('ID')
 const age = ref<number | null>(null)
 const depositAmount = ref(500)
 
+const currentStep = ref(1)
+const txid = ref('')
+const txidShake = ref(false)
+const walletAddress = 'TYxMyPlaceholderWalletAddressTRC20'
+
 const selectedExchanges = ref<string[]>([])
 const submitAttempted = ref(false)
 const depositShake = ref(false)
@@ -58,6 +63,7 @@ const countryInvalid = computed(() => !selectedCountry.value)
 const ageInvalid = computed(() => !age.value || age.value < 18)
 const depositInvalid = computed(() => Number(depositAmount.value) < 500)
 const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.value || depositInvalid.value || selectedExchanges.value.length === 0)
+const txidInvalid = computed(() => currentStep.value === 2 && !txid.value.trim())
 
 const toggleExchange = (exchange: string) => {
   if (selectedExchanges.value.includes(exchange)) {
@@ -120,7 +126,22 @@ const handleDepositBlur = () => {
   }
 }
 
-const submitOnboarding = async () => {
+const copyWalletAddress = async () => {
+  try {
+    await navigator.clipboard.writeText(walletAddress)
+  } catch (err) {
+    console.error('Failed to copy', err)
+  }
+}
+
+const triggerTxidShake = () => {
+  txidShake.value = false
+  window.requestAnimationFrame(() => {
+    txidShake.value = true
+  })
+}
+
+const nextStep = () => {
   submitAttempted.value = true
 
   if (countryInvalid.value) triggerShake('country')
@@ -129,13 +150,26 @@ const submitOnboarding = async () => {
 
   if (onboardingBlocked.value) return
 
+  submitAttempted.value = false
+  currentStep.value = 2
+}
+
+const submitPayment = async () => {
+  submitAttempted.value = true
+
+  if (txidInvalid.value) {
+    triggerTxidShake()
+    return
+  }
+
   try {
     await completeOnboarding({
       age: Number(age.value),
       countryCode: selectedCountry.value,
       exchanges: selectedExchanges.value,
       amount: String(depositAmount.value),
-      gasFeeAsset: 'USDT'
+      gasFeeAsset: 'USDT',
+      txId: txid.value
     })
     await navigateTo('/dashboard')
   } catch (error) {
@@ -153,13 +187,25 @@ const submitOnboarding = async () => {
       </div>
 
       <div class="onboarding-heading">
-        <p>Welcome to Mautrade</p>
-        <h1>Configure Your Trading Environment</h1>
+        <p v-if="currentStep === 1">
+          Welcome to Mautrade
+        </p>
+        <p v-else>
+          Payment Gateway
+        </p>
+        <h1 v-if="currentStep === 1">
+          Configure Your Trading Environment
+        </h1>
+        <h1 v-else>
+          Deposit Required Gas Fee
+        </h1>
       </div>
 
+      <!-- Step 1 -->
       <form
+        v-if="currentStep === 1"
         class="onboarding-form"
-        @submit.prevent="submitOnboarding"
+        @submit.prevent="nextStep"
       >
         <div class="onboarding-field">
           <label>Region & Compliance</label>
@@ -286,6 +332,76 @@ const submitOnboarding = async () => {
           Initialize Trading Dashboard
           <UIcon name="lucide:arrow-right" />
         </button>
+      </form>
+
+      <!-- Step 2 -->
+      <form
+        v-if="currentStep === 2"
+        class="onboarding-form payment-step"
+        @submit.prevent="submitPayment"
+      >
+        <div class="payment-instructions">
+          <p>
+            To initialize your dashboard, please deposit exactly <strong>{{ depositAmount }} USDT</strong> (TRC20/BEP20) to the following address:
+          </p>
+        </div>
+
+        <div class="qr-container">
+          <img
+            :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${walletAddress}&color=FF5A00&bgcolor=000`"
+            alt="Wallet QR Code"
+            class="qr-image"
+          >
+        </div>
+
+        <div class="wallet-address-container">
+          <label>Wallet Address</label>
+          <div class="wallet-input-group">
+            <input
+              class="onboarding-input wallet-input"
+              type="text"
+              readonly
+              :value="walletAddress"
+            >
+            <button
+              class="copy-button"
+              type="button"
+              @click="copyWalletAddress"
+            >
+              <UIcon name="lucide:copy" />
+            </button>
+          </div>
+        </div>
+
+        <div class="onboarding-field">
+          <label for="txidInput">Transaction ID (TXID)</label>
+          <input
+            id="txidInput"
+            v-model="txid"
+            type="text"
+            class="onboarding-input"
+            :class="{ 'is-invalid': submitAttempted && txidInvalid, 'is-shaking': txidShake }"
+            placeholder="Enter the transaction hash"
+            @animationend="txidShake = false"
+          >
+        </div>
+
+        <div class="payment-actions">
+          <button
+            type="button"
+            class="btn-back"
+            @click="currentStep = 1"
+          >
+            Back
+          </button>
+          <button
+            class="onboarding-submit"
+            type="submit"
+          >
+            Verify Payment
+            <UIcon name="lucide:check" />
+          </button>
+        </div>
       </form>
     </section>
 
@@ -756,6 +872,114 @@ const submitOnboarding = async () => {
   margin-top: 1rem;
   color: var(--text-mute);
   line-height: 1.7;
+}
+
+/* Payment Step UI */
+.payment-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.payment-instructions {
+  color: var(--text-mute);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.payment-instructions strong {
+  color: var(--accent);
+}
+
+.qr-container {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.qr-image {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px;
+  width: 180px;
+  height: 180px;
+}
+
+.wallet-address-container label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wallet-input-group {
+  display: flex;
+  background: var(--charcoal);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.wallet-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0.8rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.copy-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  background: rgba(255, 90, 0, 0.1);
+  border: none;
+  border-left: 1px solid var(--line);
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+.copy-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.payment-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-back {
+  padding: 0 1.5rem;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-mute);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: var(--charcoal);
+  color: var(--text);
 }
 
 @keyframes onboarding-shake {
