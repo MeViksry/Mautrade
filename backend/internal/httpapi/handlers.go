@@ -144,13 +144,29 @@ func (s *Server) handleAdminOverview(w http.ResponseWriter, r *http.Request) {
 
 func mockAdminOverview() map[string]any {
 	return map[string]any{
-		"registeredUsers":     12840,
-		"activeUsers":         8420,
-		"openLayers":          18420,
-		"estimatedAUM":        "8450192.250000000000000000",
-		"gasFeeRevenueToday":  "4820.500000000000000000",
-		"orphanedLayers":      12,
-		"executionQueueState": "ready",
+		"registeredUsers":      12840,
+		"activeUsers":          8420,
+		"openLayers":           18420,
+		"estimatedAUM":         "8450192.250000000000000000",
+		"gasFeeRevenueToday":   "4820.500000000000000000",
+		"orphanedLayers":       12,
+		"executionQueueState":  "ready",
+		"newUsersToday":        125,
+		"gasFeeDepositPending": 450,
+		"revenue7Day":          "45000",
+		"revenue30Day":         "180000",
+		"revenue365Day":        "1540000",
+		"totalRevenue":         "1540000",
+		"userGrowthChart": []map[string]any{
+			{"label": "Jan", "value": 400},
+			{"label": "Feb", "value": 800},
+			{"label": "Mar", "value": 1500},
+		},
+		"revenueChart": []map[string]any{
+			{"label": "Jan", "value": 10000},
+			{"label": "Feb", "value": 25000},
+			{"label": "Mar", "value": 80000},
+		},
 	}
 }
 

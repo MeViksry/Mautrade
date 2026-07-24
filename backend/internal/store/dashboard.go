@@ -270,18 +270,33 @@ LIMIT 100`
 	return history, rows.Err()
 }
 
+type ChartPoint struct {
+	Label string  `json:"label"`
+	Value float64 `json:"value"`
+}
+
 type AdminOverview struct {
-	RegisteredUsers     int64  `json:"registeredUsers"`
-	ActiveUsers         int64  `json:"activeUsers"`
-	OpenLayers          int64  `json:"openLayers"`
-	EstimatedAUM        string `json:"estimatedAUM"`
-	GasFeeRevenueToday  string `json:"gasFeeRevenueToday"`
-	OrphanedLayers      int64  `json:"orphanedLayers"`
-	ExecutionQueueState string `json:"executionQueueState"`
+	RegisteredUsers      int64  `json:"registeredUsers"`
+	ActiveUsers          int64  `json:"activeUsers"`
+	OpenLayers           int64  `json:"openLayers"`
+	EstimatedAUM         string `json:"estimatedAUM"`
+	GasFeeRevenueToday   string `json:"gasFeeRevenueToday"`
+	OrphanedLayers       int64  `json:"orphanedLayers"`
+	ExecutionQueueState  string `json:"executionQueueState"`
+	
+	NewUsersToday        int64  `json:"newUsersToday"`
+	GasFeeDepositPending int64  `json:"gasFeeDepositPending"`
+	Revenue7Day          string `json:"revenue7Day"`
+	Revenue30Day         string `json:"revenue30Day"`
+	Revenue365Day        string `json:"revenue365Day"`
+	TotalRevenue         string `json:"totalRevenue"`
+
+	UserGrowthChart      []ChartPoint `json:"userGrowthChart"`
+	RevenueChart         []ChartPoint `json:"revenueChart"`
 }
 
 func (s *DashboardStore) AdminOverview(ctx context.Context, defaultCurrency string) (AdminOverview, error) {
-	const query = `
+	const statsQuery = `
 WITH latest_balances AS (
   SELECT DISTINCT ON (exchange_binding_id, asset)
     exchange_binding_id,
@@ -293,22 +308,73 @@ WITH latest_balances AS (
 )
 SELECT
   (SELECT COUNT(*) FROM users)::bigint,
-  (SELECT COUNT(*) FROM users WHERE status = 'active')::bigint,
+  (SELECT COUNT(DISTINCT u.id) FROM users u WHERE EXISTS (SELECT 1 FROM gas_fee_deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') OR EXISTS (SELECT 1 FROM layers l WHERE l.user_id = u.id AND l.status IN ('open', 'partial')))::bigint,
   (SELECT COUNT(*) FROM layers WHERE status IN ('open', 'partial'))::bigint,
   (SELECT COALESCE(SUM(free_amount + locked_amount) FILTER (WHERE asset = $1), 0)::text FROM latest_balances),
   (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= date_trunc('day', now())),
-  (SELECT COUNT(*) FROM layers WHERE status = 'orphaned')::bigint`
+  (SELECT COUNT(*) FROM layers WHERE status = 'orphaned')::bigint,
+  (SELECT COUNT(*) FROM users WHERE created_at >= date_trunc('day', now()))::bigint,
+  (SELECT COUNT(*) FROM gas_fee_deposits WHERE status = 'pending')::bigint,
+  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= now() - interval '7 days'),
+  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= now() - interval '30 days'),
+  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= now() - interval '365 days'),
+  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger)
+`
 
-	overview := AdminOverview{ExecutionQueueState: "ready"}
-	if err := s.db.QueryRow(ctx, query, defaultCurrency).Scan(
+	overview := AdminOverview{
+		ExecutionQueueState: "ready",
+		UserGrowthChart:     make([]ChartPoint, 0),
+		RevenueChart:        make([]ChartPoint, 0),
+	}
+
+	if err := s.db.QueryRow(ctx, statsQuery, defaultCurrency).Scan(
 		&overview.RegisteredUsers,
 		&overview.ActiveUsers,
 		&overview.OpenLayers,
 		&overview.EstimatedAUM,
 		&overview.GasFeeRevenueToday,
 		&overview.OrphanedLayers,
+		&overview.NewUsersToday,
+		&overview.GasFeeDepositPending,
+		&overview.Revenue7Day,
+		&overview.Revenue30Day,
+		&overview.Revenue365Day,
+		&overview.TotalRevenue,
 	); err != nil && err != pgx.ErrNoRows {
-		return AdminOverview{}, fmt.Errorf("store: admin overview: %w", err)
+		return AdminOverview{}, fmt.Errorf("store: admin overview stats: %w", err)
 	}
+
+	const chartsQuery = `
+WITH months AS (
+    SELECT generate_series(date_trunc('month', now() - interval '6 months'), date_trunc('month', now()), '1 month'::interval) AS month
+)
+SELECT
+    to_char(m.month, 'Mon') AS label,
+    (SELECT COUNT(*) FROM users WHERE created_at < m.month + interval '1 month')::float AS cum_users,
+    (SELECT COALESCE(SUM(gas_fee_amount), 0) FROM gas_fee_ledger WHERE calculated_at < m.month + interval '1 month')::float AS cum_revenue
+FROM months m
+ORDER BY m.month ASC
+`
+
+	rows, err := s.db.Query(ctx, chartsQuery)
+	if err != nil {
+		return AdminOverview{}, fmt.Errorf("store: admin overview charts: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var label string
+		var cumUsers, cumRevenue float64
+		if err := rows.Scan(&label, &cumUsers, &cumRevenue); err != nil {
+			return AdminOverview{}, fmt.Errorf("store: scan charts: %w", err)
+		}
+		overview.UserGrowthChart = append(overview.UserGrowthChart, ChartPoint{Label: label, Value: cumUsers})
+		overview.RevenueChart = append(overview.RevenueChart, ChartPoint{Label: label, Value: cumRevenue})
+	}
+
+	if err := rows.Err(); err != nil {
+		return AdminOverview{}, fmt.Errorf("store: charts rows error: %w", err)
+	}
+
 	return overview, nil
 }

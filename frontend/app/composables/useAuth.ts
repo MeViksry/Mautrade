@@ -54,8 +54,11 @@ export const useAuth = () => {
       return { success: true }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
+      if (error.response?.status === 404) {
+        throw new Error('User not found', { cause: error })
+      }
       if (error.response?.status === 401) {
-        throw new Error(error.data?.error || 'Invalid email or password', { cause: error })
+        throw new Error('Invalid password', { cause: error })
       }
       throw new Error(error.data?.error || error.message || 'Failed to login', { cause: error })
     }

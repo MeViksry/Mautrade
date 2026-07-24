@@ -31,7 +31,7 @@ const depositAmount = ref(500)
 const currentStep = ref(1)
 const txid = ref('')
 const txidShake = ref(false)
-const walletAddress = '0xA6574277ABF624DDfd442c5D35B3d7c342416989'
+const walletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
 
 const selectedExchanges = ref<string[]>([])
 const submitAttempted = ref(false)

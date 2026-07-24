@@ -116,7 +116,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		if errors.Is(err, store.ErrUserNotFound) {
-			writeError(w, http.StatusUnauthorized, "invalid email")
+			writeError(w, http.StatusNotFound, "invalid email")
 			return
 		}
 		if errors.Is(err, store.ErrInvalidCredential) {

@@ -129,11 +129,29 @@ const chartOptions = {
   }
 }
 
+interface ChartPoint {
+  label: string
+  value: number
+}
+
 interface AdminOverviewResponse {
   registeredUsers: number
   activeUsers: number
-  gasFeeRevenueToday: string
   openLayers: number
+  estimatedAUM: string
+  gasFeeRevenueToday: string
+  orphanedLayers: number
+  executionQueueState: string
+
+  newUsersToday: number
+  gasFeeDepositPending: number
+  revenue7Day: string
+  revenue30Day: string
+  revenue365Day: string
+  totalRevenue: string
+
+  userGrowthChart: ChartPoint[]
+  revenueChart: ChartPoint[]
 }
 
 const { tokenCookie } = useAdminAuth()
@@ -149,15 +167,45 @@ onMounted(async () => {
     stats.value = {
       totalUser: data.registeredUsers || 0,
       activeUser: data.activeUsers || 0,
-      totalRevenue: Number(data.gasFeeRevenueToday) || 0, // Using revenue today as placeholder for total
-      gasFeeDepositPending: data.openLayers || 0, // Placeholder
-      newUserToday: 0,
-      revenue7Day: 0,
-      revenue30Day: 0,
-      revenue365Day: 0
+      totalRevenue: Number(data.totalRevenue) || 0,
+      gasFeeDepositPending: data.gasFeeDepositPending || 0,
+      newUserToday: data.newUsersToday || 0,
+      revenue7Day: Number(data.revenue7Day) || 0,
+      revenue30Day: Number(data.revenue30Day) || 0,
+      revenue365Day: Number(data.revenue365Day) || 0
     }
 
-    // We'll leave the activeLayers mock for now since it's not provided by overview
+    if (data.userGrowthChart && data.userGrowthChart.length > 0) {
+      userGrowthData.value = {
+        labels: data.userGrowthChart.map(p => p.label),
+        datasets: [
+          {
+            label: 'Total Users',
+            backgroundColor: 'rgba(255, 90, 0, 0.2)',
+            borderColor: '#ff5a00',
+            data: data.userGrowthChart.map(p => p.value),
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      }
+    }
+
+    if (data.revenueChart && data.revenueChart.length > 0) {
+      revenueData.value = {
+        labels: data.revenueChart.map(p => p.label),
+        datasets: [
+          {
+            label: 'Revenue ($)',
+            backgroundColor: 'rgba(34, 197, 94, 0.2)',
+            borderColor: '#22c55e',
+            data: data.revenueChart.map(p => p.value),
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      }
+    }
   } catch (err) {
     console.error('Failed to load admin overview:', err)
   } finally {

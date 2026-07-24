@@ -68,7 +68,7 @@ const submitLogin = async () => {
     }
   } catch (err: unknown) {
     const errorMsgText = (err as Error).message || ''
-    if (errorMsgText.toLowerCase().includes('invalid email')) {
+    if (errorMsgText.toLowerCase().includes('user not found')) {
       await navigateTo('/signup')
     } else {
       errorMsg.value = errorMsgText || 'Login failed. Please try again.'

@@ -75,7 +75,7 @@ const depositAmountShake = ref(false)
 const depositTxIdShake = ref(false)
 const depositSubmitAttempted = ref(false)
 const depositSubmitted = ref(false)
-const depositWalletAddress = '0xA6574277ABF624DDfd442c5D35B3d7c342416989'
+const depositWalletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
 const depositCoinOptions = [
   { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
   { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
