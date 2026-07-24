@@ -24,6 +24,7 @@ const countrySearch = ref('')
 const countryDropdownOpen = ref(false)
 const countrySelectRef = ref<HTMLElement | null>(null)
 const selectedCountry = ref('ID')
+const copied = ref(false)
 const age = ref<number | null>(null)
 const depositAmount = ref(500)
 
@@ -138,6 +139,10 @@ const handleDepositBlur = () => {
 const copyWalletAddress = async () => {
   try {
     await navigator.clipboard.writeText(walletAddress)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
   } catch (err) {
     console.error('Failed to copy', err)
   }
@@ -352,10 +357,11 @@ const submitPayment = async () => {
             >
             <button
               class="copy-button"
+              :class="{ 'is-copied': copied }"
               type="button"
               @click="copyWalletAddress"
             >
-              <UIcon name="lucide:copy" />
+              <UIcon :name="copied ? 'lucide:check' : 'lucide:copy'" />
             </button>
           </div>
         </div>
