@@ -100,9 +100,17 @@ const initChart = () => {
   })
 }
 
+const selectedTimeframe = ref('1d')
+const availableTimeframes = [
+  { label: '15m', value: '15m' },
+  { label: '1h', value: '1h' },
+  { label: '1D', value: '1d' },
+  { label: '1W', value: '1w' }
+]
+
 const loadHistoricalData = async (symbol: string) => {
   try {
-    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=1m&limit=500`)
+    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${selectedTimeframe.value}&limit=500`)
     const data = await res.json()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formattedData = data.map((d: any) => ({
@@ -125,7 +133,7 @@ const loadHistoricalData = async (symbol: string) => {
 
 const connectWebSocket = (symbol: string) => {
   if (ws) ws.close()
-  ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_1m`)
+  ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${selectedTimeframe.value}`)
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
     if (data.e === 'kline') {
@@ -145,7 +153,7 @@ const connectWebSocket = (symbol: string) => {
   }
 }
 
-watch(selectedCoin, async (newCoin) => {
+watch([selectedCoin, selectedTimeframe], async ([newCoin]) => {
   const sym = newCoin.replace('/', '').toLowerCase()
   if (candlestickSeries) candlestickSeries.setData([])
   await loadHistoricalData(sym)
@@ -418,17 +426,14 @@ const cancelAllLayers = () => {
               </button>
             </div>
             <div class="timeframe-tabs">
-              <button>
-                15m
-              </button>
-              <button>
-                1h
-              </button>
-              <button class="active">
-                1D
-              </button>
-              <button>
-                1W
+              <button
+                v-for="tf in availableTimeframes"
+                :key="tf.value"
+                type="button"
+                :class="{ active: selectedTimeframe === tf.value }"
+                @click="selectedTimeframe = tf.value"
+              >
+                {{ tf.label }}
               </button>
             </div>
           </div>
