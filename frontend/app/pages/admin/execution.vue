@@ -173,14 +173,6 @@ const marketRows = computed(() => {
   return selected ? [selected, ...rest].slice(0, 8) : coinOptions.slice(0, 8)
 })
 
-const quickMarketOptions = computed(() => {
-  const preferredSymbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'PEPE/USDT', 'XRP/USDT']
-
-  return preferredSymbols
-    .map(symbol => coinOptions.find(coin => coin.symbol === symbol))
-    .filter((coin): coin is CoinOption => Boolean(coin))
-})
-
 const topMovers = [
   { symbol: 'BANK/USDT', change: '+56.89%' },
   { symbol: 'TLM/USDT', change: '+55.88%' },
@@ -328,27 +320,6 @@ const cancelAllLayers = () => {
   <div class="execution-page">
     <section class="market-strip">
       <div class="market-identity">
-        <div class="market-picker-shell">
-          <CoinPairDropdown
-            v-model="selectedCoin"
-            :options="coinOptions"
-            label="Market Pair"
-            full-width
-          />
-
-          <div class="market-picker-shell__quick">
-            <button
-              v-for="coin in quickMarketOptions"
-              :key="`strip-${coin.symbol}`"
-              type="button"
-              :class="{ 'is-active': coin.symbol === selectedCoin }"
-              @click="selectedCoin = coin.symbol"
-            >
-              {{ coin.symbol }}
-            </button>
-          </div>
-        </div>
-
         <div class="market-price">
           <strong>{{ selectedCoinMeta.price }}</strong>
           <span>{{ selectedCoinMeta.name }} spot market</span>
