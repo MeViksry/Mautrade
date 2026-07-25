@@ -53,7 +53,7 @@ const fetchSettings = async () => {
 
 const handleSave = async () => {
   try {
-    const adminToken = useCookie('admin_token')
+    const adminToken = useCookie('admin_auth_token')
     await $fetch<SettingsData>(`${apiBase}/admin/settings`, {
       method: 'PUT',
       headers: {
@@ -117,12 +117,14 @@ onMounted(() => {
           <div class="settings-form">
             <div class="form-group toggle-group">
               <div class="toggle-info">
-                <label>Maintenance Mode</label>
+                <label for="maintenance-mode">Maintenance Mode</label>
                 <span class="help-text">Disable all user access except for admins.</span>
               </div>
               <label class="switch">
                 <input
+                  id="maintenance-mode"
                   v-model="settings.maintenanceMode"
+                  name="maintenance-mode"
                   type="checkbox"
                 >
                 <span class="slider round" />
@@ -131,12 +133,14 @@ onMounted(() => {
 
             <div class="form-group toggle-group">
               <div class="toggle-info">
-                <label>Allow Registrations</label>
+                <label for="allow-registrations">Allow Registrations</label>
                 <span class="help-text">Allow new users to create accounts.</span>
               </div>
               <label class="switch">
                 <input
+                  id="allow-registrations"
                   v-model="settings.allowRegistrations"
+                  name="allow-registrations"
                   type="checkbox"
                 >
                 <span class="slider round" />
@@ -144,9 +148,11 @@ onMounted(() => {
             </div>
 
             <div class="form-group">
-              <label>Support Email Address</label>
+              <label for="support-email">Support Email Address</label>
               <input
+                id="support-email"
                 v-model="settings.supportEmail"
+                name="support-email"
                 type="email"
                 class="form-input"
               >
@@ -161,10 +167,12 @@ onMounted(() => {
           </h2>
           <div class="settings-form">
             <div class="form-group">
-              <label>Profit Share / Gas Fee (%)</label>
+              <label for="gas-fee-percentage">Profit Share / Gas Fee (%)</label>
               <div class="input-with-addon">
                 <input
+                  id="gas-fee-percentage"
                   v-model="settings.gasFeePercentage"
+                  name="gas-fee-percentage"
                   type="number"
                   class="form-input"
                 >
@@ -174,11 +182,13 @@ onMounted(() => {
             </div>
 
             <div class="form-group">
-              <label>Minimum Gas Fee Deposit (USDT)</label>
+              <label for="min-deposit">Minimum Gas Fee Deposit (USDT)</label>
               <div class="input-with-addon">
                 <span class="addon">$</span>
                 <input
+                  id="min-deposit"
                   v-model="settings.minDepositUsdt"
+                  name="min-deposit"
                   type="number"
                   class="form-input"
                 >
