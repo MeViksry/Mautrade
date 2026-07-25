@@ -504,20 +504,24 @@ const cancelAllLayers = () => {
 
           <div class="order-ticket-grid">
             <div class="order-ticket order-ticket--buy">
-              <label>Price</label>
+              <label for="buy-order-price">Price</label>
               <div class="ticket-input">
                 <input
+                  id="buy-order-price"
                   v-model="orderPrice"
+                  name="buy-order-price"
                   type="number"
                   placeholder="Market price"
                 >
                 <span>{{ quoteAsset }}</span>
               </div>
 
-              <label>Amount</label>
+              <label for="buy-order-amount">Amount</label>
               <div class="ticket-input">
                 <input
+                  id="buy-order-amount"
                   v-model="orderAmount"
+                  name="buy-order-amount"
                   type="number"
                   placeholder="0.00"
                 >
@@ -539,20 +543,24 @@ const cancelAllLayers = () => {
             </div>
 
             <div class="order-ticket order-ticket--sell">
-              <label>Price</label>
+              <label for="sell-order-price">Price</label>
               <div class="ticket-input">
                 <input
+                  id="sell-order-price"
                   v-model="orderPrice"
+                  name="sell-order-price"
                   type="number"
                   placeholder="Market price"
                 >
                 <span>{{ quoteAsset }}</span>
               </div>
 
-              <label>Amount</label>
+              <label for="sell-order-amount">Amount</label>
               <div class="ticket-input">
                 <input
+                  id="sell-order-amount"
                   v-model="orderAmount"
+                  name="sell-order-amount"
                   type="number"
                   placeholder="0.00"
                 >

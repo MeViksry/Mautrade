@@ -70,9 +70,11 @@ const submitLogin = async () => {
         @submit.prevent="submitLogin"
       >
         <div class="auth-field">
-          <label>Admin Email</label>
+          <label for="admin-email">Admin Email</label>
           <input
+            id="admin-email"
             v-model="email"
+            name="admin-email"
             class="auth-input"
             type="text"
             inputmode="email"
@@ -88,10 +90,12 @@ const submitLogin = async () => {
         </div>
 
         <div class="auth-field">
-          <label>Admin Password</label>
+          <label for="admin-password">Admin Password</label>
           <div class="password-wrap">
             <input
+              id="admin-password"
               v-model="password"
+              name="admin-password"
               class="auth-input"
               :type="passwordVisible ? 'text' : 'password'"
               placeholder="Enter admin password"
@@ -111,9 +115,14 @@ const submitLogin = async () => {
         </div>
 
         <div class="auth-row">
-          <label class="auth-check">
+          <label
+            class="auth-check"
+            for="remember-me"
+          >
             <input
+              id="remember-me"
               v-model="rememberMe"
+              name="remember-me"
               type="checkbox"
             >
             Remember me
