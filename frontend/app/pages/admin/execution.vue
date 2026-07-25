@@ -1,28 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js'
-import { Line } from 'vue-chartjs'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { createChart, type IChartApi, type ISeriesApi, type CandlestickData, type Time, CrosshairMode, ColorType, CandlestickSeries } from 'lightweight-charts'
 import CoinPairDropdown from '~/components/CoinPairDropdown.vue'
 import AdminActiveSignalRow from '~/components/AdminActiveSignalRow.vue'
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-)
 
 definePageMeta({
   layout: 'admin'
@@ -71,10 +51,12 @@ const orderSide = ref<'buy' | 'sell'>('buy')
 const orderPrice = ref('')
 const orderAmount = ref('')
 
-const chartLabels = ref(Array.from({ length: 50 }, (_, i) => `T-${50 - i}`))
-const chartDataValues = ref(Array.from({ length: 50 }, () => 65000 + (Math.random() - 0.5) * 100))
-
-const currentPrice = computed(() => chartDataValues.value[chartDataValues.value.length - 1] ?? 65000)
+const currentPrice = ref(65000)
+const binanceSymbol = computed(() => selectedCoin.value.replace('/', '').toLowerCase())
+const chartContainer = ref<HTMLElement | null>(null)
+let chart: IChartApi | null = null
+let candlestickSeries: ISeriesApi<'Candlestick'> | null = null
+let ws: WebSocket | null = null
 const baseAsset = computed(() => selectedCoin.value.split('/')[0] ?? 'BTC')
 const quoteAsset = computed(() => selectedCoin.value.split('/')[1] ?? 'USDT')
 const selectedCoinMeta = computed<CoinOption>(() => {
@@ -85,47 +67,90 @@ const selectedCoinTrend = computed(() => {
   return selectedCoinMeta.value.change.startsWith('-') ? 'down' : 'up'
 })
 
-const chartData = computed(() => ({
-  labels: chartLabels.value,
-  datasets: [
-    {
-      label: selectedCoin.value,
-      backgroundColor: 'rgba(255, 90, 0, 0.1)',
-      borderColor: '#ff5a00',
-      data: chartDataValues.value,
-      fill: false,
-      tension: 0.16,
-      pointRadius: 0
-    }
-  ]
-}))
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  animation: { duration: 0 },
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: '#121212',
-      borderColor: '#ff5a00',
-      borderWidth: 1,
-      titleColor: '#ebebeb',
-      bodyColor: '#c8c8c8'
-    }
-  },
-  scales: {
-    y: {
-      position: 'right',
-      grid: { color: 'rgba(255,255,255,0.05)' },
-      ticks: { color: '#888' }
+const initChart = () => {
+  if (!chartContainer.value) return
+  chart = createChart(chartContainer.value, {
+    layout: {
+      background: { type: ColorType.Solid, color: 'transparent' },
+      textColor: '#888'
     },
-    x: {
-      grid: { color: 'rgba(255,255,255,0.025)' },
-      ticks: { color: '#666', maxTicksLimit: 8 }
+    grid: {
+      vertLines: { color: 'rgba(255,255,255,0.05)' },
+      horzLines: { color: 'rgba(255,255,255,0.05)' }
+    },
+    crosshair: {
+      mode: CrosshairMode.Normal
+    },
+    rightPriceScale: {
+      borderColor: 'rgba(255,255,255,0.1)'
+    },
+    timeScale: {
+      borderColor: 'rgba(255,255,255,0.1)',
+      timeVisible: true,
+      secondsVisible: false
+    }
+  })
+
+  candlestickSeries = chart.addSeries(CandlestickSeries, {
+    upColor: '#2ebd85',
+    downColor: '#e0294a',
+    borderVisible: false,
+    wickUpColor: '#2ebd85',
+    wickDownColor: '#e0294a'
+  })
+}
+
+const loadHistoricalData = async (symbol: string) => {
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=1m&limit=500`)
+    const data = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formattedData = data.map((d: any) => ({
+      time: (d[0] / 1000) as Time,
+      open: parseFloat(d[1]),
+      high: parseFloat(d[2]),
+      low: parseFloat(d[3]),
+      close: parseFloat(d[4])
+    }))
+    if (candlestickSeries) {
+      candlestickSeries.setData(formattedData)
+    }
+    if (formattedData.length > 0) {
+      currentPrice.value = formattedData[formattedData.length - 1].close
+    }
+  } catch (err) {
+    console.error('Failed to load historical data', err)
+  }
+}
+
+const connectWebSocket = (symbol: string) => {
+  if (ws) ws.close()
+  ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_1m`)
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    if (data.e === 'kline') {
+      const kline = data.k
+      const candle: CandlestickData = {
+        time: (kline.t / 1000) as Time,
+        open: parseFloat(kline.o),
+        high: parseFloat(kline.h),
+        low: parseFloat(kline.l),
+        close: parseFloat(kline.c)
+      }
+      if (candlestickSeries) {
+        candlestickSeries.update(candle)
+      }
+      currentPrice.value = candle.close
     }
   }
 }
+
+watch(selectedCoin, async (newCoin) => {
+  const sym = newCoin.replace('/', '').toLowerCase()
+  if (candlestickSeries) candlestickSeries.setData([])
+  await loadHistoricalData(sym)
+  connectWebSocket(sym)
+})
 
 type MarketStat = {
   label: string
@@ -162,21 +187,21 @@ const topMovers = [
   { symbol: 'HOME/USDT', change: '+9.47%' }
 ]
 
-const orderbookAsks = ref(
-  Array.from({ length: 13 }, (_, i) => ({
-    price: 65100 + i * 8,
+const orderbookAsks = computed(() => {
+  return Array.from({ length: 13 }, (_, i) => ({
+    price: currentPrice.value + (i + 1) * 2,
     amount: (Math.random() * 2).toFixed(4),
     total: (Math.random() * 900).toFixed(2)
   })).reverse()
-)
+})
 
-const orderbookBids = ref(
-  Array.from({ length: 13 }, (_, i) => ({
-    price: 65090 - i * 8,
+const orderbookBids = computed(() => {
+  return Array.from({ length: 13 }, (_, i) => ({
+    price: currentPrice.value - (i + 1) * 2,
     amount: (Math.random() * 2).toFixed(4),
     total: (Math.random() * 900).toFixed(2)
   }))
-)
+})
 
 const recentTrades = ref(Array.from({ length: 16 }, (_, i) => ({
   time: new Date(Date.now() - i * 5000).toLocaleTimeString(),
@@ -184,6 +209,20 @@ const recentTrades = ref(Array.from({ length: 16 }, (_, i) => ({
   amount: (Math.random() * 1.5).toFixed(4),
   type: Math.random() > 0.5 ? 'buy' : 'sell'
 })))
+
+watch(currentPrice, (newVal, oldVal) => {
+  if (newVal !== oldVal && oldVal !== 0) {
+    recentTrades.value.unshift({
+      time: new Date().toLocaleTimeString(),
+      price: newVal,
+      amount: (Math.random() * 1.5).toFixed(4),
+      type: newVal >= oldVal ? 'buy' : 'sell'
+    })
+    if (recentTrades.value.length > 16) {
+      recentTrades.value.pop()
+    }
+  }
+})
 
 interface ActiveLayerResponse {
   id: string
@@ -252,36 +291,25 @@ onMounted(() => {
   }, 1000)
 })
 
-let intervalId: ReturnType<typeof setInterval>
-
-onMounted(() => {
-  intervalId = setInterval(() => {
-    chartLabels.value.push('Now')
-    chartLabels.value.shift()
-
-    const lastVal = chartDataValues.value[chartDataValues.value.length - 1] ?? 65000
-    chartDataValues.value.push(lastVal + (Math.random() - 0.5) * 20)
-    chartDataValues.value.shift()
-
-    if (orderbookAsks.value[12]) {
-      orderbookAsks.value[12].amount = (Math.random() * 2).toFixed(4)
+onMounted(async () => {
+  initChart()
+  const resizeObserver = new ResizeObserver(() => {
+    if (chart && chartContainer.value) {
+      chart.applyOptions({ width: chartContainer.value.clientWidth, height: chartContainer.value.clientHeight })
     }
-    if (orderbookBids.value[0]) {
-      orderbookBids.value[0].amount = (Math.random() * 2).toFixed(4)
-    }
+  })
+  if (chartContainer.value) {
+    resizeObserver.observe(chartContainer.value)
+  }
 
-    recentTrades.value.unshift({
-      time: new Date().toLocaleTimeString(),
-      price: lastVal + (Math.random() - 0.5) * 10,
-      amount: (Math.random() * 1.5).toFixed(4),
-      type: Math.random() > 0.5 ? 'buy' : 'sell'
-    })
-    recentTrades.value.pop()
-  }, 1000)
+  const sym = binanceSymbol.value
+  await loadHistoricalData(sym)
+  connectWebSocket(sym)
 })
 
 onUnmounted(() => {
-  clearInterval(intervalId)
+  if (ws) ws.close()
+  if (chart) chart.remove()
 })
 
 const handleExecuteOrder = (side = orderSide.value) => {
@@ -436,9 +464,9 @@ const cancelAllLayers = () => {
           </div>
 
           <div class="chart-wrapper">
-            <Line
-              :data="chartData"
-              :options="chartOptions as any"
+            <div
+              ref="chartContainer"
+              style="width: 100%; height: 100%;"
             />
           </div>
         </section>
