@@ -89,3 +89,15 @@ func (s *DashboardStore) AdminListUsers(ctx context.Context, search string, limi
 	}
 	return users, nil
 }
+
+func (s *DashboardStore) AdminDeleteUser(ctx context.Context, id string) error {
+	const query = `DELETE FROM users WHERE id = $1`
+	tag, err := s.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("store: delete user: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("store: user not found")
+	}
+	return nil
+}

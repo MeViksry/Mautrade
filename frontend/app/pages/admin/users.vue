@@ -115,6 +115,25 @@ watch(searchQuery, () => {
   }, 300)
 })
 
+const deleteUser = async (id: string) => {
+  if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return
+
+  try {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    await $fetch(`${apiBase}/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
+
+    closeModal()
+    fetchUsers()
+  } catch (error) {
+    console.error('Failed to delete user:', error)
+    alert('Failed to delete user. Check console for details.')
+  }
+}
+
 onMounted(() => {
   fetchUsers()
 })
@@ -290,18 +309,6 @@ onMounted(() => {
             <span class="detail-label">Email</span>
             <span class="detail-value">
               {{ selectedUser.email }}
-              <span
-                v-if="selectedUser.emailVerified"
-                class="text-success"
-              >
-                (Verified)
-              </span>
-              <span
-                v-else
-                class="text-warning"
-              >
-                (Unverified)
-              </span>
             </span>
           </div>
           <div class="detail-group">
@@ -323,6 +330,16 @@ onMounted(() => {
           <div class="detail-group">
             <span class="detail-label">Gas Fee Balance</span>
             <span class="detail-value text-accent">${{ selectedUser.gasFeeBalance }}</span>
+          </div>
+
+          <div class="modal-actions">
+            <button
+              class="delete-btn"
+              @click="deleteUser(selectedUser.id)"
+            >
+              <UIcon name="lucide:trash-2" />
+              Delete User
+            </button>
           </div>
         </div>
       </div>
@@ -681,4 +698,30 @@ onMounted(() => {
 .text-success { color: #4ade80; }
 .text-warning { color: #fbbf24; }
 .text-accent { color: var(--accent); font-weight: 600; font-size: 1.1rem; }
+
+.modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: #ef4444;
+  color: white;
+}
 </style>

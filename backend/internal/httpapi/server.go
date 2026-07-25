@@ -129,6 +129,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/admin/auth/2fa/verify", s.handleAdmin2FAVerify)
 	s.mux.HandleFunc("POST /api/v1/admin/auth/2fa/disable", s.handleAdmin2FADisable)
 	s.mux.HandleFunc("GET /api/v1/admin/users", s.handleAdminListUsers)
+	s.mux.HandleFunc("DELETE /api/v1/admin/users/{id}", s.handleAdminDeleteUser)
 	s.mux.HandleFunc("GET /api/v1/admin/overview", s.handleAdminOverview)
 	s.mux.HandleFunc("GET /api/v1/admin/analytics", s.handleAdminGetAnalytics)
 	s.mux.HandleFunc("POST /api/v1/admin/gas-fee/preview", s.handleGasFeePreview)
