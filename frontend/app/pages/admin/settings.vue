@@ -15,6 +15,7 @@ useSeoMeta({
 const loading = ref(true)
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
+const { tokenCookie } = useAdminAuth()
 
 const settings = ref({
   maintenanceMode: false,
@@ -53,11 +54,10 @@ const fetchSettings = async () => {
 
 const handleSave = async () => {
   try {
-    const adminToken = useCookie('admin_auth_token')
     await $fetch<SettingsData>(`${apiBase}/admin/settings`, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${adminToken.value}`
+        Authorization: `Bearer ${tokenCookie.value}`
       },
       body: {
         maintenanceMode: settings.value.maintenanceMode,
