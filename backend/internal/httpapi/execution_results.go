@@ -21,7 +21,14 @@ func (s *Server) handleExecutionResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summary, err := s.store.ApplyExecutionResult(r.Context(), result, s.gasFeeCalc)
+	calc, err := s.getGasFeeCalculator(r.Context())
+	if err != nil {
+		s.logger.Error("get gas fee calculator", "error", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	summary, err := s.store.ApplyExecutionResult(r.Context(), result, calc)
 	if err != nil {
 		s.logger.Error("apply execution result", "error", err)
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -41,7 +48,13 @@ func (s *Server) StartExecutionResultConsumer(ctx context.Context) (func(), erro
 		if err := json.Unmarshal(data, &result); err != nil {
 			return fmt.Errorf("decode execution result: %w", err)
 		}
-		summary, err := s.store.ApplyExecutionResult(ctx, result, s.gasFeeCalc)
+
+		calc, err := s.getGasFeeCalculator(ctx)
+		if err != nil {
+			return fmt.Errorf("get gas fee calculator: %w", err)
+		}
+
+		summary, err := s.store.ApplyExecutionResult(ctx, result, calc)
 		if err != nil {
 			return err
 		}

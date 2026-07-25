@@ -19,7 +19,7 @@ const apiBase = config.public.apiBase
 const settings = ref({
   maintenanceMode: false,
   allowRegistrations: true,
-  gasFeePercentage: 20,
+  gasFeePercentage: 50,
   minDepositUsdt: 500,
   supportEmail: 'support@mautrade.com'
 })
@@ -39,7 +39,7 @@ const fetchSettings = async () => {
       settings.value = {
         maintenanceMode: data.maintenanceMode,
         allowRegistrations: data.allowRegistrations,
-        gasFeePercentage: parseFloat(String(data.gasFeePercentage || 20)),
+        gasFeePercentage: parseFloat(String(data.gasFeePercentage || 50)),
         minDepositUsdt: parseFloat(String(data.minDepositUsdt || 500)),
         supportEmail: data.supportEmail
       }

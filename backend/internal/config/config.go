@@ -14,7 +14,6 @@ type Config struct {
 	DatabaseURL           string
 	NATSURL               string
 	ShutdownTimeout       time.Duration
-	GasFeeShareRate       string
 	DefaultCurrency       string
 	AllowedCORSOrigin     string
 	AuthSessionTTL        time.Duration
@@ -56,7 +55,6 @@ func Load() (Config, error) {
 		DatabaseURL:           stringEnv("DATABASE_URL", ""),
 		NATSURL:               stringEnv("NATS_URL", "nats://localhost:4222"),
 		ShutdownTimeout:       time.Duration(shutdownSeconds) * time.Second,
-		GasFeeShareRate:       stringEnv("GAS_FEE_SHARE_RATE", "0.5"),
 		DefaultCurrency:       stringEnv("DEFAULT_CURRENCY", "USDT"),
 		AllowedCORSOrigin:     stringEnv("ALLOWED_CORS_ORIGIN", "*"),
 		AuthSessionTTL:        time.Duration(sessionHours) * time.Hour,

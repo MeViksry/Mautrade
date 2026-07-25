@@ -15,6 +15,13 @@ useSeoMeta({
 
 const loading = ref(true)
 
+const walletOptions = [
+  { label: 'All Wallets', value: 'all' },
+  { label: 'WALLET VIKSRY', value: 'viksry' },
+  { label: 'WALLET ARYANTO HONG', value: 'aryanto' }
+]
+const selectedWallet = ref(walletOptions[0])
+
 const walletStats = ref({
   totalBalance: 0,
   dailyInflow: 0,
@@ -186,23 +193,11 @@ onMounted(async () => {
             Inflow & Outflow Tracking
           </h2>
           <div class="filter-controls">
-            <div class="custom-select-wrapper">
-              <select class="filter-select">
-                <option value="all">
-                  All Wallets
-                </option>
-                <option value="viksry">
-                  WALLET VIKSRY
-                </option>
-                <option value="aryanto">
-                  WALLET ARYANTO HONG
-                </option>
-              </select>
-              <UIcon
-                name="lucide:chevron-down"
-                class="select-icon"
-              />
-            </div>
+            <USelectMenu
+              v-model="selectedWallet"
+              :options="walletOptions"
+              class="w-48"
+            />
           </div>
         </div>
 
@@ -395,6 +390,8 @@ onMounted(async () => {
   gap: 1.5rem;
   position: relative;
   overflow: hidden;
+  transition: none; /* No hover effect */
+  cursor: default; /* No pointer */
 }
 
 .wallet-card::before {
@@ -500,6 +497,10 @@ onMounted(async () => {
 }
 
 .custom-select-wrapper {
+  --select-bg: rgba(255, 255, 255, 0.03);
+  --select-hover: rgba(255, 255, 255, 0.06);
+  --select-border: var(--line);
+  --select-text: var(--text);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -508,9 +509,9 @@ onMounted(async () => {
 .filter-select {
   appearance: none;
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--line);
-  color: var(--text);
+  background: var(--select-bg);
+  border: 1px solid var(--select-border);
+  color: var(--select-text);
   padding: 0.6rem 2.5rem 0.6rem 1rem;
   border-radius: 8px;
   font-family: var(--sans);
@@ -522,7 +523,7 @@ onMounted(async () => {
 }
 
 .filter-select:hover, .filter-select:focus {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--select-hover);
   border-color: var(--accent);
 }
 

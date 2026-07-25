@@ -12,7 +12,7 @@ func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
 	}
-	stats, err := s.store.UserStats(r.Context(), user.ID, s.config.DefaultCurrency, s.config.GasFeeShareRate)
+	stats, err := s.store.UserStats(r.Context(), user.ID, s.config.DefaultCurrency)
 	if err != nil {
 		s.logger.Error("read user stats", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to read user stats")
@@ -103,5 +103,10 @@ func (s *Server) handleGasFeePreview(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid exit_value"})
 		return
 	}
-	writeJSON(w, http.StatusOK, s.gasFeeCalc.CalculateFromValues(entry, exit))
+	calc, err := s.getGasFeeCalculator(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to get gas fee settings"})
+		return
+	}
+	writeJSON(w, http.StatusOK, calc.CalculateFromValues(entry, exit))
 }

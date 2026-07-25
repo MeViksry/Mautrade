@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MeViksry/qdecimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -33,7 +34,7 @@ type UserStats struct {
 	GasFeeDepositTxID   *string `json:"gasFeeDepositTxId,omitempty"`
 }
 
-func (s *DashboardStore) UserStats(ctx context.Context, userID, defaultCurrency, gasFeeShareRate string) (UserStats, error) {
+func (s *DashboardStore) UserStats(ctx context.Context, userID, defaultCurrency string) (UserStats, error) {
 	const query = `
 WITH latest_balances AS (
   SELECT DISTINCT ON (exchange_binding_id, asset)
@@ -76,10 +77,16 @@ SELECT balance_sum.total_balance, gas_sum.realized_profit, gas_sum.total_gas_fee
        (SELECT tx_id FROM latest_deposit) AS gas_fee_deposit_tx_id
 FROM balance_sum, gas_sum, layer_sum`
 
+	settings, err := s.GlobalSettings(ctx)
+	if err != nil {
+		return UserStats{}, fmt.Errorf("store: get global settings: %w", err)
+	}
+
+	hundredth, _ := qdecimal.Parse("0.01")
 	stats := UserStats{
 		PrecisionPolicy: "qdecimal",
 		DefaultCurrency: defaultCurrency,
-		GasFeeShareRate: gasFeeShareRate,
+		GasFeeShareRate: settings.GasFeePercentage.Mul(hundredth).String(),
 	}
 	if err := s.db.QueryRow(ctx, query, defaultCurrency, userID).Scan(
 		&stats.TotalBalance,

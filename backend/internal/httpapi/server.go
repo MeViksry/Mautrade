@@ -23,7 +23,6 @@ type Server struct {
 	db                  *pgxpool.Pool
 	queue               *queue.Client
 	store               *store.DashboardStore
-	gasFeeCalc          gasfee.Calculator
 	credentialEncryptor *secrets.Encryptor
 	mailer              *mailer.Mailer
 	logger              *slog.Logger
@@ -31,14 +30,6 @@ type Server struct {
 }
 
 func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, mailer *mailer.Mailer, logger *slog.Logger) (*Server, error) {
-	shareRate, err := qdecimal.Parse(cfg.GasFeeShareRate)
-	if err != nil {
-		return nil, err
-	}
-	calculator, err := gasfee.NewCalculator(shareRate)
-	if err != nil {
-		return nil, err
-	}
 	credentialEncryptor, err := secrets.NewEncryptor(cfg.ExchangeCredentialKey, cfg.Environment)
 	if err != nil {
 		return nil, err
@@ -48,7 +39,6 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 		db:                  db,
 		queue:               queueClient,
 		store:               store.NewDashboardStore(db),
-		gasFeeCalc:          calculator,
 		credentialEncryptor: credentialEncryptor,
 		mailer:              mailer,
 		logger:              logger,
@@ -59,6 +49,15 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 	}
 	server.routes()
 	return server, nil
+}
+
+func (s *Server) getGasFeeCalculator(ctx context.Context) (gasfee.Calculator, error) {
+	settings, err := s.store.GlobalSettings(ctx)
+	if err != nil {
+		return gasfee.Calculator{}, err
+	}
+	hundredth, _ := qdecimal.Parse("0.01")
+	return gasfee.NewCalculator(settings.GasFeePercentage.Mul(hundredth))
 }
 
 func (s *Server) Handler() http.Handler {
