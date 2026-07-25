@@ -743,7 +743,7 @@ const cancelAllLayers = () => {
 
 .market-strip {
   position: relative;
-  z-index: 30;
+  z-index: 10;
   display: grid;
   grid-template-columns: minmax(260px, 1.1fr) minmax(420px, 2fr) auto;
   align-items: center;
