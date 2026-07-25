@@ -31,7 +31,7 @@ func (s *Server) handleAdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 		if _, ok := s.requireAdmin(w, r); !ok {
 			return
 		}
-		
+
 		id := r.PathValue("id")
 		if id == "" {
 			writeError(w, http.StatusBadRequest, "missing user id")
