@@ -198,9 +198,12 @@ onMounted(() => {
           <div class="search-bar">
             <input
               v-model="searchQuery"
+              id="user-search"
+              name="user-search"
               type="text"
               placeholder="Search by name, email, or ID..."
               class="search-input"
+              autocomplete="off"
             >
           </div>
         </div>
