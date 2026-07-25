@@ -158,9 +158,15 @@ type MarketStat = {
   tone?: 'up' | 'down'
 }
 
+const formattedLivePrice = computed(() => {
+  return currentPrice.value < 1
+    ? currentPrice.value.toLocaleString(undefined, { maximumFractionDigits: 8 })
+    : currentPrice.value.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
+})
+
 const marketStats = computed<MarketStat[]>(() => [
   { label: '24H Change', value: selectedCoinMeta.value.change, tone: selectedCoinTrend.value },
-  { label: 'Last Price', value: selectedCoinMeta.value.price },
+  { label: 'Last Price', value: formattedLivePrice.value },
   { label: '24H Volume', value: selectedCoinMeta.value.volume ?? '-' },
   { label: 'Quote', value: quoteAsset.value },
   { label: 'Network', value: `${baseAsset.value} (5)` }
@@ -321,7 +327,7 @@ const cancelAllLayers = () => {
     <section class="market-strip">
       <div class="market-identity">
         <div class="market-price">
-          <strong>{{ selectedCoinMeta.price }}</strong>
+          <strong>{{ formattedLivePrice }}</strong>
           <span>{{ selectedCoinMeta.name }} spot market</span>
         </div>
       </div>
