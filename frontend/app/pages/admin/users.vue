@@ -82,7 +82,7 @@ const fetchUsers = async () => {
     })
 
     users.value = data.map(u => ({
-      id: u.id.split('-')[0] ?? '', // show short id
+      id: u.id,
       name: u.displayName,
       email: u.email,
       registered: new Date(u.createdAt).toISOString().split('T')[0] ?? '',
@@ -226,7 +226,7 @@ onMounted(() => {
                 :key="user.id"
               >
                 <td class="col-id">
-                  #{{ user.id }}
+                  #{{ user.id.split('-')[0] }}
                 </td>
                 <td class="col-user">
                   <div class="user-info">
@@ -299,7 +299,7 @@ onMounted(() => {
         >
           <div class="detail-group">
             <span class="detail-label">ID</span>
-            <span class="detail-value">#{{ selectedUser.id }}</span>
+            <span class="detail-value">#{{ selectedUser.id.split('-')[0] }}</span>
           </div>
           <div class="detail-group">
             <span class="detail-label">Name</span>
