@@ -188,6 +188,6 @@ func writeGasFeeDepositError(w http.ResponseWriter, err error) {
 	case errors.Is(err, store.ErrGasFeeDepositNotFound):
 		writeError(w, http.StatusNotFound, "gas fee deposit not found")
 	default:
-		writeError(w, http.StatusInternalServerError, "gas fee deposit operation failed")
+		writeError(w, http.StatusInternalServerError, "gas fee deposit operation failed: "+err.Error())
 	}
 }
