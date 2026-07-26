@@ -84,6 +84,7 @@ type UpdateGasFeeDepositStatusParams struct {
 	AdminID        string
 	Status         string
 	ResolutionNote string
+	ActualAmount   *string
 	Now            time.Time
 }
 
@@ -409,8 +410,9 @@ FOR UPDATE`, params.DepositID).Scan(
 	if _, err := tx.Exec(ctx, `
 UPDATE gas_fee_deposits
 SET status = $2,
+    amount = COALESCE($4::numeric, amount),
     confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3::timestamptz ELSE NULL END
-WHERE id = $1::uuid`, params.DepositID, status, now); err != nil {
+WHERE id = $1::uuid`, params.DepositID, status, now, params.ActualAmount); err != nil {
 		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
 	}
 	if err := insertGasFeeDepositAudit(ctx, tx, "admin", params.AdminID, "gas_fee_deposit_"+status, params.DepositID, map[string]any{
@@ -490,6 +492,7 @@ type SystemUpdateGasFeeDepositStatusParams struct {
 	DepositID      string
 	Status         string
 	ResolutionNote string
+	ActualAmount   *string
 	Now            time.Time
 }
 
@@ -565,8 +568,9 @@ FOR UPDATE`, params.DepositID).Scan(
 	if _, err := tx.Exec(ctx, `
 UPDATE gas_fee_deposits
 SET status = $2,
+    amount = COALESCE($4::numeric, amount),
     confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3::timestamptz ELSE NULL END
-WHERE id = $1::uuid`, params.DepositID, status, now); err != nil {
+WHERE id = $1::uuid`, params.DepositID, status, now, params.ActualAmount); err != nil {
 		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
 	}
 

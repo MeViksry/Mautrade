@@ -121,11 +121,13 @@ func (v *Verifier) processPending(ctx context.Context) {
 		}
 
 		// Success! Mark as confirmed
-		v.logger.Info("gasfee verifier: tx verified successfully", "deposit_id", dep.ID, "tx_id", txID)
+		actualAmountStr := amountDec.String()
+		v.logger.Info("gasfee verifier: tx verified successfully", "deposit_id", dep.ID, "tx_id", txID, "actual_amount", actualAmountStr)
 		_, updateErr := v.store.SystemUpdateGasFeeDepositStatus(ctx, store.SystemUpdateGasFeeDepositStatusParams{
 			DepositID:      dep.ID,
 			Status:         "confirmed",
 			ResolutionNote: "Auto-verified via BscScan.",
+			ActualAmount:   &actualAmountStr,
 			Now:            time.Now().UTC(),
 		})
 		if updateErr != nil {
