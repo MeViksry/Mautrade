@@ -47,6 +47,234 @@ const coinOptions = ref<CoinOption[]>([
   { symbol: 'SUI/USDT', name: 'Sui', price: '...', change: '...', volume: '...' }
 ])
 
+interface ExtendedCoinDetail {
+  rank: number | string
+  circulatingSupply: number
+  maxSupply: number | null
+  issueDate: string
+  ath: number
+  atl: number
+  dominance: number
+  network: string
+  description: string
+}
+
+const coinDetails: Record<string, ExtendedCoinDetail> = {
+  BTC: {
+    rank: 1,
+    circulatingSupply: 19700000,
+    maxSupply: 21000000,
+    issueDate: '2009-01-03',
+    ath: 73750.00,
+    atl: 0.048,
+    dominance: 59.1,
+    network: 'Bitcoin',
+    description: 'Bitcoin is a decentralized cryptocurrency originally described in a 2008 whitepaper by a person, or group of people, using the alias Satoshi Nakamoto. It was launched soon after, in January 2009.'
+  },
+  ETH: {
+    rank: 2,
+    circulatingSupply: 120000000,
+    maxSupply: null,
+    issueDate: '2015-07-30',
+    ath: 4891.70,
+    atl: 0.420,
+    dominance: 17.5,
+    network: 'Ethereum (ERC20)',
+    description: 'Ethereum is a decentralized open-source blockchain system that features its own cryptocurrency, Ether. ETH works as a platform for numerous other cryptocurrencies, as well as for the execution of decentralized smart contracts.'
+  },
+  SOL: {
+    rank: 5,
+    circulatingSupply: 462000000,
+    maxSupply: null,
+    issueDate: '2020-03-16',
+    ath: 260.06,
+    atl: 0.5052,
+    dominance: 3.2,
+    network: 'Solana',
+    description: 'Solana is a highly functional open source project that banks on blockchain technology\'s permissionless nature to provide decentralized finance (DeFi) solutions.'
+  },
+  BNB: {
+    rank: 4,
+    circulatingSupply: 147500000,
+    maxSupply: 200000000,
+    issueDate: '2017-07-25',
+    ath: 720.67,
+    atl: 0.096,
+    dominance: 3.8,
+    network: 'BNB Smart Chain (BEP20)',
+    description: 'BNB was launched through an Initial Coin Offering in 2017. It is the primary coin that powers the Binance ecosystem, allowing users to pay trading fees with a discount.'
+  },
+  PEPE: {
+    rank: 23,
+    circulatingSupply: 420690000000000,
+    maxSupply: 420690000000000,
+    issueDate: '2023-04-14',
+    ath: 0.00001718,
+    atl: 0.0000000276,
+    dominance: 0.12,
+    network: 'Ethereum (ERC20)',
+    description: 'Pepe is a deflationary memecoin launched on Ethereum. The cryptocurrency was created as a tribute to the Pepe the Frog internet meme created by Matt Furie.'
+  },
+  XRP: {
+    rank: 7,
+    circulatingSupply: 55600000000,
+    maxSupply: 100000000000,
+    issueDate: '2012-01-01',
+    ath: 3.84,
+    atl: 0.0028,
+    dominance: 1.3,
+    network: 'XRP Ledger',
+    description: 'XRP is a digital asset built for payments. It is the native digital asset on the XRP Ledger—an open-source, permissionless and decentralized blockchain technology.'
+  },
+  DOGE: {
+    rank: 8,
+    circulatingSupply: 144000000000,
+    maxSupply: null,
+    issueDate: '2013-12-06',
+    ath: 0.7376,
+    atl: 0.00008547,
+    dominance: 1.1,
+    network: 'Dogecoin',
+    description: 'Dogecoin (DOGE) is based on the popular "doge" Internet meme and features a Shiba Inu on its logo. The open-source digital currency was created by Billy Markus and Jackson Palmer.'
+  },
+  ADA: {
+    rank: 10,
+    circulatingSupply: 35700000000,
+    maxSupply: 45000000000,
+    issueDate: '2017-09-01',
+    ath: 3.10,
+    atl: 0.0173,
+    dominance: 0.7,
+    network: 'Cardano',
+    description: 'Cardano is a proof-of-stake blockchain platform: the first to be founded on peer-reviewed research and developed through evidence-based methods.'
+  },
+  AVAX: {
+    rank: 11,
+    circulatingSupply: 393000000,
+    maxSupply: 720000000,
+    issueDate: '2020-09-21',
+    ath: 146.22,
+    atl: 2.78,
+    dominance: 0.5,
+    network: 'Avalanche (C-Chain)',
+    description: 'Avalanche is a lightning-fast, low-cost, and eco-friendly open-source smart contract platform built for the scale of global finance and decentralized applications.'
+  },
+  LINK: {
+    rank: 15,
+    circulatingSupply: 608000000,
+    maxSupply: 1000000000,
+    issueDate: '2017-09-20',
+    ath: 52.88,
+    atl: 0.126,
+    dominance: 0.4,
+    network: 'Ethereum (ERC20)',
+    description: 'Chainlink is a blockchain abstraction layer that enables universally connected smart contracts through a decentralized oracle network.'
+  },
+  DOT: {
+    rank: 16,
+    circulatingSupply: 1430000000,
+    maxSupply: null,
+    issueDate: '2020-08-18',
+    ath: 55.00,
+    atl: 2.69,
+    dominance: 0.38,
+    network: 'Polkadot',
+    description: 'Polkadot is an open-source sharded multichain protocol that connects and secures a network of specialized blockchains, facilitating cross-chain transfer of any data or asset types.'
+  },
+  LTC: {
+    rank: 21,
+    circulatingSupply: 74500000,
+    maxSupply: 84000000,
+    issueDate: '2011-10-13',
+    ath: 412.96,
+    atl: 1.11,
+    dominance: 0.28,
+    network: 'Litecoin',
+    description: 'Litecoin (LTC) is a cryptocurrency that was designed to provide fast, secure and low-cost payments by leveraging the unique properties of blockchain technology.'
+  },
+  SHIB: {
+    rank: 12,
+    circulatingSupply: 589000000000000,
+    maxSupply: null,
+    issueDate: '2020-08-01',
+    ath: 0.00008845,
+    atl: 0.000000000081,
+    dominance: 0.45,
+    network: 'Ethereum (ERC20)',
+    description: 'Shiba Inu coin was created anonymously in August 2020 under the pseudonym "Ryoshi." The meme coin quickly gained speed and value as a community of investors was drawn in by the cute charm of the coin.'
+  },
+  TRX: {
+    rank: 13,
+    circulatingSupply: 87000000000,
+    maxSupply: null,
+    issueDate: '2017-09-13',
+    ath: 0.30,
+    atl: 0.0010,
+    dominance: 0.48,
+    network: 'TRON (TRC20)',
+    description: 'TRON is a decentralized blockchain-based operating system that aims to build a free, global digital content entertainment ecosystem with distributed storage technology.'
+  },
+  ARB: {
+    rank: 38,
+    circulatingSupply: 2650000000,
+    maxSupply: 10000000000,
+    issueDate: '2023-03-23',
+    ath: 2.40,
+    atl: 0.74,
+    dominance: 0.1,
+    network: 'Arbitrum One',
+    description: 'Arbitrum is a Layer 2 (L2) scaling solution for Ethereum. It uses optimistic rollups to improve speed, scalability, and cost-efficiency on Ethereum.'
+  },
+  OP: {
+    rank: 41,
+    circulatingSupply: 1040000000,
+    maxSupply: 4294967296,
+    issueDate: '2022-05-31',
+    ath: 4.85,
+    atl: 0.40,
+    dominance: 0.09,
+    network: 'Optimism',
+    description: 'Optimism is a low-cost and lightning-fast Ethereum L2 blockchain, designed to provide users with near-instant transactions while maintaining L1 security.'
+  },
+  NEAR: {
+    rank: 17,
+    circulatingSupply: 1060000000,
+    maxSupply: null,
+    issueDate: '2020-10-14',
+    ath: 20.42,
+    atl: 0.52,
+    dominance: 0.35,
+    network: 'NEAR Protocol',
+    description: 'NEAR Protocol is a layer-one blockchain that was designed as a community-run cloud compute platform to eliminate some of the limitations that have been bogging down competing blockchains.'
+  },
+  SUI: {
+    rank: 29,
+    circulatingSupply: 2400000000,
+    maxSupply: 10000000000,
+    issueDate: '2023-05-03',
+    ath: 2.18,
+    atl: 0.36,
+    dominance: 0.2,
+    network: 'Sui Network',
+    description: 'Sui is a permissionless Layer-1 blockchain designed from the ground up to enable creators and developers to build experiences that cater to the next billion users in Web3.'
+  }
+}
+
+const currentCoinDetail = computed<ExtendedCoinDetail>(() => {
+  const symbol = selectedCoin.value.split('/')[0] || ''
+  return coinDetails[symbol] || {
+    rank: '-',
+    circulatingSupply: 1000000000,
+    maxSupply: null,
+    issueDate: '-',
+    ath: currentPrice.value * 2,
+    atl: currentPrice.value * 0.1,
+    dominance: 0.01,
+    network: symbol,
+    description: 'This cryptocurrency is traded live on the Mautrade market. This information is presented as a standard reference.'
+  }
+})
+
 const orderType = ref<'limit' | 'market'>('limit')
 const orderSide = ref<'buy' | 'sell'>('buy')
 const orderPrice = ref('')
@@ -552,29 +780,62 @@ const cancelAllLayers = () => {
                   <span>{{ selectedCoin }}</span>
                 </div>
               </div>
-              <p class="info-desc">
-                {{ coinOptions.find(c => c.symbol === selectedCoin)?.name || selectedCoin.split('/')[0] }} is traded on the spot market against {{ selectedCoin.split('/')[1] }}. This asset is subject to market volatility.
-              </p>
 
-              <div class="info-grid">
+              <div class="info-grid extended">
                 <div class="info-item">
-                  <label>Current Price</label>
-                  <strong>{{ coinOptions.find(c => c.symbol === selectedCoin)?.price || '...' }} USDT</strong>
+                  <label>Rank</label>
+                  <strong>No. {{ currentCoinDetail.rank }}</strong>
                 </div>
                 <div class="info-item">
-                  <label>24H Change</label>
-                  <strong :class="(coinOptions.find(c => c.symbol === selectedCoin)?.change || '').startsWith('-') ? 'text-red' : 'text-green'">
-                    {{ coinOptions.find(c => c.symbol === selectedCoin)?.change || '...' }}
-                  </strong>
+                  <label>Market Cap</label>
+                  <strong>{{ '$' + (currentCoinDetail.circulatingSupply * currentPrice).toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</strong>
+                </div>
+                <div class="info-item">
+                  <label>Market Dominance</label>
+                  <strong>{{ currentCoinDetail.dominance }}%</strong>
                 </div>
                 <div class="info-item">
                   <label>24H Volume</label>
                   <strong>{{ coinOptions.find(c => c.symbol === selectedCoin)?.volume || '...' }}</strong>
                 </div>
                 <div class="info-item">
-                  <label>Network</label>
-                  <strong>{{ selectedCoin.split('/')[0] }}</strong>
+                  <label>Circulating Supply</label>
+                  <strong>{{ currentCoinDetail.circulatingSupply.toLocaleString() }} {{ selectedCoin.split('/')[0] }}</strong>
                 </div>
+                <div class="info-item">
+                  <label>Max Supply</label>
+                  <strong>{{ currentCoinDetail.maxSupply ? currentCoinDetail.maxSupply.toLocaleString() + ' ' + selectedCoin.split('/')[0] : 'Unlimited' }}</strong>
+                </div>
+                <div class="info-item">
+                  <label>Issue Date</label>
+                  <strong>{{ currentCoinDetail.issueDate }}</strong>
+                </div>
+                <div class="info-item">
+                  <label>Network</label>
+                  <strong>{{ currentCoinDetail.network }}</strong>
+                </div>
+                <div class="info-item">
+                  <label>All-Time High</label>
+                  <strong class="text-green">${{ formatPrice(currentCoinDetail.ath) }}</strong>
+                </div>
+                <div class="info-item">
+                  <label>All-Time Low</label>
+                  <strong class="text-red">${{ formatPrice(currentCoinDetail.atl) }}</strong>
+                </div>
+              </div>
+
+              <div class="info-project">
+                <h4>Project Summary</h4>
+                <p
+                  class="text-muted text-sm"
+                  style="margin-bottom: 12px; font-style: italic;"
+                >
+                  Basic data is sourced from crypto market references. This information is provided "as is" without representations or warranties of any kind.
+                </p>
+                <h5>Introduction</h5>
+                <p class="info-desc">
+                  {{ currentCoinDetail.description }}
+                </p>
               </div>
             </div>
           </div>
@@ -1425,6 +1686,23 @@ const cancelAllLayers = () => {
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0;
+}
+
+.info-project {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.info-project h4 {
+  color: var(--text);
+  font-family: 'Oswald', sans-serif;
+  margin: 0 0 0.5rem 0;
+}
+
+.info-project h5 {
+  color: var(--text);
+  margin: 0.5rem 0;
 }
 
 .info-grid {
