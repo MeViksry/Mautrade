@@ -25,26 +25,26 @@ type CoinOption = {
   volume?: string
 }
 
-const coinOptions: CoinOption[] = [
-  { symbol: 'BTC/USDT', name: 'Bitcoin', price: '64,718.00', change: '+1.09%', volume: '8.35K BTC' },
-  { symbol: 'ETH/USDT', name: 'Ethereum', price: '3,420.12', change: '+1.30%', volume: '158.61K ETH' },
-  { symbol: 'SOL/USDT', name: 'Solana', price: '182.33', change: '+2.57%', volume: '2.81M SOL' },
-  { symbol: 'BNB/USDT', name: 'BNB', price: '569.31', change: '+0.30%', volume: '421.18K BNB' },
-  { symbol: 'PEPE/USDT', name: 'Pepe', price: '0.00002028', change: '+5.69%', volume: '18.4T PEPE' },
-  { symbol: 'XRP/USDT', name: 'XRP', price: '1.0967', change: '+0.65%', volume: '620.71M XRP' },
-  { symbol: 'DOGE/USDT', name: 'Dogecoin', price: '0.07253', change: '+0.23%', volume: '1.92B DOGE' },
-  { symbol: 'ADA/USDT', name: 'Cardano', price: '0.42', change: '+0.92%', volume: '331.44M ADA' },
-  { symbol: 'AVAX/USDT', name: 'Avalanche', price: '28.18', change: '-0.36%', volume: '12.08M AVAX' },
-  { symbol: 'LINK/USDT', name: 'Chainlink', price: '14.52', change: '+1.82%', volume: '24.66M LINK' },
-  { symbol: 'DOT/USDT', name: 'Polkadot', price: '6.18', change: '+0.54%', volume: '41.82M DOT' },
-  { symbol: 'LTC/USDT', name: 'Litecoin', price: '83.40', change: '-0.12%', volume: '5.97M LTC' },
-  { symbol: 'SHIB/USDT', name: 'Shiba Inu', price: '0.00001891', change: '+4.10%', volume: '9.48T SHIB' },
-  { symbol: 'TRX/USDT', name: 'TRON', price: '0.31', change: '+0.48%', volume: '988.12M TRX' },
-  { symbol: 'ARB/USDT', name: 'Arbitrum', price: '0.87', change: '-1.14%', volume: '88.24M ARB' },
-  { symbol: 'OP/USDT', name: 'Optimism', price: '1.72', change: '+1.76%', volume: '39.11M OP' },
-  { symbol: 'NEAR/USDT', name: 'NEAR Protocol', price: '5.41', change: '+2.03%', volume: '52.08M NEAR' },
-  { symbol: 'SUI/USDT', name: 'Sui', price: '3.84', change: '-0.82%', volume: '76.55M SUI' }
-]
+const coinOptions = ref<CoinOption[]>([
+  { symbol: 'BTC/USDT', name: 'Bitcoin', price: '...', change: '...', volume: '...' },
+  { symbol: 'ETH/USDT', name: 'Ethereum', price: '...', change: '...', volume: '...' },
+  { symbol: 'SOL/USDT', name: 'Solana', price: '...', change: '...', volume: '...' },
+  { symbol: 'BNB/USDT', name: 'BNB', price: '...', change: '...', volume: '...' },
+  { symbol: 'PEPE/USDT', name: 'Pepe', price: '...', change: '...', volume: '...' },
+  { symbol: 'XRP/USDT', name: 'XRP', price: '...', change: '...', volume: '...' },
+  { symbol: 'DOGE/USDT', name: 'Dogecoin', price: '...', change: '...', volume: '...' },
+  { symbol: 'ADA/USDT', name: 'Cardano', price: '...', change: '...', volume: '...' },
+  { symbol: 'AVAX/USDT', name: 'Avalanche', price: '...', change: '...', volume: '...' },
+  { symbol: 'LINK/USDT', name: 'Chainlink', price: '...', change: '...', volume: '...' },
+  { symbol: 'DOT/USDT', name: 'Polkadot', price: '...', change: '...', volume: '...' },
+  { symbol: 'LTC/USDT', name: 'Litecoin', price: '...', change: '...', volume: '...' },
+  { symbol: 'SHIB/USDT', name: 'Shiba Inu', price: '...', change: '...', volume: '...' },
+  { symbol: 'TRX/USDT', name: 'TRON', price: '...', change: '...', volume: '...' },
+  { symbol: 'ARB/USDT', name: 'Arbitrum', price: '...', change: '...', volume: '...' },
+  { symbol: 'OP/USDT', name: 'Optimism', price: '...', change: '...', volume: '...' },
+  { symbol: 'NEAR/USDT', name: 'NEAR Protocol', price: '...', change: '...', volume: '...' },
+  { symbol: 'SUI/USDT', name: 'Sui', price: '...', change: '...', volume: '...' }
+])
 
 const orderType = ref<'limit' | 'market'>('limit')
 const orderSide = ref<'buy' | 'sell'>('buy')
@@ -57,10 +57,11 @@ const chartContainer = ref<HTMLElement | null>(null)
 let chart: IChartApi | null = null
 let candlestickSeries: ISeriesApi<'Candlestick'> | null = null
 let ws: WebSocket | null = null
+let tickersWs: WebSocket | null = null
 const baseAsset = computed(() => selectedCoin.value.split('/')[0] ?? 'BTC')
 const quoteAsset = computed(() => selectedCoin.value.split('/')[1] ?? 'USDT')
 const selectedCoinMeta = computed<CoinOption>(() => {
-  return coinOptions.find(coin => coin.symbol === selectedCoin.value) ?? coinOptions[0]!
+  return coinOptions.value.find(coin => coin.symbol === selectedCoin.value) ?? coinOptions.value[0]!
 })
 
 const selectedCoinTrend = computed(() => {
@@ -186,10 +187,10 @@ const marketStats = computed<MarketStat[]>(() => [
 ])
 
 const marketRows = computed(() => {
-  const selected = coinOptions.find(coin => coin.symbol === selectedCoin.value)
-  const rest = coinOptions.filter(coin => coin.symbol !== selectedCoin.value)
+  const selected = coinOptions.value.find(coin => coin.symbol === selectedCoin.value)
+  const rest = coinOptions.value.filter(coin => coin.symbol !== selectedCoin.value)
 
-  return selected ? [selected, ...rest].slice(0, 8) : coinOptions.slice(0, 8)
+  return selected ? [selected, ...rest].slice(0, 8) : coinOptions.value.slice(0, 8)
 })
 
 const orderbookAsks = computed(() => {
@@ -310,6 +311,32 @@ onMounted(async () => {
   const sym = binanceSymbol.value
   await loadHistoricalData(sym)
   connectWebSocket(sym)
+
+  tickersWs = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
+  tickersWs.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (Array.isArray(data)) {
+        data.forEach((ticker: { s: string, c: string, P: string, v: string }) => {
+          const coin = coinOptions.value.find(c => c.symbol.replace('/', '') === ticker.s)
+          if (coin) {
+            const val = parseFloat(ticker.c)
+            coin.price = val >= 1000 ? val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : val.toString()
+            const changeVal = parseFloat(ticker.P)
+            coin.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%'
+            const vol = parseFloat(ticker.v)
+            let formattedVol = vol.toString()
+            if (vol >= 1e9) formattedVol = (vol / 1e9).toFixed(2) + 'B'
+            else if (vol >= 1e6) formattedVol = (vol / 1e6).toFixed(2) + 'M'
+            else if (vol >= 1e3) formattedVol = (vol / 1e3).toFixed(2) + 'K'
+            coin.volume = formattedVol + ' ' + coin.symbol.split('/')[0]
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Ticker parsing error', error)
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -318,6 +345,12 @@ onUnmounted(() => {
     ws.onerror = null
     ws.onmessage = null
     ws.close()
+  }
+  if (tickersWs) {
+    tickersWs.onclose = null
+    tickersWs.onerror = null
+    tickersWs.onmessage = null
+    tickersWs.close()
   }
   if (chart) chart.remove()
 })
