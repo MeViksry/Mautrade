@@ -81,19 +81,31 @@ const fetchUsers = async () => {
       headers: { Authorization: `Bearer ${tokenCookie.value}` }
     })
 
-    users.value = data.map(u => ({
-      id: u.id,
-      name: u.displayName,
-      email: u.email,
-      registered: new Date(u.createdAt).toISOString().split('T')[0] ?? '',
-      status: u.status === 'active' ? 'Verified' : 'Pending',
-      gasFee: 'Paid', // TODO: backend should return this
-      bot: u.onboardingCompleted ? 'Active' : 'Inactive',
-      countryCode: u.countryCode || 'N/A',
-      age: u.age || 'N/A',
-      emailVerified: u.emailVerified,
-      gasFeeBalance: typeof u.gasFeeBalance === 'string' ? u.gasFeeBalance : (u.gasFeeBalance?.toString() || '0')
-    }))
+    users.value = data.map((u) => {
+      const bal = parseFloat(u.gasFeeBalance?.toString() || '0')
+      let gasFeeStatus = 'Pending'
+      if (bal > 5) {
+        gasFeeStatus = 'Paid'
+      } else if (bal > 0 && bal <= 5) {
+        gasFeeStatus = 'Low Balance'
+      } else {
+        gasFeeStatus = u.onboardingCompleted ? 'Depleted' : 'Pending'
+      }
+
+      return {
+        id: u.id,
+        name: u.displayName,
+        email: u.email,
+        registered: new Date(u.createdAt).toISOString().split('T')[0] ?? '',
+        status: u.status === 'active' ? 'Verified' : 'Pending',
+        gasFee: gasFeeStatus,
+        bot: u.onboardingCompleted ? 'Active' : 'Inactive',
+        countryCode: u.countryCode || 'N/A',
+        age: u.age || 'N/A',
+        emailVerified: u.emailVerified,
+        gasFeeBalance: typeof u.gasFeeBalance === 'string' ? u.gasFeeBalance : (u.gasFeeBalance?.toString() || '0')
+      }
+    })
 
     // Only update stats on initial load (when search is empty) to avoid stats changing based on search
     if (!searchQuery.value) {
@@ -246,7 +258,7 @@ onMounted(() => {
                   </span>
                 </td>
                 <td class="col-status">
-                  <span :class="['status-badge', user.gasFee.toLowerCase() === 'paid' ? 'success' : 'warning']">
+                  <span :class="['status-badge', user.gasFee.toLowerCase().replace(' ', '-')]">
                     {{ user.gasFee }}
                   </span>
                 </td>
@@ -491,13 +503,15 @@ onMounted(() => {
 
 .status-badge.verified,
 .status-badge.success,
-.status-badge.active {
+.status-badge.active,
+.status-badge.paid {
   background: rgba(34, 197, 94, 0.1);
   color: #4ade80;
 }
 
 .status-badge.pending,
-.status-badge.warning {
+.status-badge.warning,
+.status-badge.low-balance {
   background: rgba(245, 158, 11, 0.1);
   color: #fbbf24;
 }
@@ -505,6 +519,12 @@ onMounted(() => {
 .status-badge.inactive {
   background: rgba(156, 163, 175, 0.1);
   color: #9ca3af;
+}
+
+.status-badge.depleted,
+.status-badge.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
 }
 
 .actions-col, .col-actions {
