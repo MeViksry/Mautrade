@@ -865,9 +865,6 @@ const cancelAllLayers = () => {
               >
                 Market
               </button>
-              <button type="button">
-                Stop Limit
-              </button>
             </div>
           </div>
 
