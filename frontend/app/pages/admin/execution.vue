@@ -132,7 +132,12 @@ const loadHistoricalData = async (symbol: string) => {
 }
 
 const connectWebSocket = (symbol: string) => {
-  if (ws) ws.close()
+  if (ws) {
+    ws.onclose = null
+    ws.onerror = null
+    ws.onmessage = null
+    ws.close()
+  }
   ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${selectedTimeframe.value}`)
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
@@ -314,7 +319,12 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (ws) ws.close()
+  if (ws) {
+    ws.onclose = null
+    ws.onerror = null
+    ws.onmessage = null
+    ws.close()
+  }
   if (chart) chart.remove()
 })
 
@@ -370,42 +380,44 @@ const cancelAllLayers = () => {
           <span>0.01</span>
         </div>
 
-        <div class="book-table">
-          <div class="book-head">
-            <span>Price</span>
-            <span>Amount</span>
-            <span>Total</span>
-          </div>
+        <ClientOnly>
+          <div class="book-table">
+            <div class="book-head">
+              <span>Price</span>
+              <span>Amount</span>
+              <span>Total</span>
+            </div>
 
-          <div class="book-side book-side--asks">
-            <div
-              v-for="(ask, index) in orderbookAsks"
-              :key="`ask-${index}`"
-              class="book-row"
-            >
-              <span class="price-sell">{{ ask.price.toFixed(2) }}</span>
-              <span>{{ ask.amount }}</span>
-              <span>{{ ask.total }}</span>
+            <div class="book-side book-side--asks">
+              <div
+                v-for="(ask, index) in orderbookAsks"
+                :key="`ask-${index}`"
+                class="book-row"
+              >
+                <span class="price-sell">{{ ask.price.toFixed(2) }}</span>
+                <span>{{ ask.amount }}</span>
+                <span>{{ ask.total }}</span>
+              </div>
+            </div>
+
+            <div class="book-spread">
+              <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
+              <span>Spread 0.09%</span>
+            </div>
+
+            <div class="book-side book-side--bids">
+              <div
+                v-for="(bid, index) in orderbookBids"
+                :key="`bid-${index}`"
+                class="book-row"
+              >
+                <span class="price-buy">{{ bid.price.toFixed(2) }}</span>
+                <span>{{ bid.amount }}</span>
+                <span>{{ bid.total }}</span>
+              </div>
             </div>
           </div>
-
-          <div class="book-spread">
-            <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
-            <span>Spread 0.09%</span>
-          </div>
-
-          <div class="book-side book-side--bids">
-            <div
-              v-for="(bid, index) in orderbookBids"
-              :key="`bid-${index}`"
-              class="book-row"
-            >
-              <span class="price-buy">{{ bid.price.toFixed(2) }}</span>
-              <span>{{ bid.amount }}</span>
-              <span>{{ bid.total }}</span>
-            </div>
-          </div>
-        </div>
+        </ClientOnly>
       </aside>
 
       <main class="trade-zone">
@@ -614,22 +626,24 @@ const cancelAllLayers = () => {
             <span>Live</span>
           </div>
 
-          <div class="trade-table">
-            <div class="trade-head">
-              <span>Price</span>
-              <span>Amount</span>
-              <span>Time</span>
+          <ClientOnly>
+            <div class="trade-table">
+              <div class="trade-head">
+                <span>Price</span>
+                <span>Amount</span>
+                <span>Time</span>
+              </div>
+              <div
+                v-for="(trade, index) in recentTrades"
+                :key="`trade-${index}`"
+                class="trade-row"
+              >
+                <span :class="trade.type === 'buy' ? 'price-buy' : 'price-sell'">{{ trade.price.toFixed(2) }}</span>
+                <span>{{ trade.amount }}</span>
+                <span>{{ trade.time }}</span>
+              </div>
             </div>
-            <div
-              v-for="(trade, index) in recentTrades"
-              :key="`trade-${index}`"
-              class="trade-row"
-            >
-              <span :class="trade.type === 'buy' ? 'price-buy' : 'price-sell'">{{ trade.price.toFixed(2) }}</span>
-              <span>{{ trade.amount }}</span>
-              <span>{{ trade.time }}</span>
-            </div>
-          </div>
+          </ClientOnly>
         </section>
 
         <section class="top-movers-panel terminal-panel">
