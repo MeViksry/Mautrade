@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"math/big"
 	"time"
@@ -70,12 +71,17 @@ func (v *Verifier) processPending(ctx context.Context) {
 		if err != nil {
 			v.logger.Info("gasfee verifier: tx verification failed", "deposit_id", dep.ID, "tx_id", txID, "error", err)
 
-			// Optional: We could mark it as failed immediately, or retry later.
-			// Let's mark it as failed if it's explicitly rejected by BscScan.
+			if errors.Is(err, bscscan.ErrNetwork) {
+				// Temporary network/API issue, leave it pending and retry later.
+				v.logger.Info("gasfee verifier: retryable network error, skipping for now", "deposit_id", dep.ID)
+				continue
+			}
+
+			// Otherwise, it's explicitly rejected by BscScan (e.g. ErrInvalidTransaction). Mark it as failed.
 			_, updateErr := v.store.SystemUpdateGasFeeDepositStatus(ctx, store.SystemUpdateGasFeeDepositStatusParams{
 				DepositID:      dep.ID,
 				Status:         "failed",
-				ResolutionNote: "Invalid transaction or network error: " + err.Error(),
+				ResolutionNote: "Invalid transaction: " + err.Error(),
 				Now:            time.Now().UTC(),
 			})
 			if updateErr != nil {
