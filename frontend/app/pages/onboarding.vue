@@ -393,7 +393,7 @@ const submitPayment = async () => {
           />
           <img
             v-show="qrLoaded"
-            :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${walletAddress}&color=FF5A00&bgcolor=000`"
+            :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${walletAddress}`"
             alt="Wallet QR Code"
             class="qr-image"
             @load="qrLoaded = true"
