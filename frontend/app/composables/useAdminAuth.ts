@@ -1,3 +1,14 @@
+export interface AdminUser {
+  id: string
+  email: string
+  displayName: string
+  role: string
+  otpEnabled: boolean
+  status: string
+  lastLoginAt?: string
+  createdAt: string
+}
+
 export const useAdminAuth = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
@@ -20,7 +31,7 @@ export const useAdminAuth = () => {
   }
 
   // State to hold the current admin user data
-  const adminUser = useState('admin_auth_user', () => null)
+  const adminUser = useState<AdminUser | null>('admin_auth_user', () => null)
 
   const loginAdmin = async (payload: { email: string, password: string, rememberMe?: boolean }) => {
     try {

@@ -1,7 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useState } from 'nuxt/app'
+import { useAdminAuth } from '~/composables/useAdminAuth'
+
 const isSidebarOpen = useState<boolean | null>('admin-sidebar-open', () => null)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
+
+const { adminUser } = useAdminAuth()
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
@@ -126,8 +132,8 @@ const toggleTheme = () => {
         <div class="user-profile">
           <div class="user-avatar" />
           <div class="user-info">
-            <span class="user-name">Admin Account</span>
-            <span class="user-id">Role: Superadmin</span>
+            <span class="user-name">{{ adminUser?.displayName || 'Admin Account' }}</span>
+            <span class="user-id">Role: {{ adminUser?.role === 'superadmin' ? 'Superadmin' : 'Admin' }}</span>
           </div>
         </div>
         <template #fallback>
