@@ -41,12 +41,15 @@ const countryShake = ref(false)
 const exchangeShake = ref(false)
 const qrLoaded = ref(false)
 
-const exchangeOptions = [
+const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
+const isLightMode = computed(() => theme.value === 'light')
+
+const exchangeOptions = computed(() => [
   { id: 'Binance', logo: '/UserDashboard/Binance_logo.svg' },
-  { id: 'OKX', logo: '/UserDashboard/OKX_logo_dark.svg' },
-  { id: 'Bybit', logo: '/UserDashboard/Bybit_logo_dark.svg' },
+  { id: 'OKX', logo: isLightMode.value ? '/UserDashboard/OKX_logo.svg' : '/UserDashboard/OKX_logo_dark.svg' },
+  { id: 'Bybit', logo: isLightMode.value ? '/UserDashboard/Bybit_logo.svg' : '/UserDashboard/Bybit_logo_dark.svg' },
   { id: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg' }
-]
+])
 
 const selectedCountryData = computed(() => {
   return countries.find(country => country.code === selectedCountry.value)
