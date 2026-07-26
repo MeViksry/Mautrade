@@ -409,7 +409,7 @@ FOR UPDATE`, params.DepositID).Scan(
 	if _, err := tx.Exec(ctx, `
 UPDATE gas_fee_deposits
 SET status = $2,
-    confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3 ELSE NULL END
+    confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3::timestamptz ELSE NULL END
 WHERE id = $1::uuid`, params.DepositID, status, now); err != nil {
 		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
 	}
@@ -565,7 +565,7 @@ FOR UPDATE`, params.DepositID).Scan(
 	if _, err := tx.Exec(ctx, `
 UPDATE gas_fee_deposits
 SET status = $2,
-    confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3 ELSE NULL END
+    confirmed_at = CASE WHEN $2 = 'confirmed' THEN $3::timestamptz ELSE NULL END
 WHERE id = $1::uuid`, params.DepositID, status, now); err != nil {
 		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
 	}
