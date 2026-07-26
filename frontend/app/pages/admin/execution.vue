@@ -186,8 +186,7 @@ const marketStats = computed<MarketStat[]>(() => [
   { label: '24H Change', value: selectedCoinMeta.value.change, tone: selectedCoinTrend.value },
   { label: 'Last Price', value: formattedLivePrice.value },
   { label: '24H Volume', value: selectedCoinMeta.value.volume ?? '-' },
-  { label: 'Quote', value: quoteAsset.value },
-  { label: 'Network', value: `${baseAsset.value} (5)` }
+  { label: 'Quote', value: quoteAsset.value }
 ])
 
 const marketRows = computed(() => {
@@ -391,17 +390,6 @@ const cancelAllLayers = () => {
           <strong :class="{ 'text-success': stat.tone === 'up', 'text-danger': stat.tone === 'down' }">{{ stat.value }}</strong>
         </div>
       </div>
-
-      <div class="market-actions">
-        <button type="button">
-          <UIcon name="lucide:activity" />
-          Live Feed
-        </button>
-        <button type="button">
-          <UIcon name="lucide:settings-2" />
-          Controls
-        </button>
-      </div>
     </section>
 
     <section class="terminal-grid">
@@ -544,11 +532,6 @@ const cancelAllLayers = () => {
                 <span>{{ baseAsset }}</span>
               </div>
 
-              <div class="ticket-summary">
-                <span>Available</span>
-                <strong>8,177.18 USDT</strong>
-              </div>
-
               <button
                 class="submit-order submit-order--buy"
                 type="button"
@@ -581,11 +564,6 @@ const cancelAllLayers = () => {
                   placeholder="0.00"
                 >
                 <span>{{ baseAsset }}</span>
-              </div>
-
-              <div class="ticket-summary">
-                <span>Locked</span>
-                <strong>0.00000000 {{ baseAsset }}</strong>
               </div>
 
               <button
