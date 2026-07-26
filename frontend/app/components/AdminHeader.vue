@@ -7,8 +7,14 @@ const isSidebarOpen = useState<boolean | null>('admin-sidebar-open', () => null)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
 
-const { adminUser } = useAdminAuth()
+const { adminUser, fetchAdminUser, tokenCookie } = useAdminAuth()
 
+await useAsyncData('admin-auth-header', async () => {
+  if (tokenCookie.value && !adminUser.value) {
+    await fetchAdminUser()
+  }
+  return true
+})
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
 }
