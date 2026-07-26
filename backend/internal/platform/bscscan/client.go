@@ -55,7 +55,7 @@ func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient
 	}
 	expectedRecipient = strings.ToLower(strings.TrimSpace(expectedRecipient))
 	expectedRecipient = strings.TrimPrefix(expectedRecipient, "0x")
-	
+
 	txID = strings.TrimSpace(txID)
 	if !strings.HasPrefix(txID, "0x") {
 		txID = "0x" + txID
