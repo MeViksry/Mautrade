@@ -66,7 +66,7 @@ const loadDeposits = async () => {
     }))
 
     depositsStats.value = {
-      totalDeposits: deposits.value.reduce((sum, d) => sum + d.amount, 0),
+      totalDeposits: deposits.value.filter(d => d.status === 'Confirmed').reduce((sum, d) => sum + d.amount, 0),
       pending: deposits.value.filter(d => d.status === 'Pending').length,
       verified: deposits.value.filter(d => d.status === 'Confirmed').length,
       rejected: deposits.value.filter(d => d.status === 'Rejected').length
