@@ -66,7 +66,8 @@ const selectedCoinMeta = computed<CoinOption>(() => {
 })
 
 const selectedCoinTrend = computed(() => {
-  return selectedCoinMeta.value.change.startsWith('-') ? 'down' : 'up'
+  const coin = coinOptions.value.find(c => c.symbol === selectedCoin.value) ?? coinOptions.value[0]!
+  return coin.change.startsWith('-') ? 'down' : 'up'
 })
 
 const initChart = () => {
@@ -182,12 +183,15 @@ const formattedLivePrice = computed(() => {
     : currentPrice.value.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
 })
 
-const marketStats = computed<MarketStat[]>(() => [
-  { label: '24H Change', value: selectedCoinMeta.value.change, tone: selectedCoinTrend.value },
-  { label: 'Last Price', value: formattedLivePrice.value },
-  { label: '24H Volume', value: selectedCoinMeta.value.volume ?? '-' },
-  { label: 'Quote', value: quoteAsset.value }
-])
+const marketStats = computed<MarketStat[]>(() => {
+  const coin = coinOptions.value.find(c => c.symbol === selectedCoin.value) ?? coinOptions.value[0]!
+  return [
+    { label: '24H Change', value: coin.change, tone: selectedCoinTrend.value },
+    { label: 'Last Price', value: formattedLivePrice.value },
+    { label: '24H Volume', value: coin.volume ?? '-' },
+    { label: 'Quote', value: quoteAsset.value }
+  ]
+})
 
 const marketRows = computed(() => {
   const selected = coinOptions.value.find(coin => coin.symbol === selectedCoin.value)
