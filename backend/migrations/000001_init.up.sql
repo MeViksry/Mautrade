@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS gas_fee_deposits (
   status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   confirmed_at TIMESTAMPTZ,
-  CONSTRAINT gas_fee_deposits_amount_min CHECK (amount >= 500),
+  CONSTRAINT gas_fee_deposits_amount_min CHECK (amount > 0),
   CONSTRAINT gas_fee_deposits_status_check CHECK (status IN ('pending', 'confirmed', 'rejected'))
 );
 
