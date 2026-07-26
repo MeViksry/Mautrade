@@ -1268,8 +1268,15 @@ const cancelAllLayers = () => {
   font-weight: 500;
 }
 
+.chart-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .chart-wrapper {
-  height: 390px;
+  flex: 1;
+  min-height: 390px;
   padding: 0.5rem 0.75rem 0.85rem;
 }
 
@@ -1668,7 +1675,7 @@ const cancelAllLayers = () => {
   }
 
   .chart-wrapper {
-    height: 320px;
+    min-height: 320px;
   }
 }
 
@@ -1710,7 +1717,7 @@ const cancelAllLayers = () => {
   }
 
   .chart-wrapper {
-    height: 260px;
+    min-height: 260px;
   }
 }
 </style>
