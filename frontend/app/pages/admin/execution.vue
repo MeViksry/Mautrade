@@ -319,26 +319,26 @@ onMounted(async () => {
   await loadHistoricalData(sym)
   connectWebSocket(sym)
 
-  tickersWs = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
+  const streams = coinOptions.value.map(c => c.symbol.replace('/', '').toLowerCase() + '@ticker').join('/')
+  tickersWs = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
   tickersWs.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data)
-      if (Array.isArray(data)) {
-        data.forEach((ticker: { s: string, c: string, P: string, v: string }) => {
-          const coin = coinOptions.value.find(c => c.symbol.replace('/', '') === ticker.s)
-          if (coin) {
-            const val = parseFloat(ticker.c)
-            coin.price = val >= 1000 ? val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : val.toString()
-            const changeVal = parseFloat(ticker.P)
-            coin.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%'
-            const vol = parseFloat(ticker.v)
-            let formattedVol = vol.toString()
-            if (vol >= 1e9) formattedVol = (vol / 1e9).toFixed(2) + 'B'
-            else if (vol >= 1e6) formattedVol = (vol / 1e6).toFixed(2) + 'M'
-            else if (vol >= 1e3) formattedVol = (vol / 1e3).toFixed(2) + 'K'
-            coin.volume = formattedVol + ' ' + coin.symbol.split('/')[0]
-          }
-        })
+      const payload = JSON.parse(event.data)
+      if (payload.data && payload.data.s) {
+        const ticker = payload.data
+        const coin = coinOptions.value.find(c => c.symbol.replace('/', '') === ticker.s)
+        if (coin) {
+          const val = parseFloat(ticker.c)
+          coin.price = val >= 1000 ? val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : val.toString()
+          const changeVal = parseFloat(ticker.P)
+          coin.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%'
+          const vol = parseFloat(ticker.v)
+          let formattedVol = vol.toString()
+          if (vol >= 1e9) formattedVol = (vol / 1e9).toFixed(2) + 'B'
+          else if (vol >= 1e6) formattedVol = (vol / 1e6).toFixed(2) + 'M'
+          else if (vol >= 1e3) formattedVol = (vol / 1e3).toFixed(2) + 'K'
+          coin.volume = formattedVol + ' ' + coin.symbol.split('/')[0]
+        }
       }
     } catch (error) {
       console.error('Ticker parsing error', error)
