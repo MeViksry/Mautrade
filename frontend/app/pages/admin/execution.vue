@@ -52,6 +52,7 @@ const orderPrice = ref('')
 const orderAmount = ref('')
 
 const currentPrice = ref(65000)
+const currentCandle = ref<CandlestickData | null>(null)
 const binanceSymbol = computed(() => selectedCoin.value.replace('/', '').toLowerCase())
 const chartContainer = ref<HTMLElement | null>(null)
 let chart: IChartApi | null = null
@@ -125,7 +126,9 @@ const loadHistoricalData = async (symbol: string) => {
       candlestickSeries.setData(formattedData)
     }
     if (formattedData.length > 0) {
-      currentPrice.value = formattedData[formattedData.length - 1].close
+      const latest = formattedData[formattedData.length - 1]
+      currentPrice.value = latest.close
+      currentCandle.value = latest
     }
   } catch (err) {
     console.error('Failed to load historical data', err)
@@ -155,6 +158,7 @@ const connectWebSocket = (symbol: string) => {
         candlestickSeries.update(candle)
       }
       currentPrice.value = candle.close
+      currentCandle.value = candle
     }
   }
 }
@@ -477,10 +481,10 @@ const cancelAllLayers = () => {
           </div>
 
           <div class="chart-meta">
-            <span>Open <strong>64,834.21</strong></span>
-            <span>High <strong>64,967.25</strong></span>
-            <span>Low <strong>63,887.73</strong></span>
-            <span>MA(7) <strong>64,206.98</strong></span>
+            <span>Open <strong v-if="currentCandle">{{ currentCandle.open.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
+            <span>High <strong v-if="currentCandle">{{ currentCandle.high.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
+            <span>Low <strong v-if="currentCandle">{{ currentCandle.low.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
+            <span>Close <strong v-if="currentCandle">{{ currentCandle.close.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
           </div>
 
           <div class="chart-wrapper">
