@@ -1,6 +1,7 @@
 package bscscan
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,9 +20,11 @@ var (
 const (
 	USDTContractAddress = "0x55d398326f99059ff775485246999027b3197955"
 	TransferMethodID    = "0xa9059cbb"
+	RPCEndpoint         = "https://bsc-dataseed.binance.org/"
 )
 
 type Client struct {
+	// apiKey is kept for backwards compatibility but no longer strictly required for RPC.
 	apiKey     string
 	httpClient *http.Client
 }
@@ -30,29 +33,38 @@ func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey: apiKey,
 		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 15 * time.Second,
 		},
 	}
 }
 
-type TxReceiptResponse struct {
+type jsonrpcRequest struct {
+	JSONRPC string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	Params  []any  `json:"params"`
+	ID      int    `json:"id"`
+}
+
+type txReceiptResponse struct {
 	Result *struct {
 		Status string `json:"status"` // "0x1" for success, "0x0" for failure
 	} `json:"result"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
-type TxByHashResponse struct {
+type txByHashResponse struct {
 	Result *struct {
 		To    string `json:"to"`
 		Input string `json:"input"`
 	} `json:"result"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
-// VerifyUSDTTransfer verifies if a given TXID is a successful USDT BEP-20 transfer to the specified wallet, and returns the amount transferred (in 18 decimals).
 func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient string) (*big.Int, error) {
-	if c.apiKey == "" {
-		return nil, fmt.Errorf("bscscan: api key is empty")
-	}
 	expectedRecipient = strings.ToLower(strings.TrimSpace(expectedRecipient))
 	expectedRecipient = strings.TrimPrefix(expectedRecipient, "0x")
 
@@ -60,19 +72,32 @@ func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient
 	if !strings.HasPrefix(txID, "0x") {
 		txID = "0x" + txID
 	}
+	if len(txID) != 66 {
+		return nil, fmt.Errorf("%w: invalid txhash length (got %d)", ErrInvalidTransaction, len(txID))
+	}
 
 	// 1. Check receipt to ensure it was successful
-	receiptURL := fmt.Sprintf("https://api.bscscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=%s&apikey=%s", txID, c.apiKey)
-	req1, _ := http.NewRequestWithContext(ctx, http.MethodGet, receiptURL, nil)
+	receiptReqBody, _ := json.Marshal(jsonrpcRequest{
+		JSONRPC: "2.0",
+		Method:  "eth_getTransactionReceipt",
+		Params:  []any{txID},
+		ID:      1,
+	})
+
+	req1, _ := http.NewRequestWithContext(ctx, http.MethodPost, RPCEndpoint, bytes.NewReader(receiptReqBody))
+	req1.Header.Set("Content-Type", "application/json")
 	res1, err := c.httpClient.Do(req1)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
 	}
 	defer res1.Body.Close()
 
-	var receiptData TxReceiptResponse
+	var receiptData txReceiptResponse
 	if err := json.NewDecoder(res1.Body).Decode(&receiptData); err != nil {
 		return nil, fmt.Errorf("%w: decode receipt: %v", ErrNetwork, err)
+	}
+	if receiptData.Error != nil {
+		return nil, fmt.Errorf("%w: rpc error: %s", ErrNetwork, receiptData.Error.Message)
 	}
 	if receiptData.Result == nil {
 		return nil, fmt.Errorf("%w: transaction receipt not found (not mined yet or invalid txid)", ErrNetwork)
@@ -85,17 +110,26 @@ func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient
 	}
 
 	// 2. Check transaction details to ensure it's USDT and the correct amount/recipient
-	txURL := fmt.Sprintf("https://api.bscscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=%s&apikey=%s", txID, c.apiKey)
-	req2, _ := http.NewRequestWithContext(ctx, http.MethodGet, txURL, nil)
+	txReqBody, _ := json.Marshal(jsonrpcRequest{
+		JSONRPC: "2.0",
+		Method:  "eth_getTransactionByHash",
+		Params:  []any{txID},
+		ID:      2,
+	})
+	req2, _ := http.NewRequestWithContext(ctx, http.MethodPost, RPCEndpoint, bytes.NewReader(txReqBody))
+	req2.Header.Set("Content-Type", "application/json")
 	res2, err := c.httpClient.Do(req2)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
 	}
 	defer res2.Body.Close()
 
-	var txData TxByHashResponse
+	var txData txByHashResponse
 	if err := json.NewDecoder(res2.Body).Decode(&txData); err != nil {
 		return nil, fmt.Errorf("%w: decode tx: %v", ErrNetwork, err)
+	}
+	if txData.Error != nil {
+		return nil, fmt.Errorf("%w: rpc error: %s", ErrNetwork, txData.Error.Message)
 	}
 	if txData.Result == nil {
 		return nil, fmt.Errorf("%w: transaction details not found", ErrNetwork)
@@ -110,10 +144,7 @@ func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient
 		return nil, fmt.Errorf("%w: not a standard ERC20 transfer (invalid input data length or method id)", ErrInvalidTransaction)
 	}
 
-	// input is: method_id (10 chars) + recipient (64 chars) + amount (64 chars)
-	// Example: 0xa9059cbb 000000000000000000000000 1234567890123456789012345678901234567890 00000...
 	recipientData := input[10:74]
-	// Address is the last 40 chars of the 64 char recipient block
 	recipientHex := recipientData[24:]
 
 	if recipientHex != expectedRecipient {
