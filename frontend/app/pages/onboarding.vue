@@ -221,7 +221,7 @@ const submitPayment = async () => {
   <main class="onboarding-page">
     <section class="onboarding-panel">
       <div class="onboarding-brand">
-        <span>MAUTRADE<span /></span>
+        <span>MAUTRADE<span class="onboarding-brand__dot" /></span>
       </div>
 
       <div class="onboarding-heading">
@@ -504,7 +504,7 @@ const submitPayment = async () => {
   letter-spacing: 0.15em;
 }
 
-.onboarding-brand span {
+.onboarding-brand__dot {
   width: 6px;
   height: 6px;
   background: var(--accent);
