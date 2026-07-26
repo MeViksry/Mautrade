@@ -192,12 +192,6 @@ const marketRows = computed(() => {
   return selected ? [selected, ...rest].slice(0, 8) : coinOptions.slice(0, 8)
 })
 
-const topMovers = [
-  { symbol: 'BANK/USDT', change: '+56.89%' },
-  { symbol: 'TLM/USDT', change: '+55.88%' },
-  { symbol: 'HOME/USDT', change: '+9.47%' }
-]
-
 const orderbookAsks = computed(() => {
   return Array.from({ length: 13 }, (_, i) => ({
     price: currentPrice.value + (i + 1) * 2,
@@ -636,24 +630,6 @@ const cancelAllLayers = () => {
               </div>
             </div>
           </ClientOnly>
-        </section>
-
-        <section class="top-movers-panel terminal-panel">
-          <div class="terminal-panel__header">
-            <h2>Top Movers</h2>
-            <span>24H</span>
-          </div>
-
-          <div class="mover-list">
-            <div
-              v-for="item in topMovers"
-              :key="item.symbol"
-              class="mover-row"
-            >
-              <span>{{ item.symbol }}</span>
-              <strong>{{ item.change }}</strong>
-            </div>
-          </div>
         </section>
       </aside>
     </section>
