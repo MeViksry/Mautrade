@@ -319,12 +319,9 @@ func validateOnboardingRequest(req onboardingRequest) error {
 		return fmt.Errorf("at least one exchange preference is required")
 	}
 	amount := strings.TrimSpace(firstNonEmpty(req.GasFeeDepositAmount, req.Amount))
-	parsed, err := qdecimal.Parse(amount)
+	_, err := qdecimal.Parse(amount)
 	if err != nil {
 		return fmt.Errorf("gas_fee_deposit_amount must be decimal")
-	}
-	if parsed.Cmp(qdecimal.MustParse("500")) < 0 {
-		return fmt.Errorf("gas_fee_deposit_amount must be at least 500 USDT")
 	}
 	return nil
 }

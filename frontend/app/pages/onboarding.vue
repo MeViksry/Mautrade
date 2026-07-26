@@ -31,16 +31,17 @@ const minDepositUsdt = ref(500)
 
 const currentStep = ref(1)
 const txid = ref('')
-const txidShake = ref(false)
-const walletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
-
 const selectedExchanges = ref<string[]>([])
+const txidShake = ref(false)
 const submitAttempted = ref(false)
+const errorMessage = ref('')
+const isSubmitting = ref(false)
 const depositShake = ref(false)
 const ageShake = ref(false)
 const countryShake = ref(false)
 const exchangeShake = ref(false)
 const qrLoaded = ref(false)
+const walletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
 
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
@@ -205,12 +206,14 @@ const nextStep = () => {
 
 const submitPayment = async () => {
   submitAttempted.value = true
+  errorMessage.value = ''
 
   if (depositInvalid.value) triggerShake('deposit')
   if (txidInvalid.value) triggerTxidShake()
 
   if (depositInvalid.value || txidInvalid.value) return
 
+  isSubmitting.value = true
   try {
     await completeOnboarding({
       age: Number(age.value),
@@ -222,9 +225,12 @@ const submitPayment = async () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     })
     await navigateTo('/dashboard')
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as Error
     console.error('Failed to complete onboarding:', error)
-    // could display error toast here
+    errorMessage.value = error.message || 'Failed to verify payment. Please check your TXID and try again.'
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -460,10 +466,19 @@ const submitPayment = async () => {
           >
         </div>
 
+        <div
+          v-if="errorMessage"
+          class="error-message"
+        >
+          <UIcon name="lucide:alert-circle" />
+          {{ errorMessage }}
+        </div>
+
         <div class="payment-actions">
           <button
             type="button"
             class="btn-back"
+            :disabled="isSubmitting"
             @click="currentStep = 1"
           >
             Back
@@ -471,9 +486,14 @@ const submitPayment = async () => {
           <button
             class="onboarding-submit"
             type="submit"
+            :disabled="isSubmitting"
           >
-            Verify Payment
-            <UIcon name="lucide:check" />
+            <span v-if="isSubmitting">Verifying...</span>
+            <span v-else>Verify Payment</span>
+            <UIcon
+              v-if="!isSubmitting"
+              name="lucide:check"
+            />
           </button>
         </div>
       </form>
@@ -1098,6 +1118,19 @@ const submitPayment = async () => {
 .btn-back:hover {
   background: var(--charcoal);
   color: var(--text);
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 90, 0, 0.1);
+  color: var(--accent);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-top: 16px;
+  margin-bottom: 8px;
 }
 
 @keyframes onboarding-shake {
