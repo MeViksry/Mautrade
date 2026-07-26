@@ -55,6 +55,11 @@ func (c *Client) VerifyUSDTTransfer(ctx context.Context, txID, expectedRecipient
 	}
 	expectedRecipient = strings.ToLower(strings.TrimSpace(expectedRecipient))
 	expectedRecipient = strings.TrimPrefix(expectedRecipient, "0x")
+	
+	txID = strings.TrimSpace(txID)
+	if !strings.HasPrefix(txID, "0x") {
+		txID = "0x" + txID
+	}
 
 	// 1. Check receipt to ensure it was successful
 	receiptURL := fmt.Sprintf("https://api.bscscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=%s&apikey=%s", txID, c.apiKey)
