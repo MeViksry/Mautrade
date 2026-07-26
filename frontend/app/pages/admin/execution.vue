@@ -16,6 +16,7 @@ useSeoMeta({
 })
 
 const selectedCoin = ref('BTC/USDT')
+const activeChartTab = ref('Chart')
 
 type CoinOption = {
   symbol: string
@@ -200,35 +201,64 @@ const marketRows = computed(() => {
   return selected ? [selected, ...rest].slice(0, 8) : coinOptions.value.slice(0, 8)
 })
 
+const priceStep = computed(() => {
+  const p = currentPrice.value
+  if (p > 1000) return 1.0
+  if (p > 100) return 0.1
+  if (p > 1) return 0.01
+  if (p > 0.01) return 0.0001
+  return 0.000001
+})
+
+const orderbookTickSize = computed(() => {
+  return priceStep.value.toString()
+})
+
+const formatPrice = (price: number) => {
+  return price < 1
+    ? price.toLocaleString(undefined, { maximumFractionDigits: 8, minimumFractionDigits: 4 })
+    : price.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
+}
+
 const orderbookAsks = computed(() => {
-  return Array.from({ length: 13 }, (_, i) => ({
-    price: currentPrice.value + (i + 1) * 2,
-    amount: (Math.random() * 2).toFixed(4),
-    total: (Math.random() * 900).toFixed(2)
+  return Array.from({ length: 15 }).map((_, i) => ({
+    price: currentPrice.value + (i + 1) * priceStep.value,
+    amount: (Math.random() * (5000 / currentPrice.value)).toFixed(4),
+    total: (Math.random() * 800 + 100).toFixed(2)
   })).reverse()
 })
 
 const orderbookBids = computed(() => {
-  return Array.from({ length: 13 }, (_, i) => ({
-    price: currentPrice.value - (i + 1) * 2,
-    amount: (Math.random() * 2).toFixed(4),
-    total: (Math.random() * 900).toFixed(2)
+  return Array.from({ length: 15 }).map((_, i) => ({
+    price: currentPrice.value - (i + 1) * priceStep.value,
+    amount: (Math.random() * (5000 / currentPrice.value)).toFixed(4),
+    total: (Math.random() * 800 + 100).toFixed(2)
   }))
 })
 
-const recentTrades = ref(Array.from({ length: 16 }, (_, i) => ({
-  time: new Date(Date.now() - i * 5000).toLocaleTimeString(),
-  price: 65090 + (Math.random() - 0.5) * 20,
-  amount: (Math.random() * 1.5).toFixed(4),
-  type: Math.random() > 0.5 ? 'buy' : 'sell'
-})))
+const generateRecentTrades = (basePrice: number) => {
+  return Array.from({ length: 16 }, (_, i) => ({
+    time: new Date(Date.now() - i * 5000).toLocaleTimeString(),
+    price: basePrice + (Math.random() - 0.5) * (priceStep.value * 10),
+    amount: (Math.random() * (5000 / basePrice)).toFixed(4),
+    type: Math.random() > 0.5 ? 'buy' : 'sell'
+  }))
+}
+
+const recentTrades = ref(generateRecentTrades(65000))
+
+watch(selectedCoin, () => {
+  setTimeout(() => {
+    recentTrades.value = generateRecentTrades(currentPrice.value)
+  }, 500)
+})
 
 watch(currentPrice, (newVal, oldVal) => {
   if (newVal !== oldVal && oldVal !== 0) {
     recentTrades.value.unshift({
       time: new Date().toLocaleTimeString(),
       price: newVal,
-      amount: (Math.random() * 1.5).toFixed(4),
+      amount: (Math.random() * (5000 / newVal)).toFixed(4),
       type: newVal >= oldVal ? 'buy' : 'sell'
     })
     if (recentTrades.value.length > 16) {
@@ -400,7 +430,7 @@ const cancelAllLayers = () => {
       <aside class="orderbook-panel terminal-panel">
         <div class="terminal-panel__header">
           <h2>Order Book</h2>
-          <span>0.01</span>
+          <span>{{ orderbookTickSize }}</span>
         </div>
 
         <ClientOnly>
@@ -417,7 +447,7 @@ const cancelAllLayers = () => {
                 :key="`ask-${index}`"
                 class="book-row"
               >
-                <span class="price-sell">{{ ask.price.toFixed(2) }}</span>
+                <span class="price-sell">{{ formatPrice(ask.price) }}</span>
                 <span>{{ ask.amount }}</span>
                 <span>{{ ask.total }}</span>
               </div>
@@ -433,7 +463,7 @@ const cancelAllLayers = () => {
                 :key="`bid-${index}`"
                 class="book-row"
               >
-                <span class="price-buy">{{ bid.price.toFixed(2) }}</span>
+                <span class="price-buy">{{ formatPrice(bid.price) }}</span>
                 <span>{{ bid.amount }}</span>
                 <span>{{ bid.total }}</span>
               </div>
@@ -446,16 +476,28 @@ const cancelAllLayers = () => {
         <section class="chart-panel terminal-panel">
           <div class="terminal-panel__header chart-header">
             <div class="chart-tabs">
-              <button class="active">
+              <button
+                :class="{ active: activeChartTab === 'Chart' }"
+                @click="activeChartTab = 'Chart'"
+              >
                 Chart
               </button>
-              <button>
+              <button
+                :class="{ active: activeChartTab === 'Info' }"
+                @click="activeChartTab = 'Info'"
+              >
                 Info
               </button>
-              <button>
+              <button
+                :class="{ active: activeChartTab === 'Data' }"
+                @click="activeChartTab = 'Data'"
+              >
                 Data
               </button>
-              <button>
+              <button
+                :class="{ active: activeChartTab === 'Analysis' }"
+                @click="activeChartTab = 'Analysis'"
+              >
                 Analysis
               </button>
             </div>
@@ -472,18 +514,76 @@ const cancelAllLayers = () => {
             </div>
           </div>
 
-          <div class="chart-meta">
+          <div
+            v-show="activeChartTab === 'Chart'"
+            class="chart-meta"
+          >
             <span>Open <strong v-if="currentCandle">{{ currentCandle.open.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
             <span>High <strong v-if="currentCandle">{{ currentCandle.high.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
             <span>Low <strong v-if="currentCandle">{{ currentCandle.low.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
             <span>Close <strong v-if="currentCandle">{{ currentCandle.close.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}</strong><strong v-else>...</strong></span>
           </div>
 
-          <div class="chart-wrapper">
+          <div
+            v-show="activeChartTab === 'Chart'"
+            class="chart-wrapper"
+          >
             <div
               ref="chartContainer"
               style="width: 100%; height: 100%;"
             />
+          </div>
+
+          <div
+            v-if="activeChartTab === 'Info'"
+            class="tab-info-content"
+          >
+            <div class="info-card">
+              <div class="info-header">
+                <div class="coin-icon">
+                  <img
+                    :src="`https://assets.coincap.io/assets/icons/${selectedCoin.split('/')[0]?.toLowerCase() || 'btc'}@2x.png`"
+                    :alt="selectedCoin"
+                    @error="$event.target.src='https://assets.coincap.io/assets/icons/btc@2x.png'"
+                  >
+                </div>
+                <div>
+                  <h3>{{ coinOptions.find(c => c.symbol === selectedCoin)?.name || selectedCoin.split('/')[0] }}</h3>
+                  <span>{{ selectedCoin }}</span>
+                </div>
+              </div>
+              <p class="info-desc">
+                {{ coinOptions.find(c => c.symbol === selectedCoin)?.name || selectedCoin.split('/')[0] }} is traded on the spot market against {{ selectedCoin.split('/')[1] }}. This asset is subject to market volatility.
+              </p>
+
+              <div class="info-grid">
+                <div class="info-item">
+                  <label>Current Price</label>
+                  <strong>{{ coinOptions.find(c => c.symbol === selectedCoin)?.price || '...' }} USDT</strong>
+                </div>
+                <div class="info-item">
+                  <label>24H Change</label>
+                  <strong :class="(coinOptions.find(c => c.symbol === selectedCoin)?.change || '').startsWith('-') ? 'text-red' : 'text-green'">
+                    {{ coinOptions.find(c => c.symbol === selectedCoin)?.change || '...' }}
+                  </strong>
+                </div>
+                <div class="info-item">
+                  <label>24H Volume</label>
+                  <strong>{{ coinOptions.find(c => c.symbol === selectedCoin)?.volume || '...' }}</strong>
+                </div>
+                <div class="info-item">
+                  <label>Network</label>
+                  <strong>{{ selectedCoin.split('/')[0] }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="!['Chart', 'Info'].includes(activeChartTab)"
+            class="tab-placeholder"
+          >
+            <p>{{ activeChartTab }} features are currently under development.</p>
           </div>
         </section>
 
@@ -642,7 +742,7 @@ const cancelAllLayers = () => {
                 :key="`trade-${index}`"
                 class="trade-row"
               >
-                <span :class="trade.type === 'buy' ? 'price-buy' : 'price-sell'">{{ trade.price.toFixed(2) }}</span>
+                <span :class="trade.type === 'buy' ? 'price-buy' : 'price-sell'">{{ formatPrice(trade.price) }}</span>
                 <span>{{ trade.amount }}</span>
                 <span>{{ trade.time }}</span>
               </div>
@@ -1262,8 +1362,109 @@ const cancelAllLayers = () => {
 
 .chart-wrapper {
   flex: 1;
-  min-height: 390px;
+  min-height: 380px;
   padding: 0.5rem 0.75rem 0.85rem;
+}
+
+.tab-info-content {
+  flex: 1;
+  display: flex;
+  min-height: 380px;
+  padding: 1.5rem;
+}
+
+.info-card {
+  width: 100%;
+  background: var(--charcoal);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.info-header h3 {
+  margin: 0 0 0.2rem 0;
+  color: var(--text);
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.25rem;
+}
+
+.info-header span {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.coin-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.coin-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.info-desc {
+  color: var(--silver);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.info-item label {
+  color: var(--text-mute);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1.1rem;
+}
+
+.tab-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .order-entry {
