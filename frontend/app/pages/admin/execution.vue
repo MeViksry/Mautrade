@@ -429,7 +429,6 @@ const cancelAllLayers = () => {
 
             <div class="book-spread">
               <strong>{{ currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) }}</strong>
-              <span>Spread 0.09%</span>
             </div>
 
             <div class="book-side book-side--bids">
