@@ -251,15 +251,6 @@ if [ -n "${DB_PASSWORD:-}" ]; then
     audit_log "db_password_injected" "status=success"
 fi
 
-if [ -n "${BSCSCAN_API_KEY:-}" ]; then
-    if grep -q "^BSCSCAN_API_KEY=" "$PROJECT_DIR/backend/.env"; then
-        sed -i "s|^BSCSCAN_API_KEY=.*|BSCSCAN_API_KEY=${BSCSCAN_API_KEY}|" "$PROJECT_DIR/backend/.env"
-    else
-        echo "BSCSCAN_API_KEY=${BSCSCAN_API_KEY}" >> "$PROJECT_DIR/backend/.env"
-    fi
-    echo -e "${GREEN}  ✓ Injected BSCSCAN_API_KEY into backend/.env${NC}"
-    audit_log "bscscan_api_key_injected" "status=success"
-fi
 
 if [ -n "${GAS_FEE_DEPOSIT_ADDRESS:-}" ]; then
     if grep -q "^GAS_FEE_DEPOSIT_ADDRESS=" "$PROJECT_DIR/.env"; then

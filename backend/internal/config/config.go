@@ -32,7 +32,6 @@ type Config struct {
 	SMTPUsername     string
 	SMTPPassword     string
 	SMTPFrom         string
-	BscScanAPIKey    string
 }
 
 func Load() (Config, error) {
@@ -73,7 +72,6 @@ func Load() (Config, error) {
 		SMTPUsername:     strings.TrimSpace(stringEnv("SMTP_USERNAME", "")),
 		SMTPPassword:     strings.TrimSpace(stringEnv("SMTP_PASSWORD", "")),
 		SMTPFrom:         strings.TrimSpace(stringEnv("SMTP_FROM", "verify@mautrade.com")),
-		BscScanAPIKey:    strings.TrimSpace(stringEnv("BSCSCAN_API_KEY", "")),
 	}, nil
 }
 

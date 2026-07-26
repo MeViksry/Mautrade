@@ -61,14 +61,9 @@ func main() {
 	}
 
 	dashboardStore := store.NewDashboardStore(db)
-	verifier := workers.NewVerifier(dashboardStore, cfg.BscScanAPIKey, cfg.GasFeeDepositAddress, logger)
+	verifier := workers.NewVerifier(dashboardStore, cfg.GasFeeDepositAddress, logger)
 	go verifier.Start(rootCtx)
-
-	if cfg.BscScanAPIKey != "" {
-		logger.Info("gasfee verifier started")
-	} else {
-		logger.Warn("BSCSCAN_API_KEY is not set, real gasfee verification is disabled")
-	}
+	logger.Info("gasfee verifier started using public rpc")
 
 	server := &http.Server{
 		Addr:    cfg.HTTPAddr,

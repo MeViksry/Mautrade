@@ -19,10 +19,10 @@ type Verifier struct {
 	wallet string
 }
 
-func NewVerifier(st *store.DashboardStore, apiKey, walletAddress string, logger *slog.Logger) *Verifier {
+func NewVerifier(st *store.DashboardStore, walletAddress string, logger *slog.Logger) *Verifier {
 	return &Verifier{
 		store:  st,
-		client: bscscan.NewClient(apiKey),
+		client: bscscan.NewClient(),
 		logger: logger,
 		wallet: walletAddress,
 	}

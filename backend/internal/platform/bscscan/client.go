@@ -24,14 +24,11 @@ const (
 )
 
 type Client struct {
-	// apiKey is kept for backwards compatibility but no longer strictly required for RPC.
-	apiKey     string
 	httpClient *http.Client
 }
 
-func NewClient(apiKey string) *Client {
+func NewClient() *Client {
 	return &Client{
-		apiKey: apiKey,
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
