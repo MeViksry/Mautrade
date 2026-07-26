@@ -27,6 +27,7 @@ const selectedCountry = ref('ID')
 const copied = ref(false)
 const age = ref<number | null>(null)
 const depositAmount = ref(500)
+const minDepositUsdt = ref(500)
 
 const currentStep = ref(1)
 const txid = ref('')
@@ -67,7 +68,7 @@ const filteredCountries = computed(() => {
 
 const countryInvalid = computed(() => !selectedCountry.value)
 const ageInvalid = computed(() => !age.value || age.value < 18)
-const depositInvalid = computed(() => Number(depositAmount.value) < 500)
+const depositInvalid = computed(() => Number(depositAmount.value) < minDepositUsdt.value)
 const exchangeInvalid = computed(() => selectedExchanges.value.length === 0)
 const onboardingBlocked = computed(() => countryInvalid.value || ageInvalid.value || exchangeInvalid.value)
 const txidInvalid = computed(() => currentStep.value === 2 && !txid.value.trim())
@@ -123,8 +124,19 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
+  try {
+    const data = await $fetch<{ minDepositUsdt: number }>(`${useRuntimeConfig().public.apiBase}/settings`)
+    if (data && data.minDepositUsdt) {
+      minDepositUsdt.value = data.minDepositUsdt
+      if (depositAmount.value === 500) {
+        depositAmount.value = data.minDepositUsdt
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch settings', e)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -134,8 +146,8 @@ onBeforeUnmount(() => {
 const { completeOnboarding } = useAuth()
 
 const handleDepositBlur = () => {
-  if (!depositAmount.value || depositAmount.value < 500) {
-    depositAmount.value = 500
+  if (!depositAmount.value || depositAmount.value < minDepositUsdt.value) {
+    depositAmount.value = minDepositUsdt.value
     triggerShake('deposit')
   }
 }
@@ -370,7 +382,7 @@ const submitPayment = async () => {
       >
         <div class="payment-instructions">
           <p>
-            To initialize your dashboard, please deposit a minimum of <strong>{{ depositAmount }} USDT</strong> (BEP-20) to the following address:
+            To initialize your dashboard, please deposit a minimum of <strong>{{ minDepositUsdt }} USDT</strong> (BEP-20) to the following address:
           </p>
         </div>
 
@@ -421,7 +433,7 @@ const submitPayment = async () => {
               v-model.number="depositAmount"
               name="depositAmount"
               type="number"
-              min="500"
+              :min="minDepositUsdt"
               step="1"
               @blur="handleDepositBlur"
             >

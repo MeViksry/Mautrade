@@ -14,7 +14,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.API_BASE || 'http://localhost:8080/api/v1',
-      gasFeeDepositAddress: process.env.GAS_FEE_DEPOSIT_ADDRESS
+      gasFeeDepositAddress: process.env.GAS_FEE_DEPOSIT_ADDRESS || 'MAUTRADE-USDT-DEPOSIT-PENDING'
     }
   },
   srcDir: 'app/',
