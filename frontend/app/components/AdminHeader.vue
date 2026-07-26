@@ -138,7 +138,7 @@ const toggleTheme = () => {
         <div class="user-profile">
           <div class="user-avatar" />
           <div class="user-info">
-            <span class="user-name">{{ adminUser?.displayName || 'Admin Account' }}</span>
+            <span class="user-name">{{ adminUser?.displayName || adminUser?.email || 'Admin Account' }}</span>
             <span class="user-id">Role: {{ adminUser?.role === 'superadmin' ? 'Superadmin' : 'Admin' }}</span>
           </div>
         </div>

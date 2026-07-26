@@ -1104,7 +1104,7 @@ const cancelAllLayers = () => {
 
 .watchlist-panel {
   position: relative;
-  z-index: 36;
+  z-index: 15;
   overflow: visible;
 }
 
@@ -1257,14 +1257,14 @@ const cancelAllLayers = () => {
 
 .order-entry {
   position: relative;
-  z-index: 24;
+  z-index: 14;
   min-height: 214px;
   overflow: visible;
 }
 
 .order-entry__bar {
   position: relative;
-  z-index: 30;
+  z-index: 15;
   display: flex;
   align-items: center;
   justify-content: space-between;
