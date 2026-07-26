@@ -2,15 +2,27 @@ export const useAdminAuth = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
   const tokenCookie = useCookie<string | null>('admin_auth_token', {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
     secure: !import.meta.dev,
     sameSite: 'lax'
   })
 
+  const setAdminAuthCookie = (token: string, rememberMe?: boolean) => {
+    const opts: { secure: boolean, sameSite: 'lax', maxAge?: number } = {
+      secure: !import.meta.dev,
+      sameSite: 'lax'
+    }
+    if (rememberMe) {
+      opts.maxAge = 30 * 24 * 60 * 60 // 30 days
+    }
+    const c = useCookie<string | null>('admin_auth_token', opts)
+    c.value = token
+    tokenCookie.value = token
+  }
+
   // State to hold the current admin user data
   const adminUser = useState('admin_auth_user', () => null)
 
-  const loginAdmin = async (payload: { email: string, password: string }) => {
+  const loginAdmin = async (payload: { email: string, password: string, rememberMe?: boolean }) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await $fetch<any>(`${apiBase}/admin/auth/login`, {
@@ -19,7 +31,7 @@ export const useAdminAuth = () => {
       })
 
       if (response.session?.token) {
-        tokenCookie.value = response.session.token
+        setAdminAuthCookie(response.session.token, payload.rememberMe)
         adminUser.value = response.admin
       }
       return { success: true }

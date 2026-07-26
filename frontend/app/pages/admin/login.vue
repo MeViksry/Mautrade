@@ -35,7 +35,7 @@ const submitLogin = async () => {
   try {
     isLoading.value = true
     errorMsg.value = ''
-    await loginAdmin({ email: email.value, password: password.value })
+    await loginAdmin({ email: email.value, password: password.value, rememberMe: rememberMe.value })
     await navigateTo('/admin')
   } catch (err: unknown) {
     if (err instanceof Error) {

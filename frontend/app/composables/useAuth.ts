@@ -16,10 +16,22 @@ export const useAuth = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
   const tokenCookie = useCookie<string | null>('auth_token', {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
     secure: !import.meta.dev,
     sameSite: 'lax'
   })
+
+  const setAuthCookie = (token: string, rememberMe?: boolean) => {
+    const opts: { secure: boolean, sameSite: 'lax', maxAge?: number } = {
+      secure: !import.meta.dev,
+      sameSite: 'lax'
+    }
+    if (rememberMe) {
+      opts.maxAge = 30 * 24 * 60 * 60 // 30 days
+    }
+    const c = useCookie<string | null>('auth_token', opts)
+    c.value = token
+    tokenCookie.value = token
+  }
 
   // State to hold the current user data
   const user = useState<AuthUser | null>('auth_user', () => null)
@@ -31,7 +43,7 @@ export const useAuth = () => {
     return user.value?.emailVerified && user.value?.onboardingCompleted
   })
 
-  const login = async (payload: { email: string, password: string }) => {
+  const login = async (payload: { email: string, password: string, rememberMe?: boolean }) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await $fetch<any>(`${apiBase}/auth/login`, {
@@ -48,7 +60,7 @@ export const useAuth = () => {
       }
 
       if (response.session?.token) {
-        tokenCookie.value = response.session.token
+        setAuthCookie(response.session.token, payload.rememberMe)
         user.value = response.user
       }
       return { success: true }
@@ -87,7 +99,7 @@ export const useAuth = () => {
     }
   }
 
-  const verifyOtp = async (payload: { email: string, code: string, purpose: string }) => {
+  const verifyOtp = async (payload: { email: string, code: string, purpose: string, rememberMe?: boolean }) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await $fetch<any>(`${apiBase}/auth/verify-otp`, {
@@ -96,7 +108,7 @@ export const useAuth = () => {
       })
 
       if (response.session?.token) {
-        tokenCookie.value = response.session.token
+        setAuthCookie(response.session.token, payload.rememberMe)
         user.value = response.user
         devOtp.value = '' // clear the dev OTP
       }
@@ -198,7 +210,7 @@ export const useAuth = () => {
     } catch (error) {
       const fetchError = error as { response?: { status: number } }
       if (fetchError.response?.status === 409) {
-        const res = await login({ email, password: 'tempPassword123' })
+        const res = await login({ email, password: 'tempPassword123', rememberMe: true })
         if (res?.otpRequired) {
           return { success: true, otpRequired: true, expiresAt: res?.expiresAt ? new Date(res.expiresAt) : undefined }
         }

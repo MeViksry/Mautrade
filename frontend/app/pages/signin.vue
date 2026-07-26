@@ -53,7 +53,7 @@ const submitLogin = async () => {
   errorMsg.value = ''
   isLoading.value = true
   try {
-    const res = await login({ email: email.value, password: password.value })
+    const res = await login({ email: email.value, password: password.value, rememberMe: rememberMe.value })
     if (res.otpRequired) {
       // Need OTP, transition to OTP step
       loginStep.value = 'otp'
@@ -110,7 +110,8 @@ const verifyOtp = async () => {
     await verifyAuthOtp({
       email: email.value,
       code: otp.value,
-      purpose: 'login_verify'
+      purpose: 'login_verify',
+      rememberMe: rememberMe.value
     })
     if (!isAccountComplete.value) {
       await navigateTo('/onboarding')
