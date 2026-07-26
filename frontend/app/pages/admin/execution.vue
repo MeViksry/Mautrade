@@ -1165,8 +1165,12 @@ const cancelAllLayers = () => {
   color: var(--silver);
 }
 
+.book-head span:nth-child(2),
+.book-head span:nth-child(3),
 .book-row span:nth-child(2),
 .book-row span:nth-child(3),
+.trade-head span:nth-child(2),
+.trade-head span:nth-child(3),
 .trade-row span:nth-child(2),
 .trade-row span:nth-child(3) {
   text-align: right;
