@@ -486,14 +486,6 @@ const cancelAllLayers = () => {
                 Stop Limit
               </button>
             </div>
-
-            <CoinPairDropdown
-              v-model="selectedCoin"
-              :options="coinOptions"
-              label="Order Coin"
-              compact
-              class="order-entry__coin-select"
-            />
           </div>
 
           <div class="order-ticket-grid">
