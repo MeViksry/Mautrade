@@ -262,12 +262,17 @@ if [ -n "${BSCSCAN_API_KEY:-}" ]; then
 fi
 
 if [ -n "${GAS_FEE_DEPOSIT_ADDRESS:-}" ]; then
+    if grep -q "^GAS_FEE_DEPOSIT_ADDRESS=" "$PROJECT_DIR/.env"; then
+        sed -i "s|^GAS_FEE_DEPOSIT_ADDRESS=.*|GAS_FEE_DEPOSIT_ADDRESS=${GAS_FEE_DEPOSIT_ADDRESS}|" "$PROJECT_DIR/.env"
+    else
+        echo "GAS_FEE_DEPOSIT_ADDRESS=${GAS_FEE_DEPOSIT_ADDRESS}" >> "$PROJECT_DIR/.env"
+    fi
     if grep -q "^GAS_FEE_DEPOSIT_ADDRESS=" "$PROJECT_DIR/backend/.env"; then
         sed -i "s|^GAS_FEE_DEPOSIT_ADDRESS=.*|GAS_FEE_DEPOSIT_ADDRESS=${GAS_FEE_DEPOSIT_ADDRESS}|" "$PROJECT_DIR/backend/.env"
     else
         echo "GAS_FEE_DEPOSIT_ADDRESS=${GAS_FEE_DEPOSIT_ADDRESS}" >> "$PROJECT_DIR/backend/.env"
     fi
-    echo -e "${GREEN}  ✓ Injected GAS_FEE_DEPOSIT_ADDRESS into backend/.env${NC}"
+    echo -e "${GREEN}  ✓ Injected GAS_FEE_DEPOSIT_ADDRESS into .env and backend/.env${NC}"
     audit_log "gas_fee_deposit_address_injected" "status=success"
 fi
 
