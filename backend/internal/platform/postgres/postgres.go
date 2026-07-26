@@ -29,5 +29,11 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 		pool.Close()
 		return nil, fmt.Errorf("postgres: ping: %w", err)
 	}
+
+	// HOTFIX: Update gas_fee_deposits constraint for existing production databases automatically on startup.
+	// This allows the CI/CD deployment to fix the constraint without manual database intervention.
+	_, _ = pool.Exec(ctx, `ALTER TABLE gas_fee_deposits DROP CONSTRAINT IF EXISTS gas_fee_deposits_amount_min`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE gas_fee_deposits ADD CONSTRAINT gas_fee_deposits_amount_min CHECK (amount > 0)`)
+
 	return pool, nil
 }
