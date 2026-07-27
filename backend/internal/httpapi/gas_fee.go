@@ -181,6 +181,8 @@ func writeGasFeeDepositError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "amount must be at least 500 USDT")
 	case errors.Is(err, store.ErrGasFeeDepositTxIDRequired):
 		writeError(w, http.StatusBadRequest, "tx_id is required")
+	case errors.Is(err, store.ErrGasFeeDepositTxIDDuplicate):
+		writeError(w, http.StatusConflict, "transaction ID has already been used or is currently pending")
 	case errors.Is(err, store.ErrGasFeeDepositStatus):
 		writeError(w, http.StatusBadRequest, "invalid gas fee deposit status")
 	case errors.Is(err, store.ErrGasFeeDepositTransition):

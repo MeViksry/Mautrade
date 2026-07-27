@@ -18,6 +18,7 @@ var (
 	ErrGasFeeDepositAmount       = errors.New("store: invalid gas fee deposit amount")
 	ErrGasFeeDepositTransition   = errors.New("store: invalid gas fee deposit transition")
 	ErrGasFeeDepositTxIDRequired = errors.New("store: gas fee deposit tx id required")
+	ErrGasFeeDepositTxIDDuplicate = errors.New("store: gas fee deposit tx id already used")
 )
 
 type GasFeeAccountView struct {
@@ -254,6 +255,15 @@ func (s *DashboardStore) CreateGasFeeDeposit(ctx context.Context, params CreateG
 	if txID == "" {
 		return GasFeeDepositView{}, ErrGasFeeDepositTxIDRequired
 	}
+
+	var exists bool
+	if err := s.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM gas_fee_deposits WHERE tx_id = $1 AND status IN ('pending', 'confirmed'))`, txID).Scan(&exists); err != nil {
+		return GasFeeDepositView{}, fmt.Errorf("store: check duplicate tx_id: %w", err)
+	}
+	if exists {
+		return GasFeeDepositView{}, ErrGasFeeDepositTxIDDuplicate
+	}
+
 	address := strings.TrimSpace(params.DepositAddress)
 	if address == "" {
 		address = "MAUTRADE-USDT-DEPOSIT-PENDING"
