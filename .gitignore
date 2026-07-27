@@ -1,0 +1,94 @@
+# Local secrets and environment files
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.production.example
+!**/.env.example
+!**/.env.production.example
+.envrc
+.npmrc
+.pypirc
+.netrc
+
+# Private keys and certificates
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# Node, Nuxt, and frontend output
+**/node_modules/
+.pnpm-store/
+**/.pnpm-store/
+frontend/.nuxt/
+frontend/.output/
+frontend/.nitro/
+frontend/.vite/
+frontend/.cache/
+frontend/dist/
+frontend/coverage/
+frontend/.eslintcache
+frontend/.stylelintcache
+frontend/.vercel/
+frontend/.netlify/
+
+# Go backend artifacts
+backend/bin/
+backend/tmp/
+backend/coverage.out
+backend/*.coverprofile
+backend/*.prof
+*.test
+
+# Rust worker artifacts
+backend/rust-node-execution/target/
+
+# Python and strategy-service artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+
+# Logs, reports, and runtime state
+logs/
+*.log
+*.pid
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Docker and deploy local state
+.deploy/
+.deploy.lock/
+docker-compose.override.yml
+*.local.yml
+
+# Database dumps and backups
+*.dump
+*.sql.gz
+*.bak
+*.backup
+
+# Local Codex/agent workspace context
+.agents/
+.codex/
