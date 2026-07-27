@@ -27,6 +27,12 @@ COMPOSE_FILE="$PROJECT_DIR/docker-compose.prod.yml"
 #  Deploy lock to prevent overlapping deploys
 # ──────────────────────────────────────────────
 LOCK_DIR="$PROJECT_DIR/.deploy.lock"
+if [ -d "$LOCK_DIR" ]; then
+    if [ -n "$(find "$LOCK_DIR" -mmin +15 2>/dev/null)" ]; then
+        echo -e "${YELLOW}Found stale lock older than 15 minutes. Removing...${NC}"
+        rm -rf "$LOCK_DIR"
+    fi
+fi
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     echo -e "${RED}Another deployment is already running. Aborting.${NC}"
     exit 1

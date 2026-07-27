@@ -62,14 +62,14 @@ interface ExtendedCoinDetail {
 const coinDetails: Record<string, ExtendedCoinDetail> = {
   BTC: {
     rank: 1,
-    circulatingSupply: 19700000,
+    circulatingSupply: 20060000,
     maxSupply: 21000000,
     issueDate: '2009-01-03',
     ath: 73750.00,
     atl: 0.048,
     dominance: 59.1,
     network: 'Bitcoin',
-    description: 'Bitcoin is a decentralized cryptocurrency originally described in a 2008 whitepaper by a person, or group of people, using the alias Satoshi Nakamoto. It was launched soon after, in January 2009.'
+    description: 'Bitcoin is a decentralized cryptocurrency originally described in a 2008 whitepaper by a person, or group of people, using the alias Satoshi Nakamoto. It was launched soon after, in January 2009.Bitcoin is a peer-to-peer online currency, meaning that all transactions happen directly between equal, independent network participants, without the need for any intermediary to permit or facilitate them. Bitcoin was created, according to Nakamoto’s own words, to allow “online payments to be sent directly from one party to another without going through a financial institution.Some concepts for a similar type of a decentralized electronic currency precede BTC, but Bitcoin holds the distinction of being the first-ever cryptocurrency to come into actual use.'
   },
   ETH: {
     rank: 2,
