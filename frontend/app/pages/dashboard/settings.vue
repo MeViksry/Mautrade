@@ -18,11 +18,27 @@ useSeoMeta({
 })
 
 const activeTab = ref('profile')
+const { user, fetchUser } = useAuth()
+
+const browserTimezone = () => {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+}
+
+const fallbackNameFromEmail = (email?: string) => {
+  const localPart = email?.split('@')[0]?.trim()
+  if (!localPart) return ''
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
+}
 
 const profileForm = ref({
-  fullName: 'User Account',
-  email: 'user@mautrade.com',
-  timezone: 'Asia/Jakarta'
+  fullName: '',
+  email: '',
+  timezone: browserTimezone()
 })
 
 const profilePhoto = ref<string | null>(null)
@@ -36,6 +52,12 @@ const notifSettings = ref({
   emailDailyReport: false,
   telegramAlerts: true
 })
+
+const applyUserProfile = () => {
+  profileForm.value.fullName = user.value?.displayName?.trim() || fallbackNameFromEmail(user.value?.email)
+  profileForm.value.email = user.value?.email || ''
+  profileForm.value.timezone = user.value?.timezone || browserTimezone()
+}
 
 const openProfilePhotoPicker = () => {
   profilePhotoInput.value?.click()
@@ -161,11 +183,19 @@ const handleSettingsClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   document.addEventListener('click', handleSettingsClickOutside)
+  applyUserProfile()
 
-  // Simulate loading delay for skeleton shimmer effect
-  setTimeout(() => {
+  const minDelay = new Promise(resolve => setTimeout(resolve, 400))
+  void Promise.all([
+    user.value ? Promise.resolve(user.value) : fetchUser(),
+    minDelay
+  ]).then(() => {
+    applyUserProfile()
     loading.value = false
-  }, 400)
+  }).catch((error) => {
+    console.warn('Failed to fetch current user for settings:', error)
+    loading.value = false
+  })
 })
 
 onBeforeUnmount(() => {

@@ -1,7 +1,38 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+
 const isSidebarOpen = useState<boolean | null>('sidebar-open', () => null)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
+const { user, fetchUser } = useAuth()
+
+const fallbackNameFromEmail = (email?: string) => {
+  const localPart = email?.split('@')[0]?.trim()
+  if (!localPart) return 'User Account'
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
+}
+
+const userDisplayName = computed(() => {
+  return user.value?.displayName?.trim() || fallbackNameFromEmail(user.value?.email)
+})
+
+const userIdentifier = computed(() => {
+  const rawId = user.value?.id?.replaceAll('-', '').trim()
+  return rawId ? rawId.slice(0, 8).toUpperCase() : 'SYNCING'
+})
+
+const userInitial = computed(() => userDisplayName.value.charAt(0).toUpperCase())
+
+onMounted(() => {
+  if (!user.value) {
+    void fetchUser()
+  }
+})
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
@@ -124,10 +155,12 @@ const toggleTheme = () => {
 
       <ClientOnly>
         <div class="user-profile">
-          <div class="user-avatar" />
+          <div class="user-avatar">
+            {{ userInitial }}
+          </div>
           <div class="user-info">
-            <span class="user-name">User Account</span>
-            <span class="user-id">UID: 88472910</span>
+            <span class="user-name">{{ userDisplayName }}</span>
+            <span class="user-id">UID: {{ userIdentifier }}</span>
           </div>
         </div>
         <template #fallback>
@@ -333,10 +366,18 @@ const toggleTheme = () => {
 }
 
 .user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent) 0%, #ff8a4c 100%);
+  color: #050505;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  flex: 0 0 auto;
 }
 
 .user-info {
@@ -353,6 +394,9 @@ const toggleTheme = () => {
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-id {

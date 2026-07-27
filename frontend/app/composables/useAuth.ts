@@ -1,7 +1,10 @@
 export interface AuthUser {
   id: string
   email: string
+  username?: string
   displayName?: string
+  timezone?: string
+  themePref?: string
   status: string
   emailVerified: boolean
   onboardingCompleted: boolean
@@ -9,7 +12,7 @@ export interface AuthUser {
   age?: number
   role: string
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export const useAuth = () => {
