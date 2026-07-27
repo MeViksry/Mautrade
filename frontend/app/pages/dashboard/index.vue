@@ -30,6 +30,11 @@ interface UserStats {
   gasFeeDepositTxId?: string
 }
 
+interface GasFeeAccountSummary {
+  balance?: string | number
+  minimumDeposit?: string | number
+}
+
 interface ExchangeBinding {
   id: number
   name: string
@@ -67,6 +72,7 @@ const activeLayersPerPage = 6
 const depositModalOpen = ref(false)
 const depositStep = ref<'methods' | 'deposit'>('methods')
 const minimumDeposit = ref(500)
+const gasFeeBalance = ref(0)
 const depositAmount = ref(500)
 const depositCoinDropdownOpen = ref(false)
 const depositCoinSelectRef = ref<HTMLElement | null>(null)
@@ -84,6 +90,28 @@ const depositCoinOptions = computed(() => [
   { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: minimumDeposit.value, icon: '/UserDashboard/USDT_logo.svg' }
 ])
 let layersResizeObserver: ResizeObserver | null = null
+
+const numberValue = (value: string | number | null | undefined) => {
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const formatStatAmount = (value: number) => {
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: 2
+  })
+}
+
+const applyGasFeeAccountSummary = (account: GasFeeAccountSummary | null) => {
+  if (!account) return
+
+  const parsedMinimum = numberValue(account.minimumDeposit)
+  if (parsedMinimum > 0) {
+    minimumDeposit.value = parsedMinimum
+  }
+
+  gasFeeBalance.value = numberValue(account.balance)
+}
 
 const syncExchangeListHeight = () => {
   if (!layersContainer.value) return
@@ -112,10 +140,8 @@ onMounted(async () => {
     stats.value = statsData
     exchanges.value = exchangesData
     layers.value = layersData
-    const parsedMinimum = Number((gasFeeAccount as { minimumDeposit?: string } | null)?.minimumDeposit || 0)
-    if (Number.isFinite(parsedMinimum) && parsedMinimum > 0) {
-      minimumDeposit.value = parsedMinimum
-    }
+    gasFeeBalance.value = statsData.totalGasFeePaid
+    applyGasFeeAccountSummary(gasFeeAccount as GasFeeAccountSummary | null)
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
   } finally {
@@ -276,7 +302,16 @@ const submitDeposit = async () => {
       txId: depositTxId.value.trim()
     })
     depositSubmitted.value = true
-    stats.value = await getUserStats()
+    const [latestStats, gasFeeAccount] = await Promise.all([
+      getUserStats(),
+      getGasFeeAccount().catch((error) => {
+        console.warn('Failed to refresh gas fee account after deposit:', error)
+        return null
+      })
+    ])
+    stats.value = latestStats
+    gasFeeBalance.value = latestStats.totalGasFeePaid
+    applyGasFeeAccountSummary(gasFeeAccount as GasFeeAccountSummary | null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     depositSubmitError.value = error.data?.error || error.message || 'Failed to submit deposit'
@@ -408,7 +443,7 @@ const submitDeposit = async () => {
         />
         <StatCard
           title="Gas Fee Balance"
-          :value="stats.totalGasFeePaid.toLocaleString()"
+          :value="formatStatAmount(gasFeeBalance)"
           unit="USDT"
           action-label="Deposit"
           action-icon="lucide:plus"
