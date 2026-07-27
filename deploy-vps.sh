@@ -273,6 +273,16 @@ if [ -n "${GAS_FEE_DEPOSIT_ADDRESS:-}" ]; then
     audit_log "gas_fee_deposit_address_injected" "status=success"
 fi
 
+if [ -n "${EXCHANGE_CREDENTIAL_KEY:-}" ]; then
+    if grep -q "^EXCHANGE_CREDENTIAL_KEY=" "$PROJECT_DIR/backend/.env"; then
+        sed -i "s|^EXCHANGE_CREDENTIAL_KEY=.*|EXCHANGE_CREDENTIAL_KEY=${EXCHANGE_CREDENTIAL_KEY}|" "$PROJECT_DIR/backend/.env"
+    else
+        echo "EXCHANGE_CREDENTIAL_KEY=${EXCHANGE_CREDENTIAL_KEY}" >> "$PROJECT_DIR/backend/.env"
+    fi
+    echo -e "${GREEN}  ✓ Injected EXCHANGE_CREDENTIAL_KEY into backend/.env${NC}"
+    audit_log "exchange_credential_key_injected" "status=success"
+fi
+
 if [ -n "${ACCOUNT_ADMIN_ONE:-}" ] || [ -n "${ACCOUNT_ADMIN_TWO:-}" ]; then
     for VAR in "ACCOUNT_ADMIN_ONE" "ADMIN_ACCOUNT_ONE_SINGLE_NAME" "ADMIN_ACCOUNT_ONE_PASSWORD" \
                "ACCOUNT_ADMIN_TWO" "ADMIN_ACCOUNT_TWO_SINGLE_NAME" "ADMIN_ACCOUNT_TWO_PASSWORD"; do

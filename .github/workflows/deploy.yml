@@ -297,6 +297,7 @@ jobs:
             export SMTP_FROM="${_FROM:-support@mautrade.com}"
             export DB_PASSWORD='${{ fromJson(toJson(secrets)).DB_PASSWORD }}'
             export GAS_FEE_DEPOSIT_ADDRESS='${{ fromJson(toJson(secrets)).GAS_FEE_DEPOSIT_ADDRESS }}'
+            export EXCHANGE_CREDENTIAL_KEY='${{ fromJson(toJson(secrets)).EXCHANGE_CREDENTIAL_KEY }}'
 
             export ACCOUNT_ADMIN_ONE='${{ fromJson(toJson(secrets)).ACCOUNT_ADMIN_ONE }}'
             export ADMIN_ACCOUNT_ONE_SINGLE_NAME='${{ fromJson(toJson(secrets)).ADMIN_ACCOUNT_ONE_SINGLE_NAME }}'
