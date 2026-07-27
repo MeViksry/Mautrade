@@ -188,10 +188,10 @@ const submitDeposit = () => {
           <span class="deposit-method__icon">
             <UIcon name="lucide:wallet" />
           </span>
-            <span class="deposit-method__content">
-              <span class="deposit-method__title">USDT Gas Fee Wallet</span>
-              <span class="deposit-method__meta">USDT BEP-20 only · Minimum deposit {{ minimumDeposit }} USDT</span>
-            </span>
+          <span class="deposit-method__content">
+            <span class="deposit-method__title">USDT Gas Fee Wallet</span>
+            <span class="deposit-method__meta">USDT BEP-20 only · Minimum deposit {{ minimumDeposit }} USDT</span>
+          </span>
           <UIcon
             name="lucide:chevron-right"
             class="deposit-method__arrow"
