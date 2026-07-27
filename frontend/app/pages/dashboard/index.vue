@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import StatCard from '~/components/StatCard.vue'
 import LayerRow from '~/components/LayerRow.vue'
 import { useDashboardData } from '~/composables/useDashboardData'
+import { createQrDataUrl } from '~/lib/qr'
 
 definePageMeta({
   layout: 'dashboard'
@@ -52,7 +53,7 @@ interface Layer {
   status: string
 }
 
-const { getUserStats, getExchangeBindings, getActiveLayers } = useDashboardData()
+const { getUserStats, getExchangeBindings, getActiveLayers, getGasFeeAccount, createGasFeeDeposit } = useDashboardData()
 
 const stats = ref<UserStats | null>(null)
 const exchanges = ref<ExchangeBinding[]>([])
@@ -65,6 +66,7 @@ const activeLayerPage = ref(1)
 const activeLayersPerPage = 6
 const depositModalOpen = ref(false)
 const depositStep = ref<'methods' | 'deposit'>('methods')
+const minimumDeposit = ref(500)
 const depositAmount = ref(500)
 const depositCoinDropdownOpen = ref(false)
 const depositCoinSelectRef = ref<HTMLElement | null>(null)
@@ -75,12 +77,12 @@ const depositAmountShake = ref(false)
 const depositTxIdShake = ref(false)
 const depositSubmitAttempted = ref(false)
 const depositSubmitted = ref(false)
+const depositSubmitting = ref(false)
+const depositSubmitError = ref('')
 const depositWalletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
-const depositCoinOptions = [
-  { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
-  { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
-  { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
-]
+const depositCoinOptions = computed(() => [
+  { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: minimumDeposit.value, icon: '/UserDashboard/USDT_logo.svg' }
+])
 let layersResizeObserver: ResizeObserver | null = null
 
 const syncExchangeListHeight = () => {
@@ -96,15 +98,24 @@ onMounted(async () => {
     // Minimum loading time so skeleton shimmer is visible (remove when using real API)
     const minDelay = new Promise(resolve => setTimeout(resolve, 1500))
 
-    const [statsData, exchangesData, layersData] = await Promise.all([
+    const gasFeeAccountPromise = getGasFeeAccount().catch((error) => {
+      console.warn('Failed to fetch gas fee account for dashboard minimum deposit:', error)
+      return null
+    })
+    const [statsData, exchangesData, layersData, gasFeeAccount] = await Promise.all([
       getUserStats(),
       getExchangeBindings(),
       getActiveLayers(),
+      gasFeeAccountPromise,
       minDelay
     ])
     stats.value = statsData
     exchanges.value = exchangesData
     layers.value = layersData
+    const parsedMinimum = Number((gasFeeAccount as { minimumDeposit?: string } | null)?.minimumDeposit || 0)
+    if (Number.isFinite(parsedMinimum) && parsedMinimum > 0) {
+      minimumDeposit.value = parsedMinimum
+    }
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
   } finally {
@@ -151,7 +162,7 @@ const exchangeListStyle = computed(() => {
 })
 
 const selectedDepositCoinData = computed(() => {
-  return depositCoinOptions.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions[0]
+  return depositCoinOptions.value.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions.value[0]
 })
 
 const setActiveLayerPage = async (page: number) => {
@@ -170,8 +181,10 @@ const goToNextActiveLayerPage = () => {
 
 const openDepositModal = () => {
   depositStep.value = 'methods'
+  depositAmount.value = minimumDeposit.value
   selectedDepositCoin.value = 'USDT'
   depositCoinDropdownOpen.value = false
+  depositSubmitError.value = ''
   depositModalOpen.value = true
 }
 
@@ -205,14 +218,13 @@ const copyDepositAddress = async () => {
 }
 
 const depositQrSvg = computed(() => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><rect width="240" height="240" fill="#f8fafc"/><rect x="20" y="20" width="54" height="54" fill="#111"/><rect x="32" y="32" width="30" height="30" fill="#f8fafc"/><rect x="42" y="42" width="10" height="10" fill="#111"/><rect x="166" y="20" width="54" height="54" fill="#111"/><rect x="178" y="32" width="30" height="30" fill="#f8fafc"/><rect x="188" y="42" width="10" height="10" fill="#111"/><rect x="20" y="166" width="54" height="54" fill="#111"/><rect x="32" y="178" width="30" height="30" fill="#f8fafc"/><rect x="42" y="188" width="10" height="10" fill="#111"/><rect x="92" y="24" width="12" height="12" fill="#111"/><rect x="116" y="24" width="24" height="12" fill="#111"/><rect x="92" y="48" width="36" height="12" fill="#111"/><rect x="140" y="48" width="12" height="12" fill="#111"/><rect x="92" y="84" width="12" height="24" fill="#111"/><rect x="116" y="84" width="12" height="12" fill="#111"/><rect x="152" y="84" width="36" height="12" fill="#111"/><rect x="200" y="96" width="12" height="24" fill="#111"/><rect x="84" y="120" width="24" height="12" fill="#111"/><rect x="120" y="120" width="12" height="36" fill="#111"/><rect x="144" y="120" width="24" height="12" fill="#111"/><rect x="180" y="132" width="36" height="12" fill="#111"/><rect x="88" y="164" width="12" height="12" fill="#111"/><rect x="112" y="164" width="48" height="12" fill="#111"/><rect x="184" y="164" width="12" height="12" fill="#111"/><rect x="92" y="188" width="24" height="12" fill="#111"/><rect x="140" y="188" width="12" height="24" fill="#111"/><rect x="164" y="188" width="48" height="12" fill="#111"/><rect x="104" y="212" width="12" height="12" fill="#111"/><rect x="128" y="212" width="36" height="12" fill="#111"/><rect x="188" y="212" width="12" height="12" fill="#111"/></svg>`
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  return createQrDataUrl(depositWalletAddress)
 })
 
-const depositAmountInvalid = computed(() => Number(depositAmount.value) < 500)
+const depositAmountInvalid = computed(() => Number(depositAmount.value) < minimumDeposit.value)
 const depositTxIdInvalid = computed(() => depositTxId.value.trim().length === 0)
 const depositTxIdErrorVisible = computed(() => depositSubmitAttempted.value && depositTxIdInvalid.value)
-const depositFormBlocked = computed(() => depositAmountInvalid.value || depositTxIdInvalid.value)
+const depositFormBlocked = computed(() => depositSubmitting.value || depositAmountInvalid.value || depositTxIdInvalid.value)
 
 const triggerDepositAmountShake = () => {
   depositAmountShake.value = false
@@ -230,6 +242,7 @@ const triggerDepositTxIdShake = () => {
 
 watch(depositAmount, () => {
   depositSubmitted.value = false
+  depositSubmitError.value = ''
   if (depositAmountInvalid.value) {
     triggerDepositAmountShake()
   }
@@ -237,10 +250,13 @@ watch(depositAmount, () => {
 
 watch(depositTxId, () => {
   depositSubmitted.value = false
+  depositSubmitError.value = ''
 })
 
-const submitDeposit = () => {
+const submitDeposit = async () => {
+  if (depositSubmitting.value) return
   depositSubmitAttempted.value = true
+  depositSubmitError.value = ''
 
   if (depositAmountInvalid.value) {
     triggerDepositAmountShake()
@@ -252,7 +268,21 @@ const submitDeposit = () => {
 
   if (depositFormBlocked.value) return
 
-  depositSubmitted.value = true
+  depositSubmitting.value = true
+  try {
+    await createGasFeeDeposit({
+      amount: depositAmount.value,
+      asset: 'USDT',
+      txId: depositTxId.value.trim()
+    })
+    depositSubmitted.value = true
+    stats.value = await getUserStats()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    depositSubmitError.value = error.data?.error || error.message || 'Failed to submit deposit'
+  } finally {
+    depositSubmitting.value = false
+  }
 }
 </script>
 
@@ -577,10 +607,10 @@ const submitDeposit = () => {
             <span class="deposit-method__icon">
               <UIcon name="lucide:wallet" />
             </span>
-            <span class="deposit-method__content">
-              <span class="deposit-method__title">USDT Gas Fee Wallet</span>
-              <span class="deposit-method__meta">Minimum deposit 500 USDT</span>
-            </span>
+              <span class="deposit-method__content">
+                <span class="deposit-method__title">USDT Gas Fee Wallet</span>
+                <span class="deposit-method__meta">USDT BEP-20 only · Minimum deposit {{ minimumDeposit }} USDT</span>
+              </span>
             <UIcon
               name="lucide:chevron-right"
               class="deposit-method__arrow"
@@ -705,7 +735,7 @@ const submitDeposit = () => {
               id="deposit-amount-error"
               class="deposit-error"
             >
-              Minimum deposit is 500 USDT
+              Minimum deposit is {{ minimumDeposit }} USDT
             </p>
           </label>
 
@@ -733,18 +763,26 @@ const submitDeposit = () => {
             class="deposit-submit"
             :class="{ 'is-blocked': depositFormBlocked }"
             type="button"
+            :disabled="depositSubmitting"
             :aria-disabled="depositFormBlocked"
             @click="submitDeposit"
           >
-            <UIcon name="lucide:send" />
-            <span>Submit Deposit</span>
+            <UIcon :name="depositSubmitting ? 'lucide:loader-circle' : 'lucide:send'" />
+            <span>{{ depositSubmitting ? 'Submitting' : 'Submit Deposit' }}</span>
           </button>
+
+          <p
+            v-if="depositSubmitError"
+            class="deposit-error"
+          >
+            {{ depositSubmitError }}
+          </p>
 
           <p
             v-if="depositSubmitted"
             class="deposit-success"
           >
-            Deposit submitted
+            Deposit submitted. Auto-validation is running.
           </p>
         </div>
       </div>

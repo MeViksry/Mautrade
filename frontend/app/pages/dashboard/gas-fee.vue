@@ -20,25 +20,41 @@ useSeoMeta({
   twitterDescription: seoDescription
 })
 
-interface UserStats {
-  totalBalance: number
-  realizedProfit: number
-  totalGasFeePaid: number
-  activeLayersCount: number
+interface GasFeeAccount {
+  asset: string
+  balance: string
+  confirmedDeposits: string
+  pendingDeposits: string
+  netGasFeeMovement: string
+  feesUsed: string
+  rebates: string
+  minimumDeposit: string
+  history: GasFeeHistoryItem[]
 }
 
-interface TradeHistory {
+interface GasFeeHistoryItem {
   id: string
-  pair: string
-  exitPrice: number
-  pnl: number
-  gasFee: number
-  closedAt: string
+  kind: 'deposit' | 'ledger'
+  type: string
+  status: string
+  amount: string
+  balanceImpact: string
+  asset: string
+  reference: string
+  txId?: string
+  network?: string
+  chainId?: number
+  actualAmount?: string
+  verificationNote?: string
+  createdAt: string
+  confirmedAt?: string
+  verifiedAt?: string
 }
 
 interface GasFeeHistoryEntry {
   id: string
   type: 'deposit' | 'fee' | 'rebate'
+  status: string
   title: string
   reference: string
   occurredAt: string
@@ -53,28 +69,35 @@ interface GasFeeMetricPoint {
   label: string
 }
 
-const { getUserStats, getHistory } = useDashboardData()
+const { getGasFeeAccount, createGasFeeDeposit } = useDashboardData()
 
-const stats = ref<UserStats | null>(null)
-const historyItems = ref<TradeHistory[]>([])
+const account = ref<GasFeeAccount | null>(null)
 const loading = ref(true)
 const depositModalOpen = ref(false)
+const depositSubmitting = ref(false)
+const depositSubmitError = ref('')
+const depositSubmitSuccess = ref('')
+
+const loadGasFeeAccount = async () => {
+  const data = await getGasFeeAccount() as GasFeeAccount
+  account.value = data
+}
 
 onMounted(async () => {
   loading.value = true
   try {
-    const [statsData, historyData] = await Promise.all([
-      getUserStats(),
-      getHistory()
-    ])
-    stats.value = statsData
-    historyItems.value = historyData
+    await loadGasFeeAccount()
   } catch (error) {
     console.error('Error fetching gas fee data:', error)
   } finally {
     loading.value = false
   }
 })
+
+const numberValue = (value: string | number | undefined) => {
+  const parsed = Number(value || 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
 
 const formatCurrency = (value: number) => {
   return value.toLocaleString(undefined, {
@@ -92,73 +115,64 @@ const formatDate = (dateString: string) => {
   })
 }
 
+const shortReference = (value?: string) => {
+  if (!value) return 'USDT BEP-20'
+  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-6)}` : value
+}
+
+const gasFeeBalance = computed(() => numberValue(account.value?.balance))
+const minimumDeposit = computed(() => numberValue(account.value?.minimumDeposit) || 500)
+const totalGasFeeUsed = computed(() => numberValue(account.value?.feesUsed))
+const totalGasFeeRebates = computed(() => numberValue(account.value?.rebates))
+
 const gasFeeHistory = computed<GasFeeHistoryEntry[]>(() => {
-  if (!stats.value) return []
+  const source = account.value?.history || []
+  const newestFirst = [...source].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  let runningBalance = gasFeeBalance.value
 
-  const depositEntries = [
-    {
-      id: 'GF-DEP-003',
-      type: 'deposit' as const,
-      title: 'Deposit',
-      reference: 'USDT Gas Fee Wallet',
-      occurredAt: '2026-07-18T10:30:00Z',
-      change: 500
-    },
-    {
-      id: 'GF-DEP-002',
-      type: 'deposit' as const,
-      title: 'Deposit',
-      reference: 'USDT Gas Fee Wallet',
-      occurredAt: '2026-07-12T08:15:00Z',
-      change: 750
-    },
-    {
-      id: 'GF-DEP-001',
-      type: 'deposit' as const,
-      title: 'Deposit',
-      reference: 'USDT Gas Fee Wallet',
-      occurredAt: '2026-07-06T07:00:00Z',
-      change: 1000
-    }
-  ]
-
-  const tradeEntries = historyItems.value.map((item) => {
-    const isRebate = item.gasFee < 0
+  return newestFirst.map((item) => {
+    const change = numberValue(item.balanceImpact)
+    const isDeposit = item.kind === 'deposit'
+    const isRebate = !isDeposit && change > 0
+    const status = item.status || 'confirmed'
+    const entryType: GasFeeHistoryEntry['type'] = isDeposit ? 'deposit' : (isRebate ? 'rebate' : 'fee')
+    const balanceAfter = runningBalance
+    runningBalance -= change
 
     return {
       id: item.id,
-      type: isRebate ? 'rebate' as const : 'fee' as const,
-      title: isRebate ? 'Gas Fee Rebate' : 'Trading Gas Fee',
-      reference: item.pair,
-      occurredAt: item.closedAt,
-      change: isRebate ? Math.abs(item.gasFee) : -Math.abs(item.gasFee)
-    }
-  })
-
-  const entries = [...depositEntries, ...tradeEntries].sort((a, b) => {
-    return new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-  })
-
-  let runningBalance = stats.value.totalGasFeePaid
-
-  return entries.map((entry) => {
-    const balanceAfter = runningBalance
-    runningBalance -= entry.change
-
-    return {
-      ...entry,
+      type: entryType,
+      status,
+      title: isDeposit
+        ? `Deposit ${status.charAt(0).toUpperCase()}${status.slice(1)}`
+        : (isRebate ? 'Gas Fee Rebate' : 'Trading Gas Fee'),
+      reference: isDeposit ? shortReference(item.txId) : item.reference,
+      occurredAt: item.confirmedAt || item.verifiedAt || item.createdAt,
+      change,
       balanceAfter
     }
   })
 })
 
-const totalGasFeeUsed = computed(() => {
-  return historyItems.value.reduce((total, item) => total + Math.max(item.gasFee, 0), 0)
-})
-
-const totalGasFeeRebates = computed(() => {
-  return historyItems.value.reduce((total, item) => total + Math.max(-item.gasFee, 0), 0)
-})
+const handleDepositSubmitted = async (payload: { amount: number, coin: string, txId: string }) => {
+  depositSubmitError.value = ''
+  depositSubmitSuccess.value = ''
+  depositSubmitting.value = true
+  try {
+    await createGasFeeDeposit({
+      amount: payload.amount,
+      asset: 'USDT',
+      txId: payload.txId
+    })
+    depositSubmitSuccess.value = 'Deposit submitted. Auto-validation is running.'
+    await loadGasFeeAccount()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    depositSubmitError.value = error.data?.error || error.message || 'Failed to submit deposit'
+  } finally {
+    depositSubmitting.value = false
+  }
+}
 
 const gasFeeMetricPoints = computed<GasFeeMetricPoint[]>(() => {
   const entries = [...gasFeeHistory.value].reverse()
@@ -305,7 +319,7 @@ const gasFeeMetricTrend = computed(() => {
     </div>
 
     <div
-      v-else-if="stats"
+      v-else-if="account"
     >
       <div class="page-header">
         <h2 class="page-title">
@@ -318,7 +332,7 @@ const gasFeeMetricTrend = computed(() => {
           <StatCard
             class="gas-fee-balance-card"
             title="Gas Fee Balance"
-            :value="stats.totalGasFeePaid.toLocaleString()"
+            :value="formatCurrency(gasFeeBalance)"
             unit="USDT"
             action-label="Deposit"
             action-icon="lucide:plus"
@@ -332,7 +346,7 @@ const gasFeeMetricTrend = computed(() => {
                   Gas Fee Metric
                 </div>
                 <div class="gas-fee-metric__value">
-                  ${{ formatCurrency(stats.totalGasFeePaid) }}<span>USDT</span>
+                  ${{ formatCurrency(gasFeeBalance) }}<span>USDT</span>
                 </div>
               </div>
               <div
@@ -474,7 +488,14 @@ const gasFeeMetricTrend = computed(() => {
       </div>
     </div>
 
-    <GasFeeDepositModal v-model="depositModalOpen" />
+    <GasFeeDepositModal
+      v-model="depositModalOpen"
+      :minimum-deposit="minimumDeposit"
+      :submitting="depositSubmitting"
+      :submit-error="depositSubmitError"
+      :submit-success="depositSubmitSuccess"
+      @submitted="handleDepositSubmitted"
+    />
   </div>
 </template>
 

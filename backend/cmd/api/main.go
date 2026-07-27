@@ -61,9 +61,17 @@ func main() {
 	}
 
 	dashboardStore := store.NewDashboardStore(db)
-	verifier := workers.NewVerifier(dashboardStore, cfg.GasFeeDepositAddress, logger)
+	verifier := workers.NewVerifier(dashboardStore, workers.VerifierConfig{
+		WalletAddress:    cfg.GasFeeDepositAddress,
+		RPCURLs:          cfg.GasFeeRPCURLs,
+		ChainID:          cfg.GasFeeChainID,
+		TokenContract:    cfg.GasFeeUSDTContract,
+		TokenDecimals:    cfg.GasFeeTokenDecimals,
+		MinConfirmations: cfg.GasFeeMinConfirmations,
+		Interval:         cfg.GasFeeVerifierInterval,
+	}, logger)
 	go verifier.Start(rootCtx)
-	logger.Info("gasfee verifier started using public rpc")
+	logger.Info("gasfee verifier started using bsc rpc", "chain_id", cfg.GasFeeChainID, "min_confirmations", cfg.GasFeeMinConfirmations)
 
 	server := &http.Server{
 		Addr:    cfg.HTTPAddr,

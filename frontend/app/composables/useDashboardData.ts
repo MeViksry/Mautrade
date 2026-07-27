@@ -35,6 +35,28 @@ export const useDashboardData = () => {
     }
   }
 
+  const getGasFeeAccount = async () => {
+    return await $fetch(`${apiBase}/user/gas-fee`, {
+      headers: {
+        Authorization: `Bearer ${tokenCookie.value}`
+      }
+    })
+  }
+
+  const createGasFeeDeposit = async (payload: { amount: number | string, asset?: string, txId: string }) => {
+    return await $fetch(`${apiBase}/user/gas-fee/deposits`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenCookie.value}`
+      },
+      body: {
+        amount: String(payload.amount),
+        asset: payload.asset || 'USDT',
+        tx_id: payload.txId
+      }
+    })
+  }
+
   const getExchangeBindings = async () => {
     return [
       { id: 1, name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 8450.75, hasApi: true },
@@ -416,6 +438,8 @@ export const useDashboardData = () => {
 
   return {
     getUserStats,
+    getGasFeeAccount,
+    createGasFeeDeposit,
     getExchangeBindings,
     getActiveLayers,
     getHistory

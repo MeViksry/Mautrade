@@ -68,9 +68,12 @@ func (s *Server) handleCreateGasFeeDeposit(w http.ResponseWriter, r *http.Reques
 	deposit, err := s.store.CreateGasFeeDeposit(r.Context(), store.CreateGasFeeDepositParams{
 		UserID:         user.ID,
 		Amount:         req.Amount,
-		Asset:          firstNonEmpty(req.Asset, s.config.DefaultCurrency),
+		Asset:          firstNonEmpty(req.Asset, "USDT"),
 		DepositAddress: s.config.GasFeeDepositAddress,
 		TxID:           firstNonEmpty(req.TxID, req.TxId),
+		Network:        "BEP-20",
+		ChainID:        int64(s.config.GasFeeChainID),
+		TokenContract:  s.config.GasFeeUSDTContract,
 		Now:            time.Now().UTC(),
 	})
 	if err != nil {
@@ -178,9 +181,13 @@ func normalizeGasFeeDepositStatus(value string, allowPending bool) (string, erro
 func writeGasFeeDepositError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrGasFeeDepositAmount):
-		writeError(w, http.StatusBadRequest, "amount must be at least 500 USDT")
+		writeError(w, http.StatusBadRequest, "amount is below the minimum gas fee deposit")
+	case errors.Is(err, store.ErrGasFeeDepositAsset):
+		writeError(w, http.StatusBadRequest, "only USDT BEP-20 gas fee deposits are supported")
 	case errors.Is(err, store.ErrGasFeeDepositTxIDRequired):
 		writeError(w, http.StatusBadRequest, "tx_id is required")
+	case errors.Is(err, store.ErrGasFeeDepositTxIDInvalid):
+		writeError(w, http.StatusBadRequest, "tx_id must be a 32-byte transaction hash")
 	case errors.Is(err, store.ErrGasFeeDepositTxIDDuplicate):
 		writeError(w, http.StatusConflict, "transaction ID has already been used or is currently pending")
 	case errors.Is(err, store.ErrGasFeeDepositStatus):

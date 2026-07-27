@@ -18,10 +18,19 @@ const loading = ref(true)
 interface DepositResponse {
   id: string
   userId: string
+  userEmail?: string
   amount: string
   asset: string
-  txId: string
+  txId?: string
   status: string
+  network: string
+  chainId: number
+  senderAddress?: string
+  blockNumber?: number
+  confirmations?: number
+  actualAmount?: string
+  verifiedAt?: string
+  verificationNote?: string
   createdAt: string
   confirmedAt?: string
 }
@@ -29,14 +38,20 @@ interface DepositResponse {
 interface FormattedDeposit {
   id: string
   userId: string
+  userEmail: string
   amount: number
+  actualAmount: number | null
   txId: string
+  network: string
+  confirmations: number | null
+  verificationNote: string
   date: string
   status: string
   fullId: string
 }
 
 const { tokenCookie } = useAdminAuth()
+const selectedStatus = ref('all')
 
 const depositsStats = ref({
   totalDeposits: 0,
@@ -51,7 +66,7 @@ const loadDeposits = async () => {
   try {
     const config = useRuntimeConfig()
     const apiBase = config.public.apiBase
-    const data = await $fetch<DepositResponse[]>(`${apiBase}/admin/gas-fee/deposits`, {
+    const data = await $fetch<DepositResponse[]>(`${apiBase}/admin/gas-fee/deposits?status=${selectedStatus.value}`, {
       headers: { Authorization: `Bearer ${tokenCookie.value}` }
     })
 
@@ -59,8 +74,13 @@ const loadDeposits = async () => {
       fullId: d.id,
       id: d.id.split('-')[0] ?? '',
       userId: d.userId.split('-')[0] ?? '',
+      userEmail: d.userEmail || '',
       amount: Number(d.amount),
+      actualAmount: d.actualAmount ? Number(d.actualAmount) : null,
       txId: d.txId || 'N/A',
+      network: `${d.asset} ${d.network || 'BEP-20'}`,
+      confirmations: d.confirmations ?? null,
+      verificationNote: d.verificationNote || '',
       date: new Date(d.createdAt).toISOString().split('T')[0] ?? '',
       status: d.status.charAt(0).toUpperCase() + d.status.slice(1)
     }))
@@ -123,6 +143,11 @@ const handleReject = async (id: string) => {
     alert('Failed to reject deposit')
   }
 }
+
+const handleStatusFilter = () => {
+  loading.value = true
+  loadDeposits()
+}
 </script>
 
 <template>
@@ -153,7 +178,7 @@ const handleReject = async (id: string) => {
           Deposit Management
         </h1>
         <p class="page-subtitle">
-          Verify and manage user gas fee deposits
+          Monitor auto-validated USDT BEP-20 gas fee deposits
         </p>
       </header>
 
@@ -182,15 +207,19 @@ const handleReject = async (id: string) => {
             Deposit Requests
           </h2>
           <div class="filters">
-            <select class="filter-select">
+            <select
+              v-model="selectedStatus"
+              class="filter-select"
+              @change="handleStatusFilter"
+            >
               <option value="all">
                 All Status
               </option>
               <option value="pending">
                 Pending
               </option>
-              <option value="verified">
-                Verified
+              <option value="confirmed">
+                Confirmed
               </option>
               <option value="rejected">
                 Rejected
@@ -224,12 +253,17 @@ const handleReject = async (id: string) => {
                 </td>
                 <td class="col-user">
                   #{{ deposit.userId }}
+                  <small v-if="deposit.userEmail">{{ deposit.userEmail }}</small>
                 </td>
                 <td class="col-amount">
                   ${{ deposit.amount }}
+                  <small v-if="deposit.actualAmount !== null">Actual ${{ deposit.actualAmount }}</small>
+                  <small>{{ deposit.network }}</small>
                 </td>
                 <td class="col-txid">
                   <span class="tx-hash">{{ deposit.txId }}</span>
+                  <small v-if="deposit.confirmations !== null">{{ deposit.confirmations }} confirmations</small>
+                  <small v-if="deposit.verificationNote">{{ deposit.verificationNote }}</small>
                 </td>
                 <td class="col-date">
                   {{ deposit.date }}
@@ -363,6 +397,14 @@ const handleReject = async (id: string) => {
   border-bottom: 1px solid var(--line);
 }
 
+.data-table td small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-mute);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
 .data-table th {
   font-family: var(--mono);
   font-size: 11px;
@@ -407,7 +449,8 @@ const handleReject = async (id: string) => {
   text-transform: uppercase;
 }
 
-.status-badge.verified {
+.status-badge.verified,
+.status-badge.confirmed {
   background: rgba(34, 197, 94, 0.1);
   color: #4ade80;
 }

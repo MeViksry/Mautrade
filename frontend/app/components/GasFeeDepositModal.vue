@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { createQrDataUrl } from '~/lib/qr'
 
 const props = defineProps<{
   modelValue: boolean
+  minimumDeposit?: number
+  submitting?: boolean
+  submitError?: string
+  submitSuccess?: string
 }>()
 
 const emit = defineEmits<{
@@ -11,7 +16,7 @@ const emit = defineEmits<{
 }>()
 
 const depositStep = ref<'methods' | 'deposit'>('methods')
-const depositAmount = ref(500)
+const depositAmount = ref(props.minimumDeposit || 500)
 const depositCoinDropdownOpen = ref(false)
 const depositCoinSelectRef = ref<HTMLElement | null>(null)
 const selectedDepositCoin = ref('USDT')
@@ -20,22 +25,20 @@ const walletCopied = ref(false)
 const depositAmountShake = ref(false)
 const depositTxIdShake = ref(false)
 const depositSubmitAttempted = ref(false)
-const depositSubmitted = ref(false)
 const runtimeConfig = useRuntimeConfig()
 const depositWalletAddress = runtimeConfig.public.gasFeeDepositAddress as string
-const depositCoinOptions = [
-  { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: 500, icon: '/UserDashboard/USDT_logo.svg' },
-  { code: 'USDC', name: 'USD Coin', network: 'ERC20 / Base', min: 500 },
-  { code: 'FDUSD', name: 'First Digital USD', network: 'BNB Smart Chain', min: 500 }
-]
+const minimumDeposit = computed(() => props.minimumDeposit || 500)
+const depositCoinOptions = computed(() => [
+  { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: minimumDeposit.value, icon: '/UserDashboard/USDT_logo.svg' }
+])
 
 const selectedDepositCoinData = computed(() => {
-  return depositCoinOptions.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions[0]
+  return depositCoinOptions.value.find(coin => coin.code === selectedDepositCoin.value) ?? depositCoinOptions.value[0]
 })
 
 const resetDepositState = () => {
   depositStep.value = 'methods'
-  depositAmount.value = 500
+  depositAmount.value = minimumDeposit.value
   selectedDepositCoin.value = 'USDT'
   depositCoinDropdownOpen.value = false
   depositTxId.value = ''
@@ -43,7 +46,6 @@ const resetDepositState = () => {
   depositAmountShake.value = false
   depositTxIdShake.value = false
   depositSubmitAttempted.value = false
-  depositSubmitted.value = false
 }
 
 watch(() => props.modelValue, (isOpen) => {
@@ -59,7 +61,6 @@ const closeDepositModal = () => {
 const selectDepositMethod = () => {
   depositStep.value = 'deposit'
   depositSubmitAttempted.value = false
-  depositSubmitted.value = false
 }
 
 const selectDepositCoin = (coinCode: string) => {
@@ -90,14 +91,13 @@ const copyDepositAddress = async () => {
 }
 
 const depositQrSvg = computed(() => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><rect width="240" height="240" fill="#f8fafc"/><rect x="20" y="20" width="54" height="54" fill="#111"/><rect x="32" y="32" width="30" height="30" fill="#f8fafc"/><rect x="42" y="42" width="10" height="10" fill="#111"/><rect x="166" y="20" width="54" height="54" fill="#111"/><rect x="178" y="32" width="30" height="30" fill="#f8fafc"/><rect x="188" y="42" width="10" height="10" fill="#111"/><rect x="20" y="166" width="54" height="54" fill="#111"/><rect x="32" y="178" width="30" height="30" fill="#f8fafc"/><rect x="42" y="188" width="10" height="10" fill="#111"/><rect x="92" y="24" width="12" height="12" fill="#111"/><rect x="116" y="24" width="24" height="12" fill="#111"/><rect x="92" y="48" width="36" height="12" fill="#111"/><rect x="140" y="48" width="12" height="12" fill="#111"/><rect x="92" y="84" width="12" height="24" fill="#111"/><rect x="116" y="84" width="12" height="12" fill="#111"/><rect x="152" y="84" width="36" height="12" fill="#111"/><rect x="200" y="96" width="12" height="24" fill="#111"/><rect x="84" y="120" width="24" height="12" fill="#111"/><rect x="120" y="120" width="12" height="36" fill="#111"/><rect x="144" y="120" width="24" height="12" fill="#111"/><rect x="180" y="132" width="36" height="12" fill="#111"/><rect x="88" y="164" width="12" height="12" fill="#111"/><rect x="112" y="164" width="48" height="12" fill="#111"/><rect x="184" y="164" width="12" height="12" fill="#111"/><rect x="92" y="188" width="24" height="12" fill="#111"/><rect x="140" y="188" width="12" height="24" fill="#111"/><rect x="164" y="188" width="48" height="12" fill="#111"/><rect x="104" y="212" width="12" height="12" fill="#111"/><rect x="128" y="212" width="36" height="12" fill="#111"/><rect x="188" y="212" width="12" height="12" fill="#111"/></svg>`
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  return createQrDataUrl(depositWalletAddress)
 })
 
-const depositAmountInvalid = computed(() => Number(depositAmount.value) < 500)
+const depositAmountInvalid = computed(() => Number(depositAmount.value) < minimumDeposit.value)
 const depositTxIdInvalid = computed(() => depositTxId.value.trim().length === 0)
 const depositTxIdErrorVisible = computed(() => depositSubmitAttempted.value && depositTxIdInvalid.value)
-const depositFormBlocked = computed(() => depositAmountInvalid.value || depositTxIdInvalid.value)
+const depositFormBlocked = computed(() => props.submitting || depositAmountInvalid.value || depositTxIdInvalid.value)
 
 const triggerDepositAmountShake = () => {
   depositAmountShake.value = false
@@ -114,17 +114,13 @@ const triggerDepositTxIdShake = () => {
 }
 
 watch(depositAmount, () => {
-  depositSubmitted.value = false
   if (depositAmountInvalid.value) {
     triggerDepositAmountShake()
   }
 })
 
-watch(depositTxId, () => {
-  depositSubmitted.value = false
-})
-
 const submitDeposit = () => {
+  if (props.submitting) return
   depositSubmitAttempted.value = true
 
   if (depositAmountInvalid.value) {
@@ -137,7 +133,6 @@ const submitDeposit = () => {
 
   if (depositFormBlocked.value) return
 
-  depositSubmitted.value = true
   emit('submitted', {
     amount: Number(depositAmount.value),
     coin: selectedDepositCoin.value,
@@ -193,10 +188,10 @@ const submitDeposit = () => {
           <span class="deposit-method__icon">
             <UIcon name="lucide:wallet" />
           </span>
-          <span class="deposit-method__content">
-            <span class="deposit-method__title">USDT Gas Fee Wallet</span>
-            <span class="deposit-method__meta">Minimum deposit 500 USDT</span>
-          </span>
+            <span class="deposit-method__content">
+              <span class="deposit-method__title">USDT Gas Fee Wallet</span>
+              <span class="deposit-method__meta">USDT BEP-20 only · Minimum deposit {{ minimumDeposit }} USDT</span>
+            </span>
           <UIcon
             name="lucide:chevron-right"
             class="deposit-method__arrow"
@@ -310,7 +305,7 @@ const submitDeposit = () => {
             <input
               v-model.number="depositAmount"
               type="number"
-              min="500"
+              :min="minimumDeposit"
               step="1"
               aria-describedby="deposit-amount-error"
             >
@@ -321,7 +316,7 @@ const submitDeposit = () => {
             id="deposit-amount-error"
             class="deposit-error"
           >
-            Minimum deposit is 500 USDT
+            Minimum deposit is {{ minimumDeposit }} USDT
           </p>
         </label>
 
@@ -349,18 +344,26 @@ const submitDeposit = () => {
           class="deposit-submit"
           :class="{ 'is-blocked': depositFormBlocked }"
           type="button"
+          :disabled="submitting"
           :aria-disabled="depositFormBlocked"
           @click="submitDeposit"
         >
-          <UIcon name="lucide:send" />
-          <span>Submit Deposit</span>
+          <UIcon :name="submitting ? 'lucide:loader-circle' : 'lucide:send'" />
+          <span>{{ submitting ? 'Submitting' : 'Submit Deposit' }}</span>
         </button>
 
         <p
-          v-if="depositSubmitted"
+          v-if="submitError"
+          class="deposit-error"
+        >
+          {{ submitError }}
+        </p>
+
+        <p
+          v-if="submitSuccess"
           class="deposit-success"
         >
-          Deposit submitted
+          {{ submitSuccess }}
         </p>
       </div>
     </div>

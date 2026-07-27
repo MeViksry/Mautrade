@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCountries } from '~/composables/useCountries'
+import { createQrDataUrl } from '~/lib/qr'
 
 definePageMeta({
   layout: 'default'
@@ -42,6 +43,7 @@ const countryShake = ref(false)
 const exchangeShake = ref(false)
 const qrLoaded = ref(false)
 const walletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
+const walletQrDataUrl = computed(() => createQrDataUrl(walletAddress, 180))
 
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const isLightMode = computed(() => theme.value === 'light')
@@ -388,7 +390,7 @@ const submitPayment = async () => {
       >
         <div class="payment-instructions">
           <p>
-            To initialize your dashboard, please deposit a minimum of <strong>{{ minDepositUsdt }} USDT</strong> (BEP-20) to the following address:
+            To initialize your dashboard, please deposit a minimum of <strong>{{ minDepositUsdt }} USDT</strong> (USDT BEP-20 only) to the following address:
           </p>
         </div>
 
@@ -399,7 +401,7 @@ const submitPayment = async () => {
           />
           <img
             v-show="qrLoaded"
-            :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${walletAddress}`"
+            :src="walletQrDataUrl"
             alt="Wallet QR Code"
             class="qr-image"
             @load="qrLoaded = true"

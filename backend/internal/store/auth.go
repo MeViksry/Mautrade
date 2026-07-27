@@ -117,6 +117,9 @@ type CompleteOnboardingParams struct {
 	GasFeeAsset         string
 	GasFeeDepositAddr   string
 	TxID                string
+	GasFeeNetwork       string
+	GasFeeChainID       int64
+	GasFeeTokenContract string
 	Now                 time.Time
 }
 
@@ -424,7 +427,17 @@ func (s *DashboardStore) CompleteOnboarding(ctx context.Context, params Complete
 	if asset == "" {
 		asset = "USDT"
 	}
+	if asset != "USDT" {
+		return CompleteOnboardingResult{}, ErrGasFeeDepositAsset
+	}
 	amount := decimalOrZero(params.GasFeeAmount)
+	txID, err := NormalizeGasFeeTxID(params.TxID)
+	if err != nil {
+		return CompleteOnboardingResult{}, err
+	}
+	network := normalizeGasFeeNetwork(params.GasFeeNetwork)
+	chainID := normalizeGasFeeChainID(params.GasFeeChainID)
+	tokenContract := normalizeGasFeeTokenContract(params.GasFeeTokenContract)
 	settings, err := s.GlobalSettings(ctx)
 	if err != nil {
 		return CompleteOnboardingResult{}, fmt.Errorf("store: fetch settings for onboarding: %w", err)
@@ -434,6 +447,14 @@ func (s *DashboardStore) CompleteOnboarding(ctx context.Context, params Complete
 		return CompleteOnboardingResult{}, fmt.Errorf("store: gas fee amount must be decimal: %w", err)
 	} else if parsed.Cmp(settings.MinDepositUsdt) < 0 {
 		return CompleteOnboardingResult{}, fmt.Errorf("store: gas fee amount must be at least %s %s", settings.MinDepositUsdt.String(), asset)
+	}
+
+	var txIDExists bool
+	if err := s.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM gas_fee_deposits WHERE tx_id = $1 AND status IN ('pending', 'confirmed'))`, txID).Scan(&txIDExists); err != nil {
+		return CompleteOnboardingResult{}, fmt.Errorf("store: check duplicate onboarding tx_id: %w", err)
+	}
+	if txIDExists {
+		return CompleteOnboardingResult{}, ErrGasFeeDepositTxIDDuplicate
 	}
 
 	tx, err := s.db.Begin(ctx)
@@ -481,16 +502,12 @@ INSERT INTO user_exchange_preferences (
 	if err != nil {
 		return CompleteOnboardingResult{}, err
 	}
-	var txID any
-	if strings.TrimSpace(params.TxID) != "" {
-		txID = strings.TrimSpace(params.TxID)
-	}
 	status := "pending"
 	if _, err := tx.Exec(ctx, `
 INSERT INTO gas_fee_deposits (
-  id, user_id, amount, asset, deposit_address, tx_id, status, created_at
+  id, user_id, amount, asset, deposit_address, tx_id, status, network, chain_id, token_contract, created_at
 ) VALUES (
-  $1::uuid, $2::uuid, $3::numeric, $4, $5, $6, $7, $8
+  $1::uuid, $2::uuid, $3::numeric, $4, $5, $6, $7, $8, $9, $10, $11
 )`,
 		depositID.String(),
 		params.UserID,
@@ -499,8 +516,14 @@ INSERT INTO gas_fee_deposits (
 		params.GasFeeDepositAddr,
 		txID,
 		status,
+		network,
+		chainID,
+		tokenContract,
 		now,
 	); err != nil {
+		if isUniqueViolation(err) {
+			return CompleteOnboardingResult{}, ErrGasFeeDepositTxIDDuplicate
+		}
 		return CompleteOnboardingResult{}, fmt.Errorf("store: insert onboarding gas fee deposit: %w", err)
 	}
 
@@ -509,10 +532,16 @@ INSERT INTO gas_fee_deposits (
 		return CompleteOnboardingResult{}, err
 	}
 	if err := insertAuthAudit(ctx, tx, "user_onboarding_completed", params.UserID, map[string]any{
-		"country_code": strings.ToUpper(params.CountryCode),
-		"age":          params.Age,
-		"timezone":     params.Timezone,
-		"deposit_id":   depositID.String(),
+		"country_code":   strings.ToUpper(params.CountryCode),
+		"age":            params.Age,
+		"timezone":       params.Timezone,
+		"deposit_id":     depositID.String(),
+		"deposit_amount": amount,
+		"deposit_asset":  asset,
+		"tx_id":          txID,
+		"network":        network,
+		"chain_id":       chainID,
+		"token_contract": tokenContract,
 	}); err != nil {
 		return CompleteOnboardingResult{}, err
 	}

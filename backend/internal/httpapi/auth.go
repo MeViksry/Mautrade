@@ -231,13 +231,23 @@ func (s *Server) handleCompleteOnboarding(w http.ResponseWriter, r *http.Request
 		Timezone:            strings.TrimSpace(req.Timezone),
 		ExchangePreferences: firstNonEmptyStringSlice(req.ExchangePreferences, req.Exchanges),
 		GasFeeAmount:        amount,
-		GasFeeAsset:         firstNonEmpty(req.GasFeeAsset, s.config.DefaultCurrency),
+		GasFeeAsset:         firstNonEmpty(req.GasFeeAsset, "USDT"),
 		GasFeeDepositAddr:   s.config.GasFeeDepositAddress,
 		TxID:                req.TxID,
+		GasFeeNetwork:       "BEP-20",
+		GasFeeChainID:       int64(s.config.GasFeeChainID),
+		GasFeeTokenContract: s.config.GasFeeUSDTContract,
 		Now:                 time.Now().UTC(),
 	})
 	if err != nil {
 		s.logger.Error("complete onboarding", "user_id", user.ID, "error", err)
+		if errors.Is(err, store.ErrGasFeeDepositAsset) ||
+			errors.Is(err, store.ErrGasFeeDepositTxIDRequired) ||
+			errors.Is(err, store.ErrGasFeeDepositTxIDInvalid) ||
+			errors.Is(err, store.ErrGasFeeDepositTxIDDuplicate) {
+			writeGasFeeDepositError(w, err)
+			return
+		}
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -322,6 +332,16 @@ func validateOnboardingRequest(req onboardingRequest) error {
 	_, err := qdecimal.Parse(amount)
 	if err != nil {
 		return fmt.Errorf("gas_fee_deposit_amount must be decimal")
+	}
+	asset := strings.ToUpper(strings.TrimSpace(req.GasFeeAsset))
+	if asset != "" && asset != "USDT" {
+		return fmt.Errorf("only USDT BEP-20 gas fee deposits are supported")
+	}
+	if _, err := store.NormalizeGasFeeTxID(req.TxID); err != nil {
+		if errors.Is(err, store.ErrGasFeeDepositTxIDRequired) {
+			return fmt.Errorf("tx_id is required")
+		}
+		return fmt.Errorf("tx_id must be a 32-byte transaction hash")
 	}
 	return nil
 }
