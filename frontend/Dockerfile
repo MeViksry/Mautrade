@@ -1,8 +1,8 @@
 # ── Stage 1: Build ──────────────────────────────
 FROM node:22-slim AS build
 
-# Enable pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11 --activate
+# Install pnpm directly (avoids corepack download hang in Docker)
+RUN npm install -g pnpm@11.13.1
 
 WORKDIR /app
 
@@ -16,8 +16,7 @@ RUN pnpm build
 
 # ── Stage 2: Runtime ────────────────────────────
 FROM node:22-slim
-
-RUN corepack enable
+# (Corepack not needed at runtime)
 
 WORKDIR /app
 
