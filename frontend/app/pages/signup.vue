@@ -43,6 +43,7 @@ const unlockReadonlyInput = (event: Event) => {
 }
 
 const { register, login, verifyOtp: verifyAuthOtp } = useAuth()
+const nuxtApp = useNuxtApp()
 const errorMsg = ref('')
 const isLoading = ref(false)
 const resendLoading = ref(false)
@@ -98,6 +99,10 @@ const triggerOtpShake = () => {
   })
 }
 
+const goTo = async (path: string) => {
+  await nuxtApp.runWithContext(() => navigateTo(path))
+}
+
 const handleResendOtp = async () => {
   resendMsg.value = ''
   errorMsg.value = ''
@@ -132,7 +137,7 @@ const verifyOtp = async () => {
       code: otp.value,
       purpose: 'register_verify'
     })
-    await navigateTo('/onboarding')
+    await goTo('/onboarding')
   } catch (err: unknown) {
     errorMsg.value = (err as Error).message
     triggerOtpShake()

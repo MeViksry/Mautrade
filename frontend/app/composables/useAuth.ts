@@ -13,24 +13,22 @@ export interface AuthUser {
 }
 
 export const useAuth = () => {
+  const nuxtApp = useNuxtApp()
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
-  const tokenCookie = useCookie<string | null>('auth_token', {
+  const authCookieOptions = {
     secure: !import.meta.dev,
-    sameSite: 'lax'
+    sameSite: 'lax' as const
+  }
+  const tokenCookie = useCookie<string | null>('auth_token', authCookieOptions)
+  const persistentTokenCookie = useCookie<string | null>('auth_token', {
+    ...authCookieOptions,
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   })
 
   const setAuthCookie = (token: string, rememberMe?: boolean) => {
-    const opts: { secure: boolean, sameSite: 'lax', maxAge?: number } = {
-      secure: !import.meta.dev,
-      sameSite: 'lax'
-    }
-    if (rememberMe) {
-      opts.maxAge = 30 * 24 * 60 * 60 // 30 days
-    }
-    const c = useCookie<string | null>('auth_token', opts)
-    c.value = token
-    tokenCookie.value = token
+    const targetCookie = rememberMe ? persistentTokenCookie : tokenCookie
+    targetCookie.value = token
   }
 
   // State to hold the current user data
@@ -153,7 +151,7 @@ export const useAuth = () => {
     }
   }
 
-  const logout = async () => {
+  const logout = async (options: { redirectTo?: string | false } = {}) => {
     try {
       if (tokenCookie.value) {
         await $fetch(`${apiBase}/auth/logout`, {
@@ -168,7 +166,11 @@ export const useAuth = () => {
     } finally {
       tokenCookie.value = null
       user.value = null
-      await navigateTo('/signin')
+
+      const redirectTo = options.redirectTo === undefined ? '/signin' : options.redirectTo
+      if (redirectTo !== false) {
+        await nuxtApp.runWithContext(() => navigateTo(redirectTo))
+      }
     }
   }
 

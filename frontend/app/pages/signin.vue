@@ -36,6 +36,7 @@ const submitAttempted = ref(false)
 const otpInvalid = computed(() => otp.value.trim().length !== 6)
 
 const { login, verifyOtp: verifyAuthOtp, isAccountComplete } = useAuth()
+const nuxtApp = useNuxtApp()
 const errorMsg = ref('')
 const isLoading = ref(false)
 const resendLoading = ref(false)
@@ -46,6 +47,10 @@ const triggerOtpShake = () => {
   window.requestAnimationFrame(() => {
     otpShake.value = true
   })
+}
+
+const goTo = async (path: string) => {
+  await nuxtApp.runWithContext(() => navigateTo(path))
 }
 
 const submitLogin = async () => {
@@ -61,15 +66,15 @@ const submitLogin = async () => {
       otp.value = ''
     } else {
       if (!isAccountComplete.value) {
-        await navigateTo('/onboarding')
+        await goTo('/onboarding')
       } else {
-        await navigateTo('/dashboard')
+        await goTo('/dashboard')
       }
     }
   } catch (err: unknown) {
     const errorMsgText = (err as Error).message || ''
     if (errorMsgText.toLowerCase().includes('user not found')) {
-      await navigateTo('/signup')
+      await goTo('/signup')
     } else {
       errorMsg.value = errorMsgText || 'Login failed. Please try again.'
     }
@@ -114,9 +119,9 @@ const verifyOtp = async () => {
       rememberMe: rememberMe.value
     })
     if (!isAccountComplete.value) {
-      await navigateTo('/onboarding')
+      await goTo('/onboarding')
     } else {
-      await navigateTo('/dashboard')
+      await goTo('/dashboard')
     }
   } catch (err: unknown) {
     errorMsg.value = (err as Error).message

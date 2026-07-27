@@ -41,10 +41,16 @@ const navItems = [
   { label: 'Settings', to: '/dashboard/settings', icon: 'lucide:settings' }
 ]
 
+const { logout } = useAuth()
+
 const closeCompactSidebar = () => {
   if (isCompactSidebar.value) {
     isSidebarOpen.value = false
   }
+}
+
+const handleLogout = async () => {
+  await logout()
 }
 </script>
 
@@ -111,7 +117,11 @@ const closeCompactSidebar = () => {
     </nav>
 
     <div class="sidebar__bottom">
-      <button class="sidebar__logout">
+      <button
+        class="sidebar__logout"
+        type="button"
+        @click="handleLogout"
+      >
         <UIcon
           name="lucide:log-out"
           class="sidebar__icon"

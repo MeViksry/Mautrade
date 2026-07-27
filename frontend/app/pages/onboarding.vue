@@ -20,6 +20,9 @@ useSeoMeta({
 })
 
 const { countries } = useCountries()
+const nuxtApp = useNuxtApp()
+const runtimeConfig = useRuntimeConfig()
+const apiBase = runtimeConfig.public.apiBase
 
 const countrySearch = ref('')
 const countryDropdownOpen = ref(false)
@@ -42,7 +45,7 @@ const ageShake = ref(false)
 const countryShake = ref(false)
 const exchangeShake = ref(false)
 const qrLoaded = ref(false)
-const walletAddress = String(useRuntimeConfig().public.gasFeeDepositAddress)
+const walletAddress = String(runtimeConfig.public.gasFeeDepositAddress)
 const walletQrDataUrl = computed(() => createQrDataUrl(walletAddress, 180))
 
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
@@ -130,7 +133,7 @@ const handleClickOutside = (event: MouseEvent) => {
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   try {
-    const data = await $fetch<{ minDepositUsdt: number }>(`${useRuntimeConfig().public.apiBase}/settings`)
+    const data = await $fetch<{ minDepositUsdt: number }>(`${apiBase}/settings`)
     if (data && data.minDepositUsdt) {
       minDepositUsdt.value = data.minDepositUsdt
       if (depositAmount.value === 500) {
@@ -226,7 +229,7 @@ const submitPayment = async () => {
       txId: txid.value,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     })
-    await navigateTo('/dashboard')
+    await nuxtApp.runWithContext(() => navigateTo('/dashboard'))
   } catch (err: unknown) {
     const error = err as Error
     console.error('Failed to complete onboarding:', error)

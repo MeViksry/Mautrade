@@ -43,10 +43,18 @@ const navItems = [
   { label: 'Settings', to: '/admin/settings', icon: 'lucide:settings' }
 ]
 
+const { logoutAdmin } = useAdminAuth()
+const nuxtApp = useNuxtApp()
+
 const closeCompactSidebar = () => {
   if (isCompactSidebar.value) {
     isSidebarOpen.value = false
   }
+}
+
+const handleLogout = async () => {
+  await logoutAdmin()
+  await nuxtApp.runWithContext(() => navigateTo('/admin/login'))
 }
 </script>
 
@@ -119,7 +127,11 @@ const closeCompactSidebar = () => {
     </nav>
 
     <div class="sidebar__bottom">
-      <button class="sidebar__logout">
+      <button
+        class="sidebar__logout"
+        type="button"
+        @click="handleLogout"
+      >
         <UIcon
           name="lucide:log-out"
           class="sidebar__icon"

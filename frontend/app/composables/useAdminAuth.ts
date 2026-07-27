@@ -12,22 +12,19 @@ export interface AdminUser {
 export const useAdminAuth = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
-  const tokenCookie = useCookie<string | null>('admin_auth_token', {
+  const authCookieOptions = {
     secure: !import.meta.dev,
-    sameSite: 'lax'
+    sameSite: 'lax' as const
+  }
+  const tokenCookie = useCookie<string | null>('admin_auth_token', authCookieOptions)
+  const persistentTokenCookie = useCookie<string | null>('admin_auth_token', {
+    ...authCookieOptions,
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   })
 
   const setAdminAuthCookie = (token: string, rememberMe?: boolean) => {
-    const opts: { secure: boolean, sameSite: 'lax', maxAge?: number } = {
-      secure: !import.meta.dev,
-      sameSite: 'lax'
-    }
-    if (rememberMe) {
-      opts.maxAge = 30 * 24 * 60 * 60 // 30 days
-    }
-    const c = useCookie<string | null>('admin_auth_token', opts)
-    c.value = token
-    tokenCookie.value = token
+    const targetCookie = rememberMe ? persistentTokenCookie : tokenCookie
+    targetCookie.value = token
   }
 
   // State to hold the current admin user data

@@ -28,6 +28,7 @@ const unlockReadonlyInput = (event: Event) => {
 }
 
 const { loginAdmin } = useAdminAuth()
+const nuxtApp = useNuxtApp()
 const isLoading = ref(false)
 const errorMsg = ref('')
 
@@ -36,7 +37,7 @@ const submitLogin = async () => {
     isLoading.value = true
     errorMsg.value = ''
     await loginAdmin({ email: email.value, password: password.value, rememberMe: rememberMe.value })
-    await navigateTo('/admin')
+    await nuxtApp.runWithContext(() => navigateTo('/admin'))
   } catch (err: unknown) {
     if (err instanceof Error) {
       errorMsg.value = err.message
