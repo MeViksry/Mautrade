@@ -825,14 +825,7 @@ const cancelAllLayers = () => {
               </div>
 
               <div class="info-project">
-                <h4>Project Summary</h4>
-                <p
-                  class="text-muted text-sm"
-                  style="margin-bottom: 12px; font-style: italic;"
-                >
-                  Basic data is sourced from crypto market references. This information is provided "as is" without representations or warranties of any kind.
-                </p>
-                <h5>Introduction</h5>
+                <h4>Introduction</h4>
                 <p class="info-desc">
                   {{ currentCoinDetail.description }}
                 </p>
