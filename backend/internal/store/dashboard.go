@@ -320,14 +320,14 @@ SELECT
   (SELECT COUNT(DISTINCT u.id) FROM users u WHERE EXISTS (SELECT 1 FROM gas_fee_deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') OR EXISTS (SELECT 1 FROM layers l WHERE l.user_id = u.id AND l.status IN ('open', 'partial')))::bigint,
   (SELECT COUNT(*) FROM layers WHERE status IN ('open', 'partial'))::bigint,
   (SELECT COALESCE(SUM(free_amount + locked_amount) FILTER (WHERE asset = $1), 0)::text FROM latest_balances),
-  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= date_trunc('day', now())),
+  (SELECT COALESCE(SUM(amount), 0)::text FROM gas_fee_deposits WHERE status = 'confirmed' AND COALESCE(confirmed_at, created_at) >= date_trunc('day', now())),
   (SELECT COUNT(*) FROM layers WHERE status = 'orphaned')::bigint,
   (SELECT COUNT(*) FROM users WHERE created_at >= date_trunc('day', now()))::bigint,
   (SELECT COUNT(*) FROM gas_fee_deposits WHERE status = 'pending')::bigint,
-  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= now() - interval '7 days'),
-  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= now() - interval '30 days'),
-  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger WHERE calculated_at >= now() - interval '365 days'),
-  (SELECT COALESCE(SUM(gas_fee_amount), 0)::text FROM gas_fee_ledger)
+  (SELECT COALESCE(SUM(amount), 0)::text FROM gas_fee_deposits WHERE status = 'confirmed' AND COALESCE(confirmed_at, created_at) >= now() - interval '7 days'),
+  (SELECT COALESCE(SUM(amount), 0)::text FROM gas_fee_deposits WHERE status = 'confirmed' AND COALESCE(confirmed_at, created_at) >= now() - interval '30 days'),
+  (SELECT COALESCE(SUM(amount), 0)::text FROM gas_fee_deposits WHERE status = 'confirmed' AND COALESCE(confirmed_at, created_at) >= now() - interval '365 days'),
+  (SELECT COALESCE(SUM(amount), 0)::text FROM gas_fee_deposits WHERE status = 'confirmed')
 `
 
 	overview := AdminOverview{
@@ -360,7 +360,7 @@ WITH months AS (
 SELECT
     to_char(m.month, 'Mon') AS label,
     (SELECT COUNT(*) FROM users WHERE created_at < m.month + interval '1 month')::float AS cum_users,
-    (SELECT COALESCE(SUM(gas_fee_amount), 0) FROM gas_fee_ledger WHERE calculated_at < m.month + interval '1 month')::float AS cum_revenue
+    (SELECT COALESCE(SUM(amount), 0) FROM gas_fee_deposits WHERE status = 'confirmed' AND COALESCE(confirmed_at, created_at) < m.month + interval '1 month')::float AS cum_revenue
 FROM months m
 ORDER BY m.month ASC
 `

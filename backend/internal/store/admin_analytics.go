@@ -31,8 +31,8 @@ type CountryDemographic struct {
 func (s *DashboardStore) AdminGetAnalytics(ctx context.Context) (AdminAnalyticsData, error) {
 	var data AdminAnalyticsData
 
-	// Query TotalRevenue
-	err := s.db.QueryRow(ctx, `SELECT COALESCE(SUM(gas_fee_amount), 0) FROM gas_fee_ledger;`).Scan(&data.TotalRevenue)
+	// Query TotalRevenue from confirmed user gas fee deposits.
+	err := s.db.QueryRow(ctx, `SELECT COALESCE(SUM(amount), 0) FROM gas_fee_deposits WHERE status = 'confirmed';`).Scan(&data.TotalRevenue)
 	if err != nil {
 		return data, err
 	}
