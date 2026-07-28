@@ -23,10 +23,26 @@ type AdminPersonalWallet = {
   walletAddress: string
   shareRate?: string
   balance?: string | number
+  availableBalance?: string
   commissionBalance?: string
+  pendingWithdrawalBalance?: string
+  withdrawnBalance?: string
   updatedBy?: string
   createdAt?: string
   updatedAt?: string
+}
+
+type AdminPersonalWalletWithdrawal = {
+  id: string
+  walletCode: string
+  destinationAddress: string
+  amount: string
+  asset: string
+  status: string
+  txId?: string
+  failureReason?: string
+  requestedAt: string
+  updatedAt: string
 }
 
 type PersonalWalletCard = AdminPersonalWallet & {
@@ -68,6 +84,13 @@ const selectedWallet = ref<PersonalWalletCard | null>(null)
 const walletAddressInput = ref('')
 const walletAddressError = ref('')
 const walletAddressSaving = ref(false)
+const withdrawModalOpen = ref(false)
+const withdrawWallet = ref<PersonalWalletCard | null>(null)
+const withdrawAmountInput = ref('')
+const withdrawAddressInput = ref('')
+const withdrawError = ref('')
+const withdrawSuccess = ref('')
+const withdrawSubmitting = ref(false)
 
 const walletAddressPattern = /^0x[a-fA-F0-9]{40}$/
 
@@ -81,6 +104,51 @@ const canSaveWalletAddress = computed(() => {
     && walletAddressInput.value.trim().length > 0
     && !walletAddressInvalid.value
     && !walletAddressSaving.value
+})
+
+const withdrawAddressInvalid = computed(() => {
+  const value = withdrawAddressInput.value.trim()
+  return value.length > 0 && !walletAddressPattern.test(value)
+})
+
+const decimalToAtomicUnits = (value: string) => {
+  let normalized = value.trim()
+  if (normalized.startsWith('+')) normalized = normalized.slice(1)
+  if (!/^\d+(\.\d{1,18})?$/.test(normalized)) return null
+
+  const [integerPart, fractionPart = ''] = normalized.split('.')
+  try {
+    return BigInt(integerPart || '0') * 10n ** 18n + BigInt(fractionPart.padEnd(18, '0') || '0')
+  } catch {
+    return null
+  }
+}
+
+const withdrawAmountUnits = computed(() => decimalToAtomicUnits(withdrawAmountInput.value))
+
+const withdrawBalanceUnits = computed(() => {
+  if (!withdrawWallet.value) return 0n
+  return decimalToAtomicUnits(withdrawWallet.value.balanceText) || 0n
+})
+
+const withdrawAmountValidationMessage = computed(() => {
+  const value = withdrawAmountInput.value.trim()
+  if (!value) return ''
+  const amount = withdrawAmountUnits.value
+  if (amount === null || amount <= 0n) return 'Enter a valid USDT amount.'
+  if (amount > withdrawBalanceUnits.value) return 'Amount exceeds wallet balance.'
+  return ''
+})
+
+const canSubmitWithdrawal = computed(() => {
+  const amount = withdrawAmountUnits.value
+  return withdrawWallet.value !== null
+    && withdrawAddressInput.value.trim().length > 0
+    && !withdrawAddressInvalid.value
+    && amount !== null
+    && amount > 0n
+    && amount <= withdrawBalanceUnits.value
+    && !withdrawSubmitting.value
 })
 
 const parseWalletBalance = (value: string | number | undefined) => {
@@ -171,7 +239,7 @@ const fetchPersonalWallets = async () => {
 
     personalWallets.value = defaultPersonalWallets.map((wallet) => {
       const remoteWallet = wallets.find(item => item.code === wallet.code)
-      const balanceText = walletBalanceText(remoteWallet?.commissionBalance ?? remoteWallet?.balance ?? wallet.balanceText)
+      const balanceText = walletBalanceText(remoteWallet?.availableBalance ?? remoteWallet?.balance ?? remoteWallet?.commissionBalance ?? wallet.balanceText)
       const balance = parseWalletBalance(balanceText)
       return {
         ...wallet,
@@ -215,7 +283,7 @@ const closeWalletAddressModal = () => {
 const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
   personalWallets.value = personalWallets.value.map((item) => {
     if (item.code !== wallet.code) return item
-    const balanceText = walletBalanceText(wallet.commissionBalance ?? wallet.balance ?? item.balanceText)
+    const balanceText = walletBalanceText(wallet.availableBalance ?? wallet.balance ?? wallet.commissionBalance ?? item.balanceText)
     return {
       ...item,
       ...wallet,
@@ -226,6 +294,15 @@ const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
     }
   })
   recomputeActiveWallets()
+}
+
+const getRequestErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as {
+    data?: { error?: string }
+    response?: { _data?: { error?: string } }
+    message?: string
+  }
+  return apiError.data?.error || apiError.response?._data?.error || apiError.message || fallback
 }
 
 const submitWalletAddress = async (clearAddress = false) => {
@@ -257,6 +334,59 @@ const submitWalletAddress = async (clearAddress = false) => {
     walletAddressError.value = 'Failed to save wallet address.'
   } finally {
     walletAddressSaving.value = false
+  }
+}
+
+const openWithdrawModal = (wallet: PersonalWalletCard) => {
+  withdrawWallet.value = wallet
+  withdrawAmountInput.value = ''
+  withdrawAddressInput.value = wallet.walletAddress
+  withdrawError.value = ''
+  withdrawSuccess.value = ''
+  withdrawModalOpen.value = true
+}
+
+const closeWithdrawModal = () => {
+  if (withdrawSubmitting.value) return
+
+  withdrawModalOpen.value = false
+  withdrawWallet.value = null
+  withdrawAmountInput.value = ''
+  withdrawAddressInput.value = ''
+  withdrawError.value = ''
+  withdrawSuccess.value = ''
+}
+
+const submitWithdrawal = async () => {
+  if (!withdrawWallet.value || !canSubmitWithdrawal.value) return
+
+  withdrawSubmitting.value = true
+  withdrawError.value = ''
+  withdrawSuccess.value = ''
+
+  try {
+    const withdrawal = await $fetch<AdminPersonalWalletWithdrawal>(`${apiBase}/admin/personal-wallets/${withdrawWallet.value.code}/withdrawals`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenCookie.value}`
+      },
+      body: {
+        amount: withdrawAmountInput.value.trim(),
+        walletAddress: withdrawAddressInput.value.trim().toLowerCase()
+      }
+    })
+    withdrawSuccess.value = `Withdraw queued: ${formatDecimalText(withdrawal.amount)} ${withdrawal.asset}`
+    withdrawAmountInput.value = ''
+    await fetchPersonalWallets()
+    const refreshedWallet = personalWallets.value.find(wallet => wallet.code === withdrawal.walletCode)
+    if (refreshedWallet) {
+      withdrawWallet.value = refreshedWallet
+    }
+  } catch (err) {
+    console.error('Failed to create personal wallet withdrawal:', err)
+    withdrawError.value = getRequestErrorMessage(err, 'Failed to create withdrawal.')
+  } finally {
+    withdrawSubmitting.value = false
   }
 }
 
@@ -367,6 +497,9 @@ onMounted(async () => {
               <button
                 class="primary-btn withdraw-btn"
                 type="button"
+                :disabled="wallet.balance <= 0"
+                :title="wallet.balance <= 0 ? 'No balance available' : 'Withdraw'"
+                @click="openWithdrawModal(wallet)"
               >
                 <UIcon name="lucide:arrow-up-right" />
                 Withdraw
@@ -456,6 +589,115 @@ onMounted(async () => {
               >
                 <UIcon name="lucide:link" />
                 {{ walletAddressSaving ? 'Saving...' : 'Save Address' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="withdrawModalOpen && withdrawWallet"
+        class="wallet-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Withdraw personal wallet balance"
+        @click.self="closeWithdrawModal"
+      >
+        <div class="wallet-modal__box">
+          <div class="wallet-modal__header">
+            <span class="wallet-modal__spacer" />
+            <h3>Withdraw</h3>
+            <button
+              class="wallet-modal__icon-btn"
+              type="button"
+              aria-label="Close withdraw modal"
+              @click="closeWithdrawModal"
+            >
+              <UIcon name="lucide:x" />
+            </button>
+          </div>
+
+          <form
+            class="wallet-modal__body"
+            autocomplete="off"
+            @submit.prevent="submitWithdrawal"
+          >
+            <div class="wallet-modal__target">
+              <span>{{ withdrawWallet.displayName }}</span>
+              <strong>{{ formatDecimalText(withdrawWallet.balanceText) }} USDT</strong>
+            </div>
+
+            <label class="wallet-field">
+              <span>Wallet Address</span>
+              <input
+                v-model="withdrawAddressInput"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                placeholder="0x0000000000000000000000000000000000000000"
+                :class="{ 'is-invalid': withdrawAddressInvalid || withdrawError }"
+                :disabled="withdrawSubmitting"
+              >
+            </label>
+
+            <label class="wallet-field">
+              <span>Amount (USDT)</span>
+              <input
+                v-model="withdrawAmountInput"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="0.00"
+                :class="{ 'is-invalid': Boolean(withdrawAmountValidationMessage) || withdrawError }"
+                :disabled="withdrawSubmitting"
+              >
+            </label>
+
+            <p
+              v-if="withdrawError"
+              class="wallet-modal__error"
+            >
+              {{ withdrawError }}
+            </p>
+            <p
+              v-else-if="withdrawAddressInvalid"
+              class="wallet-modal__error"
+            >
+              Enter a valid 0x EVM/BEP-20 wallet address.
+            </p>
+            <p
+              v-else-if="withdrawAmountValidationMessage"
+              class="wallet-modal__error"
+            >
+              {{ withdrawAmountValidationMessage }}
+            </p>
+            <p
+              v-else-if="withdrawSuccess"
+              class="wallet-modal__success"
+            >
+              {{ withdrawSuccess }}
+            </p>
+
+            <div class="wallet-modal__actions">
+              <button
+                class="secondary-neutral-btn"
+                type="button"
+                :disabled="withdrawSubmitting"
+                @click="closeWithdrawModal"
+              >
+                Cancel
+              </button>
+              <button
+                class="save-wallet-btn"
+                type="submit"
+                :disabled="!canSubmitWithdrawal"
+              >
+                <UIcon name="lucide:arrow-up-right" />
+                {{ withdrawSubmitting ? 'Withdrawing...' : 'Withdraw' }}
               </button>
             </div>
           </form>
@@ -693,6 +935,17 @@ onMounted(async () => {
   color: #fff;
 }
 
+.primary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.primary-btn:disabled:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--line);
+  color: var(--text);
+}
+
 .wallet-modal {
   position: fixed;
   inset: 0;
@@ -836,6 +1089,15 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
+.wallet-modal__success {
+  margin: -0.25rem 0 0;
+  color: #10b981;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .wallet-modal__actions {
   display: flex;
   justify-content: flex-end;
@@ -844,6 +1106,7 @@ onMounted(async () => {
 }
 
 .save-wallet-btn,
+.secondary-neutral-btn,
 .secondary-btn {
   display: inline-flex;
   align-items: center;
@@ -861,6 +1124,18 @@ onMounted(async () => {
   text-transform: uppercase;
   cursor: pointer;
   transition: background 220ms var(--ease-quiet), border-color 220ms var(--ease-quiet), transform 220ms var(--ease-quiet);
+}
+
+.secondary-neutral-btn {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text);
+}
+
+.secondary-neutral-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .save-wallet-btn:hover {
@@ -883,6 +1158,7 @@ onMounted(async () => {
 }
 
 .save-wallet-btn:disabled,
+.secondary-neutral-btn:disabled,
 .secondary-btn:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -909,6 +1185,7 @@ onMounted(async () => {
   }
 
   .save-wallet-btn,
+  .secondary-neutral-btn,
   .secondary-btn {
     width: 100%;
   }

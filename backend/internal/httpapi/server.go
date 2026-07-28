@@ -138,6 +138,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/admin/analytics", s.handleAdminGetAnalytics)
 	s.mux.HandleFunc("GET /api/v1/admin/personal-wallets", s.handleAdminPersonalWallets)
 	s.mux.HandleFunc("PATCH /api/v1/admin/personal-wallets/{code}", s.handleUpdateAdminPersonalWallet)
+	s.mux.HandleFunc("POST /api/v1/admin/personal-wallets/{code}/withdrawals", s.handleCreateAdminPersonalWalletWithdrawal)
 	s.mux.HandleFunc("POST /api/v1/admin/gas-fee/preview", s.handleGasFeePreview)
 	s.mux.HandleFunc("GET /api/v1/admin/gas-fee/deposits", s.handleAdminGasFeeDeposits)
 	s.mux.HandleFunc("PATCH /api/v1/admin/gas-fee/deposits/{deposit_id}/status", s.handleUpdateGasFeeDepositStatus)
