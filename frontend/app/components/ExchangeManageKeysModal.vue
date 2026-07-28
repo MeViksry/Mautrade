@@ -180,200 +180,206 @@ const submitVerification = () => {
 </script>
 
 <template>
-  <div
-    v-if="modelValue && exchange"
-    class="manage-modal"
-    role="dialog"
-    aria-modal="true"
-    :aria-label="manageStep === 'keys' ? 'Manage API Keys' : `${actionLabel} Verification`"
-    @click.self="closeManageModal"
-  >
-    <div class="manage-modal__box">
-      <div class="manage-modal__header">
-        <button
-          v-if="manageStep === 'verify'"
-          class="manage-modal__icon-btn"
-          type="button"
-          aria-label="Back to API key details"
-          @click="manageStep = 'keys'"
-        >
-          <UIcon name="lucide:arrow-left" />
-        </button>
-        <span
-          v-else
-          class="manage-modal__spacer"
-        />
-        <h3>{{ manageStep === 'keys' ? 'Manage Keys' : `${actionLabel} Verification` }}</h3>
-        <button
-          class="manage-modal__icon-btn"
-          type="button"
-          aria-label="Close manage keys modal"
-          @click="closeManageModal"
-        >
-          <UIcon name="lucide:x" />
-        </button>
-      </div>
-
-      <div
-        v-if="manageStep === 'keys'"
-        class="key-panel"
-      >
-        <div class="key-panel__exchange">
-          <img
-            class="key-panel__logo"
-            :src="getExchangeLogo(exchange)"
-            :alt="`${exchange.name} logo`"
+  <Teleport to="body">
+    <div
+      v-if="modelValue && exchange"
+      class="manage-modal"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="manageStep === 'keys' ? 'Manage API Keys' : `${actionLabel} Verification`"
+      @click.self="closeManageModal"
+    >
+      <div class="manage-modal__box">
+        <div class="manage-modal__header">
+          <button
+            v-if="manageStep === 'verify'"
+            class="manage-modal__icon-btn"
+            type="button"
+            aria-label="Back to API key details"
+            @click="manageStep = 'keys'"
           >
+            <UIcon name="lucide:arrow-left" />
+          </button>
           <span
-            class="key-panel__status"
-            :class="exchange.status === 'connected' ? 'status-active' : 'status-inactive'"
+            v-else
+            class="manage-modal__spacer"
+          />
+          <h3>{{ manageStep === 'keys' ? 'Manage Keys' : `${actionLabel} Verification` }}</h3>
+          <button
+            class="manage-modal__icon-btn"
+            type="button"
+            aria-label="Close manage keys modal"
+            @click="closeManageModal"
           >
-            {{ exchange.status }}
-          </span>
+            <UIcon name="lucide:x" />
+          </button>
         </div>
 
-        <label
-          v-for="credential in credentialPreviews"
-          :key="credential.key"
-          class="manage-field"
+        <div
+          v-if="manageStep === 'keys'"
+          class="key-panel"
         >
-          <span>{{ credential.label }}</span>
-          <div class="api-key-view">
-            <input
-              :value="credential.maskedValue"
-              readonly
-              type="text"
+          <div class="key-panel__exchange">
+            <img
+              class="key-panel__logo"
+              :src="getExchangeLogo(exchange)"
+              :alt="`${exchange.name} logo`"
             >
             <span
-              class="api-key-view__icon"
-              aria-hidden="true"
+              class="key-panel__status"
+              :class="exchange.status === 'connected' ? 'status-active' : 'status-inactive'"
             >
-              <UIcon :name="credential.icon" />
+              {{ exchange.status }}
             </span>
           </div>
-        </label>
 
-        <div class="key-actions">
-          <button
-            v-if="exchange.status === 'connected'"
-            class="btn-danger"
-            type="button"
-            :disabled="submitting || credentialsLoading"
-            @click="startVerification('disconnect')"
+          <label
+            v-for="credential in credentialPreviews"
+            :key="credential.key"
+            class="manage-field"
           >
-            <UIcon name="lucide:unlink" />
-            <span>Disconnect</span>
-          </button>
-          <button
-            v-else
-            class="btn-primary"
-            type="button"
-            :disabled="submitting || credentialsLoading"
-            @click="startVerification('connect')"
+            <span>{{ credential.label }}</span>
+            <div class="api-key-view">
+              <input
+                :value="credential.maskedValue"
+                readonly
+                type="text"
+              >
+              <span
+                class="api-key-view__icon"
+                aria-hidden="true"
+              >
+                <UIcon :name="credential.icon" />
+              </span>
+            </div>
+          </label>
+
+          <div class="key-actions">
+            <button
+              v-if="exchange.status === 'connected'"
+              class="btn-danger"
+              type="button"
+              :disabled="submitting || credentialsLoading"
+              @click="startVerification('disconnect')"
+            >
+              <UIcon name="lucide:unlink" />
+              <span>Disconnect</span>
+            </button>
+            <button
+              v-else
+              class="btn-primary"
+              type="button"
+              :disabled="submitting || credentialsLoading"
+              @click="startVerification('connect')"
+            >
+              <UIcon name="lucide:link" />
+              <span>Connect</span>
+            </button>
+          </div>
+
+          <p
+            v-if="errorMessage"
+            class="manage-error"
           >
-            <UIcon name="lucide:link" />
-            <span>Connect</span>
-          </button>
+            {{ errorMessage }}
+          </p>
         </div>
 
-        <p
-          v-if="errorMessage"
-          class="manage-error"
+        <form
+          v-else
+          class="verify-form"
+          autocomplete="off"
+          data-form-type="other"
+          @submit.prevent="submitVerification"
         >
-          {{ errorMessage }}
-        </p>
+          <div class="verify-form__target">
+            <span>{{ exchange.name }}</span>
+            <strong>{{ actionLabel }}</strong>
+          </div>
+
+          <label class="manage-field">
+            <span>Email OTP</span>
+            <input
+              v-model="emailOtp"
+              class="otp-input"
+              :class="{ 'is-invalid': submitAttempted && emailOtpInvalid, 'is-shaking': fieldShake.emailOtp }"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              placeholder="000000"
+              :disabled="submitting"
+              @animationend="fieldShake.emailOtp = false"
+            >
+          </label>
+
+          <label
+            v-if="googleAuthenticatorEnabled"
+            class="manage-field"
+          >
+            <span>Google Authenticator</span>
+            <input
+              v-model="googleOtp"
+              class="otp-input"
+              :class="{ 'is-invalid': submitAttempted && googleOtpInvalid, 'is-shaking': fieldShake.googleOtp }"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              placeholder="000000"
+              :disabled="submitting"
+              @animationend="fieldShake.googleOtp = false"
+            >
+          </label>
+
+          <button
+            class="verify-submit"
+            :class="{ 'is-blocked': verificationBlocked }"
+            type="submit"
+            :aria-disabled="verificationBlocked"
+            :disabled="submitting"
+          >
+            <UIcon :name="pendingAction === 'connect' ? 'lucide:link' : 'lucide:unlink'" />
+            <span>{{ submitting ? 'Updating...' : actionLabel }}</span>
+          </button>
+
+          <p
+            v-if="errorMessage"
+            class="manage-error"
+          >
+            {{ errorMessage }}
+          </p>
+
+          <p
+            v-else-if="submitAttempted && verificationHasErrors"
+            class="manage-error"
+          >
+            Complete verification codes
+          </p>
+        </form>
       </div>
-
-      <form
-        v-else
-        class="verify-form"
-        autocomplete="off"
-        data-form-type="other"
-        @submit.prevent="submitVerification"
-      >
-        <div class="verify-form__target">
-          <span>{{ exchange.name }}</span>
-          <strong>{{ actionLabel }}</strong>
-        </div>
-
-        <label class="manage-field">
-          <span>Email OTP</span>
-          <input
-            v-model="emailOtp"
-            class="otp-input"
-            :class="{ 'is-invalid': submitAttempted && emailOtpInvalid, 'is-shaking': fieldShake.emailOtp }"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="6"
-            placeholder="000000"
-            :disabled="submitting"
-            @animationend="fieldShake.emailOtp = false"
-          >
-        </label>
-
-        <label
-          v-if="googleAuthenticatorEnabled"
-          class="manage-field"
-        >
-          <span>Google Authenticator</span>
-          <input
-            v-model="googleOtp"
-            class="otp-input"
-            :class="{ 'is-invalid': submitAttempted && googleOtpInvalid, 'is-shaking': fieldShake.googleOtp }"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="6"
-            placeholder="000000"
-            :disabled="submitting"
-            @animationend="fieldShake.googleOtp = false"
-          >
-        </label>
-
-        <button
-          class="verify-submit"
-          :class="{ 'is-blocked': verificationBlocked }"
-          type="submit"
-          :aria-disabled="verificationBlocked"
-          :disabled="submitting"
-        >
-          <UIcon :name="pendingAction === 'connect' ? 'lucide:link' : 'lucide:unlink'" />
-          <span>{{ submitting ? 'Updating...' : actionLabel }}</span>
-        </button>
-
-        <p
-          v-if="errorMessage"
-          class="manage-error"
-        >
-          {{ errorMessage }}
-        </p>
-
-        <p
-          v-else-if="submitAttempted && verificationHasErrors"
-          class="manage-error"
-        >
-          Complete verification codes
-        </p>
-      </form>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .manage-modal {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(10px);
+  isolation: isolate;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .manage-modal__box {
+  position: relative;
+  z-index: 1;
   width: min(540px, 100%);
   max-height: min(720px, calc(100vh - 4rem));
   overflow-y: auto;

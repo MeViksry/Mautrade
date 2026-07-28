@@ -199,129 +199,103 @@ const submitBindExchange = () => {
 </script>
 
 <template>
-  <div
-    v-if="modelValue"
-    class="bind-modal"
-    role="dialog"
-    aria-modal="true"
-    :aria-label="bindStep === 'exchanges' ? 'Bind New Exchange' : 'Exchange API Credentials'"
-    @click.self="closeBindModal"
-  >
-    <div class="bind-modal__box">
-      <div class="bind-modal__header">
-        <button
-          v-if="bindStep === 'credentials'"
-          class="bind-modal__icon-btn"
-          type="button"
-          aria-label="Back to exchange list"
-          @click="bindStep = 'exchanges'"
-        >
-          <UIcon name="lucide:arrow-left" />
-        </button>
-        <span
-          v-else
-          class="bind-modal__spacer"
-        />
-        <h3>{{ bindStep === 'exchanges' ? 'Bind New Exchange' : 'API Credentials' }}</h3>
-        <button
-          class="bind-modal__icon-btn"
-          type="button"
-          aria-label="Close bind modal"
-          @click="closeBindModal"
-        >
-          <UIcon name="lucide:x" />
-        </button>
-      </div>
-
-      <div
-        v-if="bindStep === 'exchanges'"
-        class="exchange-picker"
-      >
-        <button
-          v-for="exchange in exchanges"
-          :key="exchange.id"
-          class="exchange-option"
-          :class="{ 'is-bound': isExchangeBound(exchange) }"
-          type="button"
-          :disabled="isExchangeBound(exchange)"
-          @click="selectExchange(exchange)"
-        >
-          <span class="exchange-option__logo-shell">
-            <img
-              class="exchange-option__logo"
-              :src="getExchangeLogo(exchange)"
-              :alt="`${exchange.name} logo`"
-            >
-          </span>
+  <Teleport to="body">
+    <div
+      v-if="modelValue"
+      class="bind-modal"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="bindStep === 'exchanges' ? 'Bind New Exchange' : 'Exchange API Credentials'"
+      @click.self="closeBindModal"
+    >
+      <div class="bind-modal__box">
+        <div class="bind-modal__header">
+          <button
+            v-if="bindStep === 'credentials'"
+            class="bind-modal__icon-btn"
+            type="button"
+            aria-label="Back to exchange list"
+            @click="bindStep = 'exchanges'"
+          >
+            <UIcon name="lucide:arrow-left" />
+          </button>
           <span
-            class="exchange-option__status"
-            :class="exchange.status === 'connected' ? 'status-active' : 'status-inactive'"
-          >
-            {{ exchange.status }}
-          </span>
-          <UIcon
-            :name="isExchangeBound(exchange) ? 'lucide:lock' : 'lucide:chevron-right'"
-            class="exchange-option__arrow"
+            v-else
+            class="bind-modal__spacer"
           />
-        </button>
-      </div>
-
-      <form
-        v-else
-        class="bind-form"
-        autocomplete="off"
-        data-form-type="other"
-        @submit.prevent="submitBindExchange"
-      >
-        <div
-          v-if="selectedExchange"
-          class="bind-form__exchange"
-        >
-          <img
-            class="bind-form__logo"
-            :src="getExchangeLogo(selectedExchange)"
-            :alt="`${selectedExchange.name} logo`"
+          <h3>{{ bindStep === 'exchanges' ? 'Bind New Exchange' : 'API Credentials' }}</h3>
+          <button
+            class="bind-modal__icon-btn"
+            type="button"
+            aria-label="Close bind modal"
+            @click="closeBindModal"
           >
-          <span>{{ selectedExchange.name }}</span>
+            <UIcon name="lucide:x" />
+          </button>
         </div>
 
-        <label class="bind-field">
-          <span>API Key</span>
-          <input
-            v-model="apiKey"
-            :class="{ 'is-invalid': submitAttempted && fieldErrors.apiKey, 'is-shaking': fieldShake.apiKey }"
-            :readonly="autofillLocked.apiKey"
-            :disabled="submitting"
-            type="text"
-            name="mautrade-exchange-api-key"
-            placeholder="Enter API key"
-            autocomplete="new-password"
-            autocapitalize="off"
-            autocorrect="off"
-            inputmode="text"
-            :spellcheck="false"
-            data-1p-ignore="true"
-            data-lpignore="true"
-            data-form-type="other"
-            @focus="unlockAutofillField('apiKey')"
-            @animationend="fieldShake.apiKey = false"
+        <div
+          v-if="bindStep === 'exchanges'"
+          class="exchange-picker"
+        >
+          <button
+            v-for="exchange in exchanges"
+            :key="exchange.id"
+            class="exchange-option"
+            :class="{ 'is-bound': isExchangeBound(exchange) }"
+            type="button"
+            :disabled="isExchangeBound(exchange)"
+            @click="selectExchange(exchange)"
           >
-        </label>
+            <span class="exchange-option__logo-shell">
+              <img
+                class="exchange-option__logo"
+                :src="getExchangeLogo(exchange)"
+                :alt="`${exchange.name} logo`"
+              >
+            </span>
+            <span
+              class="exchange-option__status"
+              :class="exchange.status === 'connected' ? 'status-active' : 'status-inactive'"
+            >
+              {{ exchange.status }}
+            </span>
+            <UIcon
+              :name="isExchangeBound(exchange) ? 'lucide:lock' : 'lucide:chevron-right'"
+              class="exchange-option__arrow"
+            />
+          </button>
+        </div>
 
-        <label class="bind-field">
-          <span>API Secret</span>
+        <form
+          v-else
+          class="bind-form"
+          autocomplete="off"
+          data-form-type="other"
+          @submit.prevent="submitBindExchange"
+        >
           <div
-            class="bind-secret"
-            :class="{ 'is-invalid': submitAttempted && fieldErrors.apiSecret, 'is-shaking': fieldShake.apiSecret }"
-            @animationend="fieldShake.apiSecret = false"
+            v-if="selectedExchange"
+            class="bind-form__exchange"
           >
+            <img
+              class="bind-form__logo"
+              :src="getExchangeLogo(selectedExchange)"
+              :alt="`${selectedExchange.name} logo`"
+            >
+            <span>{{ selectedExchange.name }}</span>
+          </div>
+
+          <label class="bind-field">
+            <span>API Key</span>
             <input
-              v-model="apiSecret"
-              :type="visibleFields.apiSecret ? 'text' : 'password'"
-              :readonly="autofillLocked.apiSecret"
+              v-model="apiKey"
+              :class="{ 'is-invalid': submitAttempted && fieldErrors.apiKey, 'is-shaking': fieldShake.apiKey }"
+              :readonly="autofillLocked.apiKey"
               :disabled="submitting"
-              name="mautrade-exchange-api-secret"
-              placeholder="Enter API secret"
+              type="text"
+              name="mautrade-exchange-api-key"
+              placeholder="Enter API key"
               autocomplete="new-password"
               autocapitalize="off"
               autocorrect="off"
@@ -330,36 +304,91 @@ const submitBindExchange = () => {
               data-1p-ignore="true"
               data-lpignore="true"
               data-form-type="other"
-              @focus="unlockAutofillField('apiSecret')"
+              @focus="unlockAutofillField('apiKey')"
+              @animationend="fieldShake.apiKey = false"
             >
-            <button
-              type="button"
-              :disabled="submitting"
-              :aria-label="visibleFields.apiSecret ? 'Hide API secret' : 'Show API secret'"
-              @click="toggleFieldVisibility('apiSecret')"
-            >
-              <UIcon :name="visibleFields.apiSecret ? 'lucide:eye-off' : 'lucide:eye'" />
-            </button>
-          </div>
-        </label>
+          </label>
 
-        <label
-          v-for="field in selectedConfig.extraFields"
-          :key="field.key"
-          class="bind-field"
-        >
-          <span>{{ field.label }}</span>
-          <div
-            v-if="field.type === 'password'"
-            class="bind-secret"
-            :class="{ 'is-invalid': submitAttempted && fieldErrors[field.key], 'is-shaking': fieldShake[field.key] }"
-            @animationend="fieldShake[field.key] = false"
+          <label class="bind-field">
+            <span>API Secret</span>
+            <div
+              class="bind-secret"
+              :class="{ 'is-invalid': submitAttempted && fieldErrors.apiSecret, 'is-shaking': fieldShake.apiSecret }"
+              @animationend="fieldShake.apiSecret = false"
+            >
+              <input
+                v-model="apiSecret"
+                :type="visibleFields.apiSecret ? 'text' : 'password'"
+                :readonly="autofillLocked.apiSecret"
+                :disabled="submitting"
+                name="mautrade-exchange-api-secret"
+                placeholder="Enter API secret"
+                autocomplete="new-password"
+                autocapitalize="off"
+                autocorrect="off"
+                inputmode="text"
+                :spellcheck="false"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+                @focus="unlockAutofillField('apiSecret')"
+              >
+              <button
+                type="button"
+                :disabled="submitting"
+                :aria-label="visibleFields.apiSecret ? 'Hide API secret' : 'Show API secret'"
+                @click="toggleFieldVisibility('apiSecret')"
+              >
+                <UIcon :name="visibleFields.apiSecret ? 'lucide:eye-off' : 'lucide:eye'" />
+              </button>
+            </div>
+          </label>
+
+          <label
+            v-for="field in selectedConfig.extraFields"
+            :key="field.key"
+            class="bind-field"
           >
+            <span>{{ field.label }}</span>
+            <div
+              v-if="field.type === 'password'"
+              class="bind-secret"
+              :class="{ 'is-invalid': submitAttempted && fieldErrors[field.key], 'is-shaking': fieldShake[field.key] }"
+              @animationend="fieldShake[field.key] = false"
+            >
+              <input
+                v-model="extras[field.key]"
+                :type="visibleFields[field.key] ? 'text' : 'password'"
+                :readonly="autofillLocked[field.key]"
+                :disabled="submitting"
+                :name="`mautrade-exchange-${field.key}`"
+                :placeholder="field.placeholder"
+                autocomplete="new-password"
+                autocapitalize="off"
+                autocorrect="off"
+                inputmode="text"
+                :spellcheck="false"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+                @focus="unlockAutofillField(field.key)"
+              >
+              <button
+                type="button"
+                :disabled="submitting"
+                :aria-label="visibleFields[field.key] ? `Hide ${field.label}` : `Show ${field.label}`"
+                @click="toggleFieldVisibility(field.key)"
+              >
+                <UIcon :name="visibleFields[field.key] ? 'lucide:eye-off' : 'lucide:eye'" />
+              </button>
+            </div>
             <input
+              v-else
               v-model="extras[field.key]"
-              :type="visibleFields[field.key] ? 'text' : 'password'"
+              :class="{ 'is-invalid': submitAttempted && fieldErrors[field.key], 'is-shaking': fieldShake[field.key] }"
               :readonly="autofillLocked[field.key]"
               :disabled="submitting"
+              :type="field.type"
               :name="`mautrade-exchange-${field.key}`"
               :placeholder="field.placeholder"
               autocomplete="new-password"
@@ -371,81 +400,58 @@ const submitBindExchange = () => {
               data-lpignore="true"
               data-form-type="other"
               @focus="unlockAutofillField(field.key)"
+              @animationend="fieldShake[field.key] = false"
             >
-            <button
-              type="button"
-              :disabled="submitting"
-              :aria-label="visibleFields[field.key] ? `Hide ${field.label}` : `Show ${field.label}`"
-              @click="toggleFieldVisibility(field.key)"
-            >
-              <UIcon :name="visibleFields[field.key] ? 'lucide:eye-off' : 'lucide:eye'" />
-            </button>
-          </div>
-          <input
-            v-else
-            v-model="extras[field.key]"
-            :class="{ 'is-invalid': submitAttempted && fieldErrors[field.key], 'is-shaking': fieldShake[field.key] }"
-            :readonly="autofillLocked[field.key]"
+          </label>
+
+          <button
+            class="bind-submit"
+            :class="{ 'is-blocked': formBlocked }"
+            type="submit"
+            :aria-disabled="formBlocked"
             :disabled="submitting"
-            :type="field.type"
-            :name="`mautrade-exchange-${field.key}`"
-            :placeholder="field.placeholder"
-            autocomplete="new-password"
-            autocapitalize="off"
-            autocorrect="off"
-            inputmode="text"
-            :spellcheck="false"
-            data-1p-ignore="true"
-            data-lpignore="true"
-            data-form-type="other"
-            @focus="unlockAutofillField(field.key)"
-            @animationend="fieldShake[field.key] = false"
           >
-        </label>
+            <UIcon name="lucide:link" />
+            <span>{{ submitting ? 'Binding...' : 'Bind Exchange' }}</span>
+          </button>
 
-        <button
-          class="bind-submit"
-          :class="{ 'is-blocked': formBlocked }"
-          type="submit"
-          :aria-disabled="formBlocked"
-          :disabled="submitting"
-        >
-          <UIcon name="lucide:link" />
-          <span>{{ submitting ? 'Binding...' : 'Bind Exchange' }}</span>
-        </button>
+          <p
+            v-if="errorMessage"
+            class="bind-error"
+          >
+            {{ errorMessage }}
+          </p>
 
-        <p
-          v-if="errorMessage"
-          class="bind-error"
-        >
-          {{ errorMessage }}
-        </p>
-
-        <p
-          v-else-if="submitAttempted && hasFieldErrors"
-          class="bind-error"
-        >
-          Complete required credentials
-        </p>
-      </form>
+          <p
+            v-else-if="submitAttempted && hasFieldErrors"
+            class="bind-error"
+          >
+            Complete required credentials
+          </p>
+        </form>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .bind-modal {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(10px);
+  isolation: isolate;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .bind-modal__box {
+  position: relative;
+  z-index: 1;
   width: min(560px, 100%);
   max-height: min(760px, calc(100vh - 4rem));
   overflow-y: auto;
