@@ -356,9 +356,6 @@ onMounted(async () => {
             <div class="wallet-balance">
               <span class="currency">$</span>{{ formatDecimalText(wallet.balanceText) }}
             </div>
-            <div class="wallet-share">
-              {{ Number(wallet.shareRate) * 100 }}% Gas Fee Deposit Share
-            </div>
             <div
               class="wallet-address-status"
               :class="{ 'wallet-address-status--linked': wallet.walletAddress }"
@@ -643,16 +640,6 @@ onMounted(async () => {
 .wallet-balance .currency {
   font-size: 1.5rem;
   color: var(--text-mute);
-}
-
-.wallet-share {
-  margin-top: -1rem;
-  color: var(--accent);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .wallet-address-status {
