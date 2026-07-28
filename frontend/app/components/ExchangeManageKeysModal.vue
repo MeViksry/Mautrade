@@ -2,14 +2,22 @@
 import { computed, reactive, ref, watch } from 'vue'
 
 interface ExchangeBinding {
-  id: number
+  id: string
+  exchange: string
+  bindingId?: string
   name: string
   logo: string
   logoDark?: string
-  status: string
+  status: 'connected' | 'disconnected'
   lastSynced: string | null
   balance: number
-  hasApi?: boolean
+  hasApi: boolean
+}
+
+interface ExchangeCredentials {
+  maskedApiKey: string
+  hasApiSecret: boolean
+  hasPassphrase: boolean
 }
 
 interface CredentialConfig {
@@ -20,8 +28,8 @@ interface CredentialConfig {
 interface CredentialPreview {
   key: string
   label: string
-  value: string
   maskedValue: string
+  icon: string
 }
 
 const props = defineProps<{
@@ -29,20 +37,22 @@ const props = defineProps<{
   exchange: ExchangeBinding | null
   theme: 'dark' | 'light'
   googleAuthenticatorEnabled: boolean
+  credentials?: ExchangeCredentials | null
+  credentialsLoading?: boolean
+  submitting?: boolean
+  errorMessage?: string
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'status-change': [payload: { exchangeId: number, status: 'connected' | 'disconnected' }]
+  'status-change': [payload: { exchange: string, status: 'connected' | 'disconnected' }]
 }>()
 
 const manageStep = ref<'keys' | 'verify'>('keys')
 const pendingAction = ref<'connect' | 'disconnect' | null>(null)
-const visibleCredentials = reactive<Record<string, boolean>>({})
 const emailOtp = ref('')
 const googleOtp = ref('')
 const submitAttempted = ref(false)
-const submitted = ref(false)
 const fieldShake = reactive<Record<string, boolean>>({})
 
 const resetManageState = () => {
@@ -51,15 +61,10 @@ const resetManageState = () => {
   emailOtp.value = ''
   googleOtp.value = ''
   submitAttempted.value = false
-  submitted.value = false
 
   Object.keys(fieldShake).forEach((key) => {
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete fieldShake[key]
-  })
-  Object.keys(visibleCredentials).forEach((key) => {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete visibleCredentials[key]
   })
 }
 
@@ -97,16 +102,18 @@ const credentialConfigs: Record<string, CredentialConfig[]> = {
   ]
 }
 
-const getCredentialValue = (exchange: ExchangeBinding, credential: CredentialConfig) => {
-  const prefix = exchange.name.toUpperCase().replace(/\s+/g, '')
-  const suffix = String(exchange.id).padStart(2, '0')
-  const keyLabel = credential.key.replace(/([A-Z])/g, '-$1').toUpperCase()
-
-  return `MAU-${prefix}-${keyLabel}-${suffix}A9F`
+const credentialStatusValue = (key: string) => {
+  if (props.credentialsLoading) return 'Loading...'
+  if (!props.credentials) return 'Not available'
+  if (key === 'apiKey') return props.credentials.maskedApiKey || 'Not available'
+  if (key === 'apiSecret') return props.credentials.hasApiSecret ? 'Stored securely' : 'Not stored'
+  if (key === 'passphrase') return props.credentials.hasPassphrase ? 'Stored securely' : 'Not stored'
+  return 'Not available'
 }
 
-const maskCredential = (value: string) => {
-  return `${value.slice(0, 12)}••••••••${value.slice(-4)}`
+const credentialIcon = (key: string) => {
+  if (key === 'apiKey') return 'lucide:key-round'
+  return 'lucide:shield-check'
 }
 
 const credentialPreviews = computed<CredentialPreview[]>(() => {
@@ -115,23 +122,13 @@ const credentialPreviews = computed<CredentialPreview[]>(() => {
   const configs = credentialConfigs[props.exchange.name] ?? credentialConfigs.Binance!
 
   return configs.map((credential) => {
-    const value = getCredentialValue(props.exchange!, credential)
-
     return {
       ...credential,
-      value,
-      maskedValue: maskCredential(value)
+      maskedValue: credentialStatusValue(credential.key),
+      icon: credentialIcon(credential.key)
     }
   })
 })
-
-const getDisplayedCredential = (credential: CredentialPreview) => {
-  return visibleCredentials[credential.key] ? credential.value : credential.maskedValue
-}
-
-const toggleCredentialVisibility = (key: string) => {
-  visibleCredentials[key] = !visibleCredentials[key]
-}
 
 const actionLabel = computed(() => {
   return pendingAction.value === 'connect' ? 'Connect' : 'Disconnect'
@@ -139,7 +136,8 @@ const actionLabel = computed(() => {
 
 const emailOtpInvalid = computed(() => emailOtp.value.trim().length !== 6)
 const googleOtpInvalid = computed(() => props.googleAuthenticatorEnabled && googleOtp.value.trim().length !== 6)
-const verificationBlocked = computed(() => submitted.value || emailOtpInvalid.value || googleOtpInvalid.value)
+const verificationHasErrors = computed(() => emailOtpInvalid.value || googleOtpInvalid.value)
+const verificationBlocked = computed(() => props.submitting === true || verificationHasErrors.value)
 
 const triggerFieldShake = (key: string) => {
   fieldShake[key] = false
@@ -149,19 +147,18 @@ const triggerFieldShake = (key: string) => {
 }
 
 const startVerification = (action: 'connect' | 'disconnect') => {
+  if (props.submitting) return
+
   pendingAction.value = action
   manageStep.value = 'verify'
   emailOtp.value = ''
   googleOtp.value = ''
   submitAttempted.value = false
-  submitted.value = false
 }
 
-watch([emailOtp, googleOtp], () => {
-  submitted.value = false
-})
-
 const submitVerification = () => {
+  if (props.submitting) return
+
   submitAttempted.value = true
 
   if (emailOtpInvalid.value) {
@@ -172,11 +169,10 @@ const submitVerification = () => {
     triggerFieldShake('googleOtp')
   }
 
-  if (verificationBlocked.value || !props.exchange || !pendingAction.value) return
+  if (verificationHasErrors.value || !props.exchange || !pendingAction.value) return
 
-  submitted.value = true
   emit('status-change', {
-    exchangeId: props.exchange.id,
+    exchange: props.exchange.exchange,
     status: pendingAction.value === 'connect' ? 'connected' : 'disconnected'
   })
 }
@@ -243,17 +239,16 @@ const submitVerification = () => {
           <span>{{ credential.label }}</span>
           <div class="api-key-view">
             <input
-              :value="getDisplayedCredential(credential)"
+              :value="credential.maskedValue"
               readonly
               type="text"
             >
-            <button
-              type="button"
-              :aria-label="visibleCredentials[credential.key] ? `Hide ${credential.label}` : `Show ${credential.label}`"
-              @click="toggleCredentialVisibility(credential.key)"
+            <span
+              class="api-key-view__icon"
+              aria-hidden="true"
             >
-              <UIcon :name="visibleCredentials[credential.key] ? 'lucide:eye-off' : 'lucide:eye'" />
-            </button>
+              <UIcon :name="credential.icon" />
+            </span>
           </div>
         </label>
 
@@ -262,6 +257,7 @@ const submitVerification = () => {
             v-if="exchange.status === 'connected'"
             class="btn-danger"
             type="button"
+            :disabled="submitting || credentialsLoading"
             @click="startVerification('disconnect')"
           >
             <UIcon name="lucide:unlink" />
@@ -271,12 +267,20 @@ const submitVerification = () => {
             v-else
             class="btn-primary"
             type="button"
+            :disabled="submitting || credentialsLoading"
             @click="startVerification('connect')"
           >
             <UIcon name="lucide:link" />
             <span>Connect</span>
           </button>
         </div>
+
+        <p
+          v-if="errorMessage"
+          class="manage-error"
+        >
+          {{ errorMessage }}
+        </p>
       </div>
 
       <form
@@ -302,6 +306,7 @@ const submitVerification = () => {
             autocomplete="one-time-code"
             maxlength="6"
             placeholder="000000"
+            :disabled="submitting"
             @animationend="fieldShake.emailOtp = false"
           >
         </label>
@@ -320,6 +325,7 @@ const submitVerification = () => {
             autocomplete="one-time-code"
             maxlength="6"
             placeholder="000000"
+            :disabled="submitting"
             @animationend="fieldShake.googleOtp = false"
           >
         </label>
@@ -329,23 +335,24 @@ const submitVerification = () => {
           :class="{ 'is-blocked': verificationBlocked }"
           type="submit"
           :aria-disabled="verificationBlocked"
+          :disabled="submitting"
         >
           <UIcon :name="pendingAction === 'connect' ? 'lucide:link' : 'lucide:unlink'" />
-          <span>{{ actionLabel }}</span>
+          <span>{{ submitting ? 'Updating...' : actionLabel }}</span>
         </button>
 
         <p
-          v-if="submitAttempted && verificationBlocked"
+          v-if="errorMessage"
           class="manage-error"
         >
-          Complete verification codes
+          {{ errorMessage }}
         </p>
 
         <p
-          v-if="submitted"
-          class="manage-success"
+          v-else-if="submitAttempted && verificationHasErrors"
+          class="manage-error"
         >
-          Status updated
+          Complete verification codes
         </p>
       </form>
     </div>
@@ -508,7 +515,7 @@ const submitVerification = () => {
   border-right: none;
 }
 
-.api-key-view button {
+.api-key-view__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -516,12 +523,6 @@ const submitVerification = () => {
   border: 1px solid var(--line);
   background: var(--charcoal);
   color: var(--text);
-  transition: border-color 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
-}
-
-.api-key-view button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .key-actions {
@@ -568,6 +569,14 @@ const submitVerification = () => {
   background: rgba(239, 68, 68, 0.08);
   color: #ff6b6b;
   transform: translateY(-1px);
+}
+
+.btn-primary:disabled,
+.btn-danger:disabled,
+.verify-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
 }
 
 .verify-form__target {

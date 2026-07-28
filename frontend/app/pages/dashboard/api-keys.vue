@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import ExchangeBindModal from '~/components/ExchangeBindModal.vue'
 import ExchangeManageKeysModal from '~/components/ExchangeManageKeysModal.vue'
 import { useDashboardData } from '~/composables/useDashboardData'
+import type { ExchangeBinding, ExchangeCredentialSummary } from '~/composables/useDashboardData'
 
 definePageMeta({
   layout: 'dashboard'
@@ -20,35 +21,50 @@ useSeoMeta({
   twitterDescription: seoDescription
 })
 
-interface ExchangeBinding {
-  id: number
-  name: string
-  logo: string
-  logoDark?: string
-  status: string
-  lastSynced: string | null
-  balance: number
-  hasApi?: boolean
-}
-
-const { getExchangeBindings } = useDashboardData()
+const {
+  getExchangeBindings,
+  bindExchange,
+  getExchangeBindingCredentials,
+  updateExchangeBindingStatus,
+  deleteExchangeBinding
+} = useDashboardData()
 const exchanges = ref<ExchangeBinding[]>([])
 const loading = ref(true)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const bindModalOpen = ref(false)
 const manageModalOpen = ref(false)
 const managedExchange = ref<ExchangeBinding | null>(null)
+const managedCredentials = ref<ExchangeCredentialSummary | null>(null)
+const pageError = ref('')
+const bindSubmitting = ref(false)
+const bindError = ref('')
+const manageSubmitting = ref<string | null>(null)
+const manageCredentialsLoading = ref(false)
+const manageError = ref('')
 const googleAuthenticatorEnabled = ref(true)
 
-onMounted(async () => {
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return fallback
+}
+
+const refreshExchangeBindings = async () => {
   loading.value = true
+  pageError.value = ''
   try {
     exchanges.value = await getExchangeBindings()
   } catch (error) {
     console.error('Error fetching exchange bindings:', error)
+    pageError.value = getErrorMessage(error, 'Failed to load exchange bindings')
   } finally {
     loading.value = false
   }
+}
+
+onMounted(async () => {
+  await refreshExchangeBindings()
 })
 
 const formatLastSynced = (lastSynced: string | null) => {
@@ -59,58 +75,89 @@ const getExchangeLogo = (exchange: ExchangeBinding) => {
   return theme.value === 'dark' && exchange.logoDark ? exchange.logoDark : exchange.logo
 }
 
-const handleExchangeBindSubmitted = (payload: { exchange: string }) => {
-  exchanges.value = exchanges.value.map((exchange) => {
-    if (exchange.name !== payload.exchange) return exchange
-
-    return {
-      ...exchange,
-      status: 'connected',
-      lastSynced: new Date().toISOString(),
-      hasApi: true
-    }
-  })
+const openBindModal = () => {
+  bindError.value = ''
+  bindModalOpen.value = true
 }
 
-const handleDeleteApi = (exchangeId: number) => {
-  exchanges.value = exchanges.value.map((exchange) => {
-    if (exchange.id !== exchangeId) return exchange
-
-    return {
-      ...exchange,
-      status: 'disconnected',
-      lastSynced: null,
-      balance: 0,
-      hasApi: false
-    }
-  })
-
-  if (managedExchange.value?.id === exchangeId) {
-    manageModalOpen.value = false
-    managedExchange.value = null
+const handleExchangeBindSubmitted = async (payload: { exchange: string, apiKey: string, apiSecret: string, extras: Record<string, string> }) => {
+  bindSubmitting.value = true
+  bindError.value = ''
+  try {
+    await bindExchange({
+      exchange: payload.exchange,
+      apiKey: payload.apiKey,
+      apiSecret: payload.apiSecret,
+      passphrase: payload.extras.passphrase
+    })
+    await refreshExchangeBindings()
+    bindModalOpen.value = false
+  } catch (error) {
+    bindError.value = getErrorMessage(error, 'Failed to bind exchange')
+  } finally {
+    bindSubmitting.value = false
   }
 }
 
-const openManageKeys = (exchange: ExchangeBinding) => {
+const handleDeleteApi = async (exchange: ExchangeBinding) => {
+  if (exchange.hasApi === false || manageSubmitting.value) return
+
+  manageSubmitting.value = exchange.exchange
+  pageError.value = ''
+  manageError.value = ''
+  try {
+    await deleteExchangeBinding(exchange.exchange)
+    await refreshExchangeBindings()
+
+    if (managedExchange.value?.exchange === exchange.exchange) {
+      manageModalOpen.value = false
+      managedExchange.value = null
+      managedCredentials.value = null
+    }
+  } catch (error) {
+    const message = getErrorMessage(error, 'Failed to delete exchange API')
+    pageError.value = message
+    manageError.value = message
+  } finally {
+    manageSubmitting.value = null
+  }
+}
+
+const openManageKeys = async (exchange: ExchangeBinding) => {
   if (exchange.hasApi === false) return
 
   managedExchange.value = exchange
+  managedCredentials.value = null
+  manageError.value = ''
   manageModalOpen.value = true
+  manageCredentialsLoading.value = true
+  try {
+    managedCredentials.value = await getExchangeBindingCredentials(exchange.exchange)
+  } catch (error) {
+    manageError.value = getErrorMessage(error, 'Failed to load exchange credential')
+  } finally {
+    manageCredentialsLoading.value = false
+  }
 }
 
-const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'connected' | 'disconnected' }) => {
-  exchanges.value = exchanges.value.map((exchange) => {
-    if (exchange.id !== payload.exchangeId) return exchange
+const handleExchangeStatusChange = async (payload: { exchange: string, status: 'connected' | 'disconnected' }) => {
+  if (manageSubmitting.value) return
 
-    return {
-      ...exchange,
-      status: payload.status,
-      lastSynced: payload.status === 'connected' ? new Date().toISOString() : exchange.lastSynced,
-      hasApi: true
+  manageSubmitting.value = payload.exchange
+  manageError.value = ''
+  try {
+    await updateExchangeBindingStatus(payload.exchange, payload.status)
+    await refreshExchangeBindings()
+    managedExchange.value = exchanges.value.find(exchange => exchange.exchange === payload.exchange) ?? null
+    if (managedExchange.value?.hasApi) {
+      managedCredentials.value = await getExchangeBindingCredentials(payload.exchange)
     }
-  })
-
-  managedExchange.value = exchanges.value.find(exchange => exchange.id === payload.exchangeId) ?? null
+    manageModalOpen.value = false
+  } catch (error) {
+    manageError.value = getErrorMessage(error, 'Failed to update exchange status')
+  } finally {
+    manageSubmitting.value = null
+  }
 }
 </script>
 
@@ -161,11 +208,18 @@ const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'conn
         <button
           class="btn-primary"
           type="button"
-          @click="bindModalOpen = true"
+          @click="openBindModal"
         >
           + Bind New Exchange
         </button>
       </div>
+
+      <p
+        v-if="pageError"
+        class="page-error"
+      >
+        {{ pageError }}
+      </p>
 
       <div class="api-keys-grid">
         <div
@@ -212,10 +266,10 @@ const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'conn
             <button
               class="btn-danger"
               type="button"
-              :disabled="exchange.hasApi === false"
-              @click="handleDeleteApi(exchange.id)"
+              :disabled="exchange.hasApi === false || manageSubmitting === exchange.exchange"
+              @click="handleDeleteApi(exchange)"
             >
-              Delete Api
+              {{ manageSubmitting === exchange.exchange ? 'Deleting...' : 'Delete Api' }}
             </button>
           </div>
         </div>
@@ -226,6 +280,8 @@ const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'conn
       v-model="bindModalOpen"
       :exchanges="exchanges"
       :theme="theme"
+      :submitting="bindSubmitting"
+      :error-message="bindError"
       @submitted="handleExchangeBindSubmitted"
     />
     <ExchangeManageKeysModal
@@ -233,6 +289,10 @@ const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'conn
       :exchange="managedExchange"
       :theme="theme"
       :google-authenticator-enabled="googleAuthenticatorEnabled"
+      :credentials="managedCredentials"
+      :credentials-loading="manageCredentialsLoading"
+      :submitting="Boolean(manageSubmitting)"
+      :error-message="manageError"
       @status-change="handleExchangeStatusChange"
     />
   </div>
@@ -260,6 +320,15 @@ const handleExchangeStatusChange = (payload: { exchangeId: number, status: 'conn
   color: var(--text);
   margin: 0;
   letter-spacing: 0.05em;
+}
+
+.page-error {
+  margin: -0.35rem 0 0.35rem;
+  color: #ef4444;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ─── Skeleton Loading ─── */

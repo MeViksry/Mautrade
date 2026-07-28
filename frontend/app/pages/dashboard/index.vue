@@ -36,13 +36,16 @@ interface GasFeeAccountSummary {
 }
 
 interface ExchangeBinding {
-  id: number
+  id: string
+  exchange: string
+  bindingId?: string
   name: string
   logo: string
   logoDark?: string
-  status: string
+  status: 'connected' | 'disconnected'
   lastSynced: string | null
   balance: number
+  hasApi: boolean
 }
 
 interface Layer {

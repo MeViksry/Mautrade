@@ -1,9 +1,83 @@
-export const useDashboardData = () => {
-  // Mock data structure, ready to be replaced with real API calls using useFetch or $fetch
+export interface ExchangeBinding {
+  id: string
+  exchange: string
+  bindingId?: string
+  name: string
+  logo: string
+  logoDark?: string
+  status: 'connected' | 'disconnected'
+  lastSynced: string | null
+  balance: number
+  hasApi: boolean
+}
 
+export interface ExchangeCredentialSummary {
+  id: string
+  exchange: string
+  status: string
+  maskedApiKey: string
+  hasApiSecret: boolean
+  hasPassphrase: boolean
+  permissionScope: string
+  lastVerifiedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface ApiExchangeBinding {
+  id: string
+  name: string
+  status: string
+  lastSynced: string | null
+  balance: string | number
+  hasApi: boolean
+}
+
+interface BindExchangePayload {
+  exchange: string
+  apiKey: string
+  apiSecret: string
+  passphrase?: string
+}
+
+export const useDashboardData = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
   const tokenCookie = useCookie<string | null>('auth_token')
+  const exchangeCatalog: ExchangeBinding[] = [
+    { id: 'binance', exchange: 'binance', name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false },
+    { id: 'okx', exchange: 'okx', name: 'OKX', logo: '/UserDashboard/OKX_logo.svg', logoDark: '/UserDashboard/OKX_logo_dark.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false },
+    { id: 'bybit', exchange: 'bybit', name: 'Bybit', logo: '/UserDashboard/Bybit_logo.svg', logoDark: '/UserDashboard/Bybit_logo_dark.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false },
+    { id: 'tokocrypto', exchange: 'tokocrypto', name: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false }
+  ]
+
+  const authHeaders = () => ({
+    Authorization: `Bearer ${tokenCookie.value}`
+  })
+
+  const numberValue = (value: string | number | null | undefined) => {
+    const parsed = Number(value ?? 0)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  const normalizeExchangeKey = (value: string) => {
+    return value.toLowerCase().replace(/\s+/g, '')
+  }
+
+  const toExchangeStatus = (status: string): 'connected' | 'disconnected' => {
+    return status.toLowerCase() === 'connected' || status.toLowerCase() === 'active' ? 'connected' : 'disconnected'
+  }
+
+  const formatApiError = (error: unknown, fallback: string) => {
+    if (typeof error === 'object' && error !== null && 'data' in error) {
+      const data = (error as { data?: { error?: string, message?: string } }).data
+      return data?.error || data?.message || fallback
+    }
+    if (error instanceof Error) {
+      return error.message
+    }
+    return fallback
+  }
 
   const getUserStats = async () => {
     try {
@@ -37,18 +111,14 @@ export const useDashboardData = () => {
 
   const getGasFeeAccount = async () => {
     return await $fetch(`${apiBase}/user/gas-fee`, {
-      headers: {
-        Authorization: `Bearer ${tokenCookie.value}`
-      }
+      headers: authHeaders()
     })
   }
 
   const createGasFeeDeposit = async (payload: { amount: number | string, asset?: string, txId: string }) => {
     return await $fetch(`${apiBase}/user/gas-fee/deposits`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${tokenCookie.value}`
-      },
+      headers: authHeaders(),
       body: {
         amount: String(payload.amount),
         asset: payload.asset || 'USDT',
@@ -57,13 +127,88 @@ export const useDashboardData = () => {
     })
   }
 
-  const getExchangeBindings = async () => {
-    return [
-      { id: 1, name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 8450.75, hasApi: true },
-      { id: 2, name: 'OKX', logo: '/UserDashboard/OKX_logo.svg', logoDark: '/UserDashboard/OKX_logo_dark.svg', status: 'connected', lastSynced: '2026-07-18T10:30:00Z', balance: 4000.00, hasApi: true },
-      { id: 3, name: 'Bybit', logo: '/UserDashboard/Bybit_logo.svg', logoDark: '/UserDashboard/Bybit_logo_dark.svg', status: 'disconnected', lastSynced: '2026-07-01T08:00:00Z', balance: 0.00, hasApi: true },
-      { id: 4, name: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg', status: 'disconnected', lastSynced: null, balance: 0.00, hasApi: true }
-    ]
+  const getExchangeBindings = async (): Promise<ExchangeBinding[]> => {
+    try {
+      const bindings = await $fetch<ApiExchangeBinding[]>(`${apiBase}/user/exchange-bindings`, {
+        headers: authHeaders()
+      })
+      const bindingsByExchange = new Map(
+        bindings.map(binding => [normalizeExchangeKey(binding.name), binding])
+      )
+
+      return exchangeCatalog.map((catalogExchange) => {
+        const binding = bindingsByExchange.get(catalogExchange.exchange)
+        if (!binding) return { ...catalogExchange }
+
+        return {
+          ...catalogExchange,
+          bindingId: binding.id,
+          status: toExchangeStatus(binding.status),
+          lastSynced: binding.lastSynced,
+          balance: numberValue(binding.balance),
+          hasApi: binding.hasApi
+        }
+      })
+    } catch (error) {
+      console.warn('Failed to fetch exchange bindings:', error)
+      return exchangeCatalog.map(exchange => ({ ...exchange }))
+    }
+  }
+
+  const bindExchange = async (payload: BindExchangePayload): Promise<ExchangeCredentialSummary> => {
+    const body: Record<string, string> = {
+      exchange: payload.exchange,
+      api_key: payload.apiKey,
+      api_secret: payload.apiSecret,
+      permission_scope: 'trade_only'
+    }
+
+    if (payload.passphrase?.trim()) {
+      body.api_passphrase = payload.passphrase.trim()
+    }
+
+    try {
+      return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body
+      })
+    } catch (error) {
+      throw new Error(formatApiError(error, 'Failed to bind exchange'), { cause: error })
+    }
+  }
+
+  const getExchangeBindingCredentials = async (exchange: string): Promise<ExchangeCredentialSummary> => {
+    try {
+      return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings/${encodeURIComponent(exchange)}/credentials`, {
+        headers: authHeaders()
+      })
+    } catch (error) {
+      throw new Error(formatApiError(error, 'Failed to read exchange credential'), { cause: error })
+    }
+  }
+
+  const updateExchangeBindingStatus = async (exchange: string, status: 'connected' | 'disconnected'): Promise<ExchangeCredentialSummary> => {
+    try {
+      return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings/${encodeURIComponent(exchange)}/status`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: { status }
+      })
+    } catch (error) {
+      throw new Error(formatApiError(error, 'Failed to update exchange status'), { cause: error })
+    }
+  }
+
+  const deleteExchangeBinding = async (exchange: string): Promise<ExchangeCredentialSummary> => {
+    try {
+      return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings/${encodeURIComponent(exchange)}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      })
+    } catch (error) {
+      throw new Error(formatApiError(error, 'Failed to delete exchange API'), { cause: error })
+    }
   }
 
   const getActiveLayers = async () => {
@@ -441,6 +586,10 @@ export const useDashboardData = () => {
     getGasFeeAccount,
     createGasFeeDeposit,
     getExchangeBindings,
+    bindExchange,
+    getExchangeBindingCredentials,
+    updateExchangeBindingStatus,
+    deleteExchangeBinding,
     getActiveLayers,
     getHistory
   }

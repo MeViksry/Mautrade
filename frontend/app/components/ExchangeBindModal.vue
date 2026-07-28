@@ -2,14 +2,16 @@
 import { computed, reactive, ref, watch } from 'vue'
 
 interface ExchangeBinding {
-  id: number
+  id: string
+  exchange: string
+  bindingId?: string
   name: string
   logo: string
   logoDark?: string
-  status: string
+  status: 'connected' | 'disconnected'
   lastSynced: string | null
   balance: number
-  hasApi?: boolean
+  hasApi: boolean
 }
 
 interface ExtraFieldConfig {
@@ -28,6 +30,8 @@ const props = defineProps<{
   modelValue: boolean
   exchanges: ExchangeBinding[]
   theme: 'dark' | 'light'
+  submitting?: boolean
+  errorMessage?: string
 }>()
 
 const emit = defineEmits<{
@@ -69,7 +73,6 @@ const autofillLocked = reactive<Record<string, boolean>>({
   apiSecret: true
 })
 const submitAttempted = ref(false)
-const submitted = ref(false)
 const fieldShake = reactive<Record<string, boolean>>({})
 
 const resetBindState = () => {
@@ -78,7 +81,6 @@ const resetBindState = () => {
   apiKey.value = ''
   apiSecret.value = ''
   submitAttempted.value = false
-  submitted.value = false
 
   Object.keys(extras).forEach((key) => {
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
@@ -130,7 +132,6 @@ const selectExchange = (exchange: ExchangeBinding) => {
   selectedExchange.value = exchange
   bindStep.value = 'credentials'
   submitAttempted.value = false
-  submitted.value = false
 
   selectedConfig.value.extraFields.forEach((field) => {
     extras[field.key] = ''
@@ -154,9 +155,8 @@ const fieldErrors = computed(() => {
   return errors
 })
 
-const formBlocked = computed(() => {
-  return submitted.value || Object.values(fieldErrors.value).some(Boolean)
-})
+const hasFieldErrors = computed(() => Object.values(fieldErrors.value).some(Boolean))
+const formBlocked = computed(() => props.submitting === true || hasFieldErrors.value)
 
 const triggerFieldShake = (key: string) => {
   fieldShake[key] = false
@@ -173,15 +173,9 @@ const unlockAutofillField = (key: string) => {
   autofillLocked[key] = false
 }
 
-watch([apiKey, apiSecret], () => {
-  submitted.value = false
-})
-
-watch(extras, () => {
-  submitted.value = false
-})
-
 const submitBindExchange = () => {
+  if (props.submitting) return
+
   submitAttempted.value = true
 
   Object.entries(fieldErrors.value).forEach(([key, hasError]) => {
@@ -190,11 +184,10 @@ const submitBindExchange = () => {
     }
   })
 
-  if (formBlocked.value || !selectedExchange.value) return
+  if (hasFieldErrors.value || !selectedExchange.value) return
 
-  submitted.value = true
   emit('submitted', {
-    exchange: selectedExchange.value.name,
+    exchange: selectedExchange.value.exchange,
     apiKey: apiKey.value.trim(),
     apiSecret: apiSecret.value.trim(),
     extras: Object.fromEntries(
@@ -297,6 +290,7 @@ const submitBindExchange = () => {
             v-model="apiKey"
             :class="{ 'is-invalid': submitAttempted && fieldErrors.apiKey, 'is-shaking': fieldShake.apiKey }"
             :readonly="autofillLocked.apiKey"
+            :disabled="submitting"
             type="text"
             name="mautrade-exchange-api-key"
             placeholder="Enter API key"
@@ -324,6 +318,7 @@ const submitBindExchange = () => {
               v-model="apiSecret"
               :type="visibleFields.apiSecret ? 'text' : 'password'"
               :readonly="autofillLocked.apiSecret"
+              :disabled="submitting"
               name="mautrade-exchange-api-secret"
               placeholder="Enter API secret"
               autocomplete="new-password"
@@ -338,6 +333,7 @@ const submitBindExchange = () => {
             >
             <button
               type="button"
+              :disabled="submitting"
               :aria-label="visibleFields.apiSecret ? 'Hide API secret' : 'Show API secret'"
               @click="toggleFieldVisibility('apiSecret')"
             >
@@ -362,6 +358,7 @@ const submitBindExchange = () => {
               v-model="extras[field.key]"
               :type="visibleFields[field.key] ? 'text' : 'password'"
               :readonly="autofillLocked[field.key]"
+              :disabled="submitting"
               :name="`mautrade-exchange-${field.key}`"
               :placeholder="field.placeholder"
               autocomplete="new-password"
@@ -376,6 +373,7 @@ const submitBindExchange = () => {
             >
             <button
               type="button"
+              :disabled="submitting"
               :aria-label="visibleFields[field.key] ? `Hide ${field.label}` : `Show ${field.label}`"
               @click="toggleFieldVisibility(field.key)"
             >
@@ -387,6 +385,7 @@ const submitBindExchange = () => {
             v-model="extras[field.key]"
             :class="{ 'is-invalid': submitAttempted && fieldErrors[field.key], 'is-shaking': fieldShake[field.key] }"
             :readonly="autofillLocked[field.key]"
+            :disabled="submitting"
             :type="field.type"
             :name="`mautrade-exchange-${field.key}`"
             :placeholder="field.placeholder"
@@ -408,23 +407,24 @@ const submitBindExchange = () => {
           :class="{ 'is-blocked': formBlocked }"
           type="submit"
           :aria-disabled="formBlocked"
+          :disabled="submitting"
         >
           <UIcon name="lucide:link" />
-          <span>Bind Exchange</span>
+          <span>{{ submitting ? 'Binding...' : 'Bind Exchange' }}</span>
         </button>
 
         <p
-          v-if="submitAttempted && formBlocked"
+          v-if="errorMessage"
           class="bind-error"
         >
-          Complete required credentials
+          {{ errorMessage }}
         </p>
 
         <p
-          v-if="submitted"
-          class="bind-success"
+          v-else-if="submitAttempted && hasFieldErrors"
+          class="bind-error"
         >
-          Exchange binding submitted
+          Complete required credentials
         </p>
       </form>
     </div>
