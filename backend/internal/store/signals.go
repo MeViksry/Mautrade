@@ -46,18 +46,19 @@ type ExecutionJobRecord struct {
 }
 
 type ExecutionPayload struct {
-	ID             string `json:"id"`
-	IdempotencyKey string `json:"idempotency_key"`
-	MasterSignalID string `json:"master_signal_id"`
-	UserID         string `json:"user_id"`
-	LayerID        string `json:"layer_id,omitempty"`
-	Exchange       string `json:"exchange"`
-	AccountMode    string `json:"account_mode,omitempty"`
-	Symbol         string `json:"symbol"`
-	Side           string `json:"side"`
-	Quantity       string `json:"quantity,omitempty"`
-	QuoteValue     string `json:"quote_value,omitempty"`
-	CreatedAt      string `json:"created_at"`
+	ID                string `json:"id"`
+	IdempotencyKey    string `json:"idempotency_key"`
+	MasterSignalID    string `json:"master_signal_id"`
+	UserID            string `json:"user_id"`
+	LayerID           string `json:"layer_id,omitempty"`
+	ExchangeBindingID string `json:"exchange_binding_id"`
+	Exchange          string `json:"exchange"`
+	AccountMode       string `json:"account_mode,omitempty"`
+	Symbol            string `json:"symbol"`
+	Side              string `json:"side"`
+	Quantity          string `json:"quantity,omitempty"`
+	QuoteValue        string `json:"quote_value,omitempty"`
+	CreatedAt         string `json:"created_at"`
 }
 
 type eligibleBuyBinding struct {
@@ -492,18 +493,19 @@ func newExecutionJob(signalID, layerID, userID, bindingID, exchange, accountMode
 	}
 
 	payload := ExecutionPayload{
-		ID:             jobIDText,
-		IdempotencyKey: idempotencyKey,
-		MasterSignalID: signalID,
-		UserID:         userID,
-		LayerID:        layerID,
-		Exchange:       exchange,
-		AccountMode:    accountMode,
-		Symbol:         symbol,
-		Side:           side,
-		Quantity:       quantity,
-		QuoteValue:     quoteValue,
-		CreatedAt:      createdAt.UTC().Format(time.RFC3339Nano),
+		ID:                jobIDText,
+		IdempotencyKey:    idempotencyKey,
+		MasterSignalID:    signalID,
+		UserID:            userID,
+		LayerID:           layerID,
+		ExchangeBindingID: bindingID,
+		Exchange:          exchange,
+		AccountMode:       accountMode,
+		Symbol:            symbol,
+		Side:              side,
+		Quantity:          quantity,
+		QuoteValue:        quoteValue,
+		CreatedAt:         createdAt.UTC().Format(time.RFC3339Nano),
 	}
 
 	return ExecutionJobRecord{

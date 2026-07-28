@@ -61,6 +61,11 @@ pub fn validate_request(req: &ExecutionRequest) -> Result<(), ExecutionError> {
     if req.symbol.trim().is_empty() {
         return Err(ExecutionError::InvalidOrder("symbol is required".to_string()));
     }
+    if req.exchange_binding_id.trim().is_empty() {
+        return Err(ExecutionError::InvalidOrder(
+            "exchange_binding_id is required".to_string(),
+        ));
+    }
     if let Some(account_mode) = &req.account_mode {
         match account_mode.trim().to_ascii_lowercase().as_str() {
             "" | "real" | "demo" | "testnet" => {}
@@ -120,6 +125,7 @@ mod tests {
             master_signal_id: "signal-1".to_string(),
             user_id: "user-1".to_string(),
             layer_id: None,
+            exchange_binding_id: "binding-1".to_string(),
             exchange: "binance".to_string(),
             account_mode: account_mode.map(str::to_string),
             symbol: "BTCUSDT".to_string(),
@@ -140,6 +146,14 @@ mod tests {
     #[test]
     fn validate_request_rejects_unknown_account_mode() {
         let req = request_with_account_mode(Some("practice"));
+
+        assert!(validate_request(&req).is_err());
+    }
+
+    #[test]
+    fn validate_request_requires_exchange_binding_id() {
+        let mut req = request_with_account_mode(Some("real"));
+        req.exchange_binding_id.clear();
 
         assert!(validate_request(&req).is_err());
     }

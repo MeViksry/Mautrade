@@ -17,6 +17,17 @@ services:
       keydb:
         condition: service_started
 
+  rust-engine:
+    build:
+      context: ./rust-node-execution
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+      EXECUTOR_DURABLE: mautrade-rust-executor
+    depends_on:
+      nats:
+        condition: service_started
+
   postgres:
     image: postgres:17
     environment:

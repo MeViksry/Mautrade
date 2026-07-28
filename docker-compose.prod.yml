@@ -120,6 +120,23 @@ services:
         condition: service_completed_successfully
 
   # ──────────────────────────────────────────────
+  #  RUST ENGINE — Copy-trading execution worker
+  # ──────────────────────────────────────────────
+  rust-engine:
+    build:
+      context: ./backend/rust-node-execution
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NATS_URL: nats://nats:4222
+      EXECUTOR_DURABLE: mautrade-rust-executor
+    networks:
+      - internal
+    depends_on:
+      nats:
+        condition: service_started
+
+  # ──────────────────────────────────────────────
   #  INFRASTRUCTURE — Internal only
   # ──────────────────────────────────────────────
   migrate:

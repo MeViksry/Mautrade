@@ -70,17 +70,19 @@ func (s *Server) handleRetryAdminExecution(w http.ResponseWriter, r *http.Reques
 	}
 
 	publishRequest := queue.ExecutionRequest{
-		ID:             retry.Payload.ID,
-		IdempotencyKey: retry.Payload.IdempotencyKey,
-		MasterSignalID: retry.Payload.MasterSignalID,
-		UserID:         retry.Payload.UserID,
-		LayerID:        retry.Payload.LayerID,
-		Exchange:       retry.Payload.Exchange,
-		Symbol:         retry.Payload.Symbol,
-		Side:           retry.Payload.Side,
-		Quantity:       retry.Payload.Quantity,
-		QuoteValue:     retry.Payload.QuoteValue,
-		CreatedAt:      retry.Payload.CreatedAt,
+		ID:                retry.Payload.ID,
+		IdempotencyKey:    retry.Payload.IdempotencyKey,
+		MasterSignalID:    retry.Payload.MasterSignalID,
+		UserID:            retry.Payload.UserID,
+		LayerID:           retry.Payload.LayerID,
+		ExchangeBindingID: retry.Payload.ExchangeBindingID,
+		Exchange:          retry.Payload.Exchange,
+		AccountMode:       retry.Payload.AccountMode,
+		Symbol:            retry.Payload.Symbol,
+		Side:              retry.Payload.Side,
+		Quantity:          retry.Payload.Quantity,
+		QuoteValue:        retry.Payload.QuoteValue,
+		CreatedAt:         retry.Payload.CreatedAt,
 	}
 	if err := s.queue.PublishExecutionRequestWithMsgID(r.Context(), publishRequest, retry.MessageID); err != nil {
 		s.logger.Error("publish execution retry", "job_id", retry.JobID, "attempt", retry.Attempt, "error", err)

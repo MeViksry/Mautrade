@@ -9,6 +9,8 @@ pub struct ExecutionRequest {
     pub user_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layer_id: Option<String>,
+    #[serde(default)]
+    pub exchange_binding_id: String,
     pub exchange: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub account_mode: Option<String>,

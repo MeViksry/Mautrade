@@ -100,17 +100,19 @@ func (c *Client) EnsureExecutionResultStream(ctx context.Context) error {
 }
 
 type ExecutionRequest struct {
-	ID             string `json:"id"`
-	IdempotencyKey string `json:"idempotency_key"`
-	MasterSignalID string `json:"master_signal_id"`
-	UserID         string `json:"user_id"`
-	LayerID        string `json:"layer_id,omitempty"`
-	Exchange       string `json:"exchange"`
-	Symbol         string `json:"symbol"`
-	Side           string `json:"side"`
-	Quantity       string `json:"quantity,omitempty"`
-	QuoteValue     string `json:"quote_value,omitempty"`
-	CreatedAt      string `json:"created_at"`
+	ID                string `json:"id"`
+	IdempotencyKey    string `json:"idempotency_key"`
+	MasterSignalID    string `json:"master_signal_id"`
+	UserID            string `json:"user_id"`
+	LayerID           string `json:"layer_id,omitempty"`
+	ExchangeBindingID string `json:"exchange_binding_id"`
+	Exchange          string `json:"exchange"`
+	AccountMode       string `json:"account_mode,omitempty"`
+	Symbol            string `json:"symbol"`
+	Side              string `json:"side"`
+	Quantity          string `json:"quantity,omitempty"`
+	QuoteValue        string `json:"quote_value,omitempty"`
+	CreatedAt         string `json:"created_at"`
 }
 
 func (c *Client) PublishExecutionRequest(ctx context.Context, req ExecutionRequest) error {

@@ -160,17 +160,19 @@ func (s *Server) publishSignalJobs(r *http.Request, dispatch store.SignalDispatc
 	published := 0
 	for _, job := range dispatch.Jobs {
 		req := queue.ExecutionRequest{
-			ID:             job.Payload.ID,
-			IdempotencyKey: job.Payload.IdempotencyKey,
-			MasterSignalID: job.Payload.MasterSignalID,
-			UserID:         job.Payload.UserID,
-			LayerID:        job.Payload.LayerID,
-			Exchange:       job.Payload.Exchange,
-			Symbol:         job.Payload.Symbol,
-			Side:           job.Payload.Side,
-			Quantity:       job.Payload.Quantity,
-			QuoteValue:     job.Payload.QuoteValue,
-			CreatedAt:      job.Payload.CreatedAt,
+			ID:                job.Payload.ID,
+			IdempotencyKey:    job.Payload.IdempotencyKey,
+			MasterSignalID:    job.Payload.MasterSignalID,
+			UserID:            job.Payload.UserID,
+			LayerID:           job.Payload.LayerID,
+			ExchangeBindingID: job.ExchangeBindingID,
+			Exchange:          job.Payload.Exchange,
+			AccountMode:       job.Payload.AccountMode,
+			Symbol:            job.Payload.Symbol,
+			Side:              job.Payload.Side,
+			Quantity:          job.Payload.Quantity,
+			QuoteValue:        job.Payload.QuoteValue,
+			CreatedAt:         job.Payload.CreatedAt,
 		}
 		if err := s.queue.PublishExecutionRequest(r.Context(), req); err != nil {
 			s.logger.Error("publish execution job", "job_id", job.ID, "error", err)
