@@ -44,6 +44,7 @@ type AuthUserView struct {
 	CountryCode         *string    `json:"countryCode,omitempty"`
 	Timezone            string     `json:"timezone"`
 	ThemePref           string     `json:"themePref"`
+	ProfilePhotoDataURL string     `json:"profilePhotoDataUrl,omitempty"`
 	EmailVerified       bool       `json:"emailVerified"`
 	OnboardingCompleted bool       `json:"onboardingCompleted"`
 	CreatedAt           time.Time  `json:"createdAt"`
@@ -105,6 +106,14 @@ type SessionView struct {
 	Token     string    `json:"token,omitempty"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+type UpdateUserProfileParams struct {
+	UserID              string
+	DisplayName         string
+	Timezone            string
+	ProfilePhotoDataURL string
+	Now                 time.Time
 }
 
 type CompleteOnboardingParams struct {
@@ -417,6 +426,54 @@ func (s *DashboardStore) AuthUser(ctx context.Context, userID string) (AuthUserV
 	return userByIDForAuth(ctx, s.db, userID)
 }
 
+func (s *DashboardStore) UpdateUserProfile(ctx context.Context, params UpdateUserProfileParams) (AuthUserView, error) {
+	if !s.Ready() {
+		return AuthUserView{}, fmt.Errorf("store: update user profile requires postgres")
+	}
+
+	now := normalizedNow(params.Now)
+	displayName := strings.TrimSpace(params.DisplayName)
+	timezone := strings.TrimSpace(params.Timezone)
+	profilePhoto := strings.TrimSpace(params.ProfilePhotoDataURL)
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return AuthUserView{}, fmt.Errorf("store: begin update user profile: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	commandTag, err := tx.Exec(ctx, `
+UPDATE users
+SET display_name = $2,
+    timezone = $3,
+    profile_photo_data_url = $4,
+    updated_at = $5
+WHERE id = $1::uuid`, params.UserID, displayName, timezone, profilePhoto, now)
+	if err != nil {
+		return AuthUserView{}, fmt.Errorf("store: update user profile: %w", err)
+	}
+	if commandTag.RowsAffected() == 0 {
+		return AuthUserView{}, ErrUserNotFound
+	}
+
+	user, err := userByIDForAuth(ctx, tx, params.UserID)
+	if err != nil {
+		return AuthUserView{}, err
+	}
+	if err := insertAuthAudit(ctx, tx, "user_profile_updated", params.UserID, map[string]any{
+		"display_name":      displayName,
+		"timezone":          timezone,
+		"profile_photo_set": profilePhoto != "",
+	}); err != nil {
+		return AuthUserView{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return AuthUserView{}, fmt.Errorf("store: commit update user profile: %w", err)
+	}
+
+	return user, nil
+}
+
 func (s *DashboardStore) CompleteOnboarding(ctx context.Context, params CompleteOnboardingParams) (CompleteOnboardingResult, error) {
 	if !s.Ready() {
 		return CompleteOnboardingResult{}, fmt.Errorf("store: onboarding requires postgres")
@@ -646,6 +703,7 @@ WHERE id = $1::uuid`, userID))
 func authUserSelectSQL() string {
 	return `
 SELECT id::text, email, username, display_name, country_code::text, timezone, theme_pref,
+       COALESCE(to_jsonb(users)->>'profile_photo_data_url', '') AS profile_photo_data_url,
        email_verified_at, onboarding_completed_at, password_hash, status, created_at, age
 FROM users
 `
@@ -661,6 +719,7 @@ func scanAuthUserRow(row pgx.Row) (authUserRow, error) {
 		&result.RawCountryCode,
 		&result.User.Timezone,
 		&result.User.ThemePref,
+		&result.User.ProfilePhotoDataURL,
 		&result.EmailVerifiedAt,
 		&result.OnboardingAt,
 		&result.PasswordHash,

@@ -18,7 +18,7 @@ useSeoMeta({
 })
 
 const activeTab = ref('profile')
-const { user, fetchUser } = useAuth()
+const { user, fetchUser, updateProfile } = useAuth()
 
 const browserTimezone = () => {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -43,9 +43,14 @@ const profileForm = ref({
 
 const profilePhoto = ref<string | null>(null)
 const profilePhotoInput = ref<HTMLInputElement | null>(null)
+const profileSaving = ref(false)
+const profileError = ref('')
+const profileSuccess = ref('')
 const timezoneSearch = ref('')
 const timezoneDropdownOpen = ref(false)
 const timezoneSelectRef = ref<HTMLElement | null>(null)
+const maxProfilePhotoBytes = 512 * 1024
+const allowedProfilePhotoTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
 
 const notifSettings = ref({
   emailNewTrade: true,
@@ -57,9 +62,11 @@ const applyUserProfile = () => {
   profileForm.value.fullName = user.value?.displayName?.trim() || fallbackNameFromEmail(user.value?.email)
   profileForm.value.email = user.value?.email || ''
   profileForm.value.timezone = user.value?.timezone || browserTimezone()
+  profilePhoto.value = user.value?.profilePhotoDataUrl?.trim() || null
 }
 
 const openProfilePhotoPicker = () => {
+  if (profileSaving.value) return
   profilePhotoInput.value?.click()
 }
 
@@ -68,18 +75,76 @@ const handleProfilePhotoChange = (event: Event) => {
   const file = input.files?.[0]
   if (!file) return
 
+  profileError.value = ''
+  profileSuccess.value = ''
+
+  if (!allowedProfilePhotoTypes.has(file.type)) {
+    profileError.value = 'Profile photo must be PNG, JPEG, WebP, or GIF.'
+    input.value = ''
+    return
+  }
+  if (file.size > maxProfilePhotoBytes) {
+    profileError.value = 'Profile photo must be 512KB or smaller.'
+    input.value = ''
+    return
+  }
+
   const reader = new FileReader()
   reader.onload = () => {
     profilePhoto.value = typeof reader.result === 'string' ? reader.result : null
+    input.value = ''
+    void saveProfile('Profile photo saved.')
+  }
+  reader.onerror = () => {
+    profileError.value = 'Failed to read profile photo.'
+    input.value = ''
   }
   reader.readAsDataURL(file)
 }
 
 const deleteProfilePhoto = () => {
+  if (profileSaving.value) return
+
   profilePhoto.value = null
 
   if (profilePhotoInput.value) {
     profilePhotoInput.value.value = ''
+  }
+
+  void saveProfile('Profile photo removed.')
+}
+
+const profileErrorMessage = (error: unknown) => {
+  const typedError = error as { message?: string }
+  return typedError.message || 'Failed to update profile.'
+}
+
+const saveProfile = async (successMessage = 'Profile updated.') => {
+  if (profileSaving.value) return
+
+  const displayName = profileForm.value.fullName.trim()
+  if (displayName.length < 2) {
+    profileError.value = 'Full name must be at least 2 characters.'
+    profileSuccess.value = ''
+    return
+  }
+
+  profileSaving.value = true
+  profileError.value = ''
+  profileSuccess.value = ''
+
+  try {
+    await updateProfile({
+      displayName,
+      timezone: profileForm.value.timezone,
+      profilePhotoDataUrl: profilePhoto.value || ''
+    })
+    applyUserProfile()
+    profileSuccess.value = successMessage
+  } catch (error) {
+    profileError.value = profileErrorMessage(error)
+  } finally {
+    profileSaving.value = false
   }
 }
 
@@ -289,7 +354,7 @@ onBeforeUnmount(() => {
 
             <form
               class="settings-form"
-              @submit.prevent
+              @submit.prevent="saveProfile()"
             >
               <div class="profile-photo-field">
                 <div class="profile-photo-preview">
@@ -310,12 +375,13 @@ onBeforeUnmount(() => {
                     ref="profilePhotoInput"
                     class="profile-photo-input"
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
                     @change="handleProfilePhotoChange"
                   >
                   <button
                     class="btn-photo"
                     type="button"
+                    :disabled="profileSaving"
                     @click="openProfilePhotoPicker"
                   >
                     <UIcon name="lucide:image-plus" />
@@ -324,7 +390,7 @@ onBeforeUnmount(() => {
                   <button
                     class="btn-photo btn-photo--danger"
                     type="button"
-                    :disabled="!profilePhoto"
+                    :disabled="profileSaving || !profilePhoto"
                     @click="deleteProfilePhoto"
                   >
                     <UIcon name="lucide:trash-2" />
@@ -339,6 +405,7 @@ onBeforeUnmount(() => {
                   v-model="profileForm.fullName"
                   type="text"
                   class="form-input"
+                  :disabled="profileSaving"
                 >
               </div>
 
@@ -362,6 +429,7 @@ onBeforeUnmount(() => {
                   <button
                     class="timezone-select__trigger"
                     type="button"
+                    :disabled="profileSaving"
                     @click="timezoneDropdownOpen = !timezoneDropdownOpen"
                   >
                     <span>
@@ -410,8 +478,26 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="form-actions">
-                <button class="btn-primary">
-                  Save Changes
+                <div class="profile-form-feedback">
+                  <p
+                    v-if="profileError"
+                    class="profile-message profile-message--error"
+                  >
+                    {{ profileError }}
+                  </p>
+                  <p
+                    v-else-if="profileSuccess"
+                    class="profile-message profile-message--success"
+                  >
+                    {{ profileSuccess }}
+                  </p>
+                </div>
+                <button
+                  class="btn-primary"
+                  type="submit"
+                  :disabled="profileSaving"
+                >
+                  {{ profileSaving ? 'Saving...' : 'Save Changes' }}
                 </button>
               </div>
             </form>
@@ -779,6 +865,11 @@ onBeforeUnmount(() => {
   border-color: var(--accent);
 }
 
+.timezone-select__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .timezone-select__trigger span {
   display: flex;
   align-items: center;
@@ -915,7 +1006,30 @@ onBeforeUnmount(() => {
 }
 
 .form-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
   margin-top: 1rem;
+}
+
+.profile-form-feedback {
+  min-height: 18px;
+}
+
+.profile-message {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.profile-message--success {
+  color: #00d18f;
+}
+
+.profile-message--error {
+  color: #ff5a5a;
 }
 
 .btn-primary {
@@ -931,8 +1045,13 @@ onBeforeUnmount(() => {
   transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #ff7324;
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .btn-secondary {

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -43,6 +44,16 @@ type onboardingRequest struct {
 	GasFeeAsset         string   `json:"gas_fee_asset"`
 	TxID                string   `json:"tx_id"`
 }
+
+type updateProfileRequest struct {
+	DisplayName              string `json:"displayName"`
+	DisplayNameSnake         string `json:"display_name"`
+	Timezone                 string `json:"timezone"`
+	ProfilePhotoDataURL      string `json:"profilePhotoDataUrl"`
+	ProfilePhotoDataURLSnake string `json:"profile_photo_data_url"`
+}
+
+const maxProfilePhotoBytes = 512 * 1024
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if !s.store.Ready() {
@@ -206,6 +217,43 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "logged_out"})
 }
 
+func (s *Server) handleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	user, err := s.authUserFromRequest(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid or expired session")
+		return
+	}
+
+	var req updateProfileRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := validateUpdateProfileRequest(req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := s.store.UpdateUserProfile(r.Context(), store.UpdateUserProfileParams{
+		UserID:              user.ID,
+		DisplayName:         strings.TrimSpace(firstNonEmpty(req.DisplayName, req.DisplayNameSnake)),
+		Timezone:            strings.TrimSpace(req.Timezone),
+		ProfilePhotoDataURL: strings.TrimSpace(firstNonEmpty(req.ProfilePhotoDataURL, req.ProfilePhotoDataURLSnake)),
+		Now:                 time.Now().UTC(),
+	})
+	if err != nil {
+		if errors.Is(err, store.ErrUserNotFound) {
+			writeError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		s.logger.Error("update user profile", "user_id", user.ID, "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to update profile")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"user": result})
+}
+
 func (s *Server) handleCompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	user, err := s.authUserFromRequest(r)
 	if err != nil {
@@ -310,6 +358,58 @@ func validateVerifyEmailOTPRequest(req verifyEmailOTPRequest) error {
 	}
 	if req.Purpose != "" && req.Purpose != store.EmailOTPPurposeRegisterVerify && req.Purpose != store.EmailOTPPurposeLoginVerify {
 		return fmt.Errorf("purpose must be register_verify or login_verify")
+	}
+	return nil
+}
+
+func validateUpdateProfileRequest(req updateProfileRequest) error {
+	displayName := strings.TrimSpace(firstNonEmpty(req.DisplayName, req.DisplayNameSnake))
+	if len(displayName) < 2 {
+		return fmt.Errorf("displayName must be at least 2 characters")
+	}
+	if len(displayName) > 80 {
+		return fmt.Errorf("displayName must be at most 80 characters")
+	}
+
+	timezone := strings.TrimSpace(req.Timezone)
+	if timezone == "" {
+		return fmt.Errorf("timezone is required")
+	}
+	if len(timezone) > 64 {
+		return fmt.Errorf("timezone is too long")
+	}
+	if _, err := time.LoadLocation(timezone); err != nil {
+		return fmt.Errorf("timezone is invalid")
+	}
+
+	profilePhoto := strings.TrimSpace(firstNonEmpty(req.ProfilePhotoDataURL, req.ProfilePhotoDataURLSnake))
+	if profilePhoto == "" {
+		return nil
+	}
+	if err := validateProfilePhotoDataURL(profilePhoto); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateProfilePhotoDataURL(value string) error {
+	metadata, encoded, found := strings.Cut(value, ",")
+	if !found || encoded == "" {
+		return fmt.Errorf("profilePhotoDataUrl must be a base64 image data URL")
+	}
+
+	switch strings.ToLower(metadata) {
+	case "data:image/png;base64", "data:image/jpeg;base64", "data:image/webp;base64", "data:image/gif;base64":
+	default:
+		return fmt.Errorf("profilePhotoDataUrl must be png, jpeg, webp, or gif")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil || len(decoded) == 0 {
+		return fmt.Errorf("profilePhotoDataUrl must be valid base64")
+	}
+	if len(decoded) > maxProfilePhotoBytes {
+		return fmt.Errorf("profilePhotoDataUrl must be 512KB or smaller")
 	}
 	return nil
 }

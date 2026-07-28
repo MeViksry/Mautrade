@@ -5,6 +5,7 @@ export interface AuthUser {
   displayName?: string
   timezone?: string
   themePref?: string
+  profilePhotoDataUrl?: string
   status: string
   emailVerified: boolean
   onboardingCompleted: boolean
@@ -200,6 +201,27 @@ export const useAuth = () => {
     }
   }
 
+  const updateProfile = async (payload: { displayName: string, timezone: string, profilePhotoDataUrl?: string }) => {
+    try {
+      const response = await $fetch<{ user: AuthUser }>(`${apiBase}/user/profile`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${tokenCookie.value}`
+        },
+        body: {
+          displayName: payload.displayName,
+          timezone: payload.timezone,
+          profilePhotoDataUrl: payload.profilePhotoDataUrl || ''
+        }
+      })
+      user.value = response.user
+      return response.user
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      throw new Error(error.data?.error || error.message || 'Failed to update profile', { cause: error })
+    }
+  }
+
   const completeAuthFlow = async (email: string): Promise<{ success: boolean, otpRequired?: boolean, expiresAt?: Date }> => {
     try {
       const response = await $fetch<{ otpRequired?: boolean, otpExpiresAt?: string }>(`${apiBase}/auth/register`, {
@@ -235,6 +257,7 @@ export const useAuth = () => {
     completeOnboarding,
     logout,
     fetchUser,
+    updateProfile,
     completeAuthFlow
   }
 }

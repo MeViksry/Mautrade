@@ -111,6 +111,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/auth/me", s.handleMe)
 	s.mux.HandleFunc("POST /api/v1/auth/logout", s.handleLogout)
 	s.mux.HandleFunc("POST /api/v1/onboarding/complete", s.handleCompleteOnboarding)
+	s.mux.HandleFunc("PUT /api/v1/user/profile", s.handleUpdateUserProfile)
 	s.mux.HandleFunc("GET /api/v1/user/stats", s.handleUserStats)
 	s.mux.HandleFunc("GET /api/v1/user/exchange-bindings", s.handleExchangeBindings)
 	s.mux.HandleFunc("POST /api/v1/user/exchange-bindings", s.handleBindExchange)
@@ -150,7 +151,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", s.config.AllowedCORSOrigin)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

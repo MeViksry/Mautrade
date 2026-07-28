@@ -26,6 +26,7 @@ const userIdentifier = computed(() => {
   return rawId ? rawId.slice(0, 8).toUpperCase() : 'SYNCING'
 })
 
+const userPhoto = computed(() => user.value?.profilePhotoDataUrl?.trim() || '')
 const userInitial = computed(() => userDisplayName.value.charAt(0).toUpperCase())
 
 onMounted(() => {
@@ -156,7 +157,13 @@ const toggleTheme = () => {
       <ClientOnly>
         <div class="user-profile">
           <div class="user-avatar">
-            {{ userInitial }}
+            <img
+              v-if="userPhoto"
+              class="user-avatar__image"
+              :src="userPhoto"
+              alt=""
+            >
+            <span v-else>{{ userInitial }}</span>
           </div>
           <div class="user-info">
             <span class="user-name">{{ userDisplayName }}</span>
@@ -378,6 +385,14 @@ const toggleTheme = () => {
   font-size: 11px;
   font-weight: 800;
   flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.user-avatar__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-info {
