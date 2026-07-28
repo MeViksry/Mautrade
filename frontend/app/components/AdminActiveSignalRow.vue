@@ -1,16 +1,40 @@
 <script setup lang="ts">
+type ActiveLayer = {
+  id: string
+  symbol: string
+  type: string
+  layerNumber: number
+  allocationPct: number
+  status: string
+  createdAt: string
+  totalLayers: number
+  activeUsers: number
+  totalVolumeQuote: number
+  remainingQuantity: number
+  remainingValueQuote: number
+}
+
 defineProps<{
-  layer: {
-    id: string
-    symbol: string
-    type: string
-    allocationPct: number
-    status: string
-    createdAt: string
-    totalLayers: number
-    totalVolumeQuote: number
-  }
+  layer: ActiveLayer
+  selling?: boolean
 }>()
+
+defineEmits<{
+  'sell-layer': [layer: ActiveLayer]
+}>()
+
+const formatCurrency = (value: number) => {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+const formatQuantity = (value: number) => {
+  if (value >= 1) return value.toLocaleString(undefined, { maximumFractionDigits: 6 })
+  return value.toLocaleString(undefined, { maximumFractionDigits: 10 })
+}
+
+const formatPercent = (value: number) => {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 4 })
+}
 
 const formatDate = (dateString: string) => {
   const d = new Date(dateString)
@@ -25,16 +49,18 @@ const formatDate = (dateString: string) => {
         {{ layer.symbol }}
       </div>
       <div class="layer-row__meta">
-        <span class="layer-row__id">{{ layer.id.split('-')[0] }}</span>
+        <span>Layer {{ layer.layerNumber }}</span>
         <span class="layer-row__dot" />
-        <span class="layer-row__time">{{ formatDate(layer.createdAt) }}</span>
+        <span>{{ layer.activeUsers }} users</span>
+        <span class="layer-row__dot" />
+        <span>{{ formatDate(layer.createdAt) }}</span>
       </div>
     </div>
 
     <div class="layer-row__stats">
       <div class="layer-row__stat-group">
         <div class="layer-row__label">
-          Layers
+          User Layers
         </div>
         <div class="layer-row__val">
           {{ layer.totalLayers }}
@@ -42,10 +68,10 @@ const formatDate = (dateString: string) => {
       </div>
       <div class="layer-row__stat-group">
         <div class="layer-row__label">
-          Volume
+          Remaining
         </div>
         <div class="layer-row__val">
-          ${{ layer.totalVolumeQuote.toLocaleString() }}
+          {{ formatQuantity(layer.remainingQuantity) }}
         </div>
       </div>
       <div class="layer-row__stat-group">
@@ -53,21 +79,31 @@ const formatDate = (dateString: string) => {
           Allocation
         </div>
         <div class="layer-row__val">
-          {{ layer.allocationPct }}%
+          {{ formatPercent(layer.allocationPct) }}%
+        </div>
+      </div>
+      <div class="layer-row__stat-group">
+        <div class="layer-row__label">
+          Value
+        </div>
+        <div class="layer-row__val">
+          ${{ formatCurrency(layer.remainingValueQuote) }}
         </div>
       </div>
     </div>
 
-    <div class="layer-row__pnl">
-      <div
-        class="layer-row__pnl-amount"
-        :class="layer.type === 'buy' ? 'text-green' : 'text-red'"
-      >
-        {{ layer.type.toUpperCase() }}
-      </div>
-      <div class="layer-row__pnl-pct">
+    <div class="layer-row__actions">
+      <div class="layer-row__status">
         {{ layer.status.toUpperCase() }}
       </div>
+      <button
+        type="button"
+        class="layer-row__sell"
+        :disabled="selling"
+        @click="$emit('sell-layer', layer)"
+      >
+        {{ selling ? 'Selling...' : 'Sell Layer' }}
+      </button>
     </div>
   </div>
 </template>
@@ -75,7 +111,7 @@ const formatDate = (dateString: string) => {
 <style scoped>
 .layer-row {
   display: grid;
-  grid-template-columns: 2fr 3fr 1.5fr;
+  grid-template-columns: 1.55fr 3fr 1.1fr;
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid var(--line);
@@ -113,8 +149,10 @@ const formatDate = (dateString: string) => {
 }
 
 .layer-row__stats {
-  display: flex;
-  gap: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
 }
 .layer-row__stat-group {
   display: flex;
@@ -129,25 +167,48 @@ const formatDate = (dateString: string) => {
   letter-spacing: 0.1em;
 }
 .layer-row__val {
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--mono);
   font-size: 13px;
   color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.layer-row__pnl {
+.layer-row__actions {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.2rem;
+  gap: 0.5rem;
 }
-.layer-row__pnl-amount {
-  font-family: 'Oswald', sans-serif;
-  font-size: 1.3rem;
-  letter-spacing: 0.02em;
-}
-.layer-row__pnl-pct {
+.layer-row__status {
+  color: #10b981;
   font-family: var(--mono);
   font-size: 11px;
+  font-weight: 800;
+}
+.layer-row__sell {
+  min-width: 108px;
+  min-height: 36px;
+  border: 1px solid rgba(246, 70, 93, 0.46);
+  background: rgba(246, 70, 93, 0.1);
+  color: #f6465d;
+  border-radius: 4px;
+  padding: 0 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.layer-row__sell:hover:not(:disabled) {
+  background: #f6465d;
+  color: #fff;
+}
+.layer-row__sell:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .text-green { color: #10b981; }
@@ -176,24 +237,27 @@ const formatDate = (dateString: string) => {
     gap: 0.3rem;
   }
 
-  .layer-row__pnl {
+  .layer-row__actions {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .layer-row__pnl-amount {
-    font-size: 0.95rem;
+  .layer-row__status {
+    font-size: 8px;
   }
 
-  .layer-row__pnl-pct {
-    font-size: 8px;
+  .layer-row__sell {
+    min-width: 88px;
+    min-height: 30px;
+    padding: 0 0.55rem;
+    font-size: 0.56rem;
   }
 
   .layer-row__stats {
     grid-column: 1 / -1;
     grid-row: 2;
-    gap: 0;
-    justify-content: space-between;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
   .layer-row__stat-group {
@@ -224,11 +288,7 @@ const formatDate = (dateString: string) => {
     font-size: 7px;
   }
 
-  .layer-row__pnl-amount {
-    font-size: 0.85rem;
-  }
-
-  .layer-row__pnl-pct {
+  .layer-row__status {
     font-size: 7.5px;
   }
 
