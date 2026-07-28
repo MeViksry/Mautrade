@@ -49,8 +49,8 @@ func (s *DashboardStore) AdminGetAnalytics(ctx context.Context) (AdminAnalyticsD
 		return data, err
 	}
 
-	// Query Transactions (Successful Layer Executions)
-	err = s.db.QueryRow(ctx, `SELECT COUNT(*) FROM layer_executions WHERE status = 'success';`).Scan(&data.Transactions)
+	// Query Transactions from user gas fee deposit submissions.
+	err = s.db.QueryRow(ctx, `SELECT COUNT(*) FROM gas_fee_deposits WHERE status IN ('pending', 'confirmed');`).Scan(&data.Transactions)
 	if err != nil {
 		return data, err
 	}
