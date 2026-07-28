@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import StatCard from '~/components/StatCard.vue'
 
 definePageMeta({
@@ -13,6 +13,37 @@ useSeoMeta({
   description: seoDescription
 })
 const loading = ref(true)
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
+const { tokenCookie } = useAdminAuth()
+
+type AdminPersonalWallet = {
+  code: string
+  displayName: string
+  walletAddress: string
+  updatedBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+type PersonalWalletCard = AdminPersonalWallet & {
+  balance: number
+}
+
+const defaultPersonalWallets: PersonalWalletCard[] = [
+  {
+    code: 'viksry',
+    displayName: 'WALLET VIKSRY',
+    walletAddress: '',
+    balance: 0
+  },
+  {
+    code: 'aryanto_hong',
+    displayName: 'WALLET ARYANTO HONG',
+    walletAddress: '',
+    balance: 0
+  }
+]
 
 const walletStats = ref({
   totalBalance: 0,
@@ -21,10 +52,34 @@ const walletStats = ref({
   activeWallets: 0
 })
 
-onMounted(async () => {
-  const config = useRuntimeConfig()
-  const gasFeeAddress = config.public.gasFeeDepositAddress as string || ''
+const personalWallets = ref<PersonalWalletCard[]>(defaultPersonalWallets.map(wallet => ({ ...wallet })))
+const gasFeeWalletActive = ref(false)
+const walletFetchError = ref('')
+const walletAddressModalOpen = ref(false)
+const selectedWallet = ref<PersonalWalletCard | null>(null)
+const walletAddressInput = ref('')
+const walletAddressError = ref('')
+const walletAddressSaving = ref(false)
 
+const walletAddressPattern = /^0x[a-fA-F0-9]{40}$/
+
+const walletAddressInvalid = computed(() => {
+  const value = walletAddressInput.value.trim()
+  return value.length > 0 && !walletAddressPattern.test(value)
+})
+
+const canSaveWalletAddress = computed(() => {
+  return selectedWallet.value !== null
+    && walletAddressInput.value.trim().length > 0
+    && !walletAddressInvalid.value
+    && !walletAddressSaving.value
+})
+
+const recomputeActiveWallets = () => {
+  walletStats.value.activeWallets = (gasFeeWalletActive.value ? 1 : 0) + personalWallets.value.filter(wallet => wallet.walletAddress.trim() !== '').length
+}
+
+const fetchGasFeeWalletBalance = async (gasFeeAddress: string) => {
   let balanceVal = 0
 
   if (gasFeeAddress && gasFeeAddress.startsWith('0x')) {
@@ -64,12 +119,116 @@ onMounted(async () => {
     }
   }
 
+  return balanceVal
+}
+
+const fetchPersonalWallets = async () => {
+  if (!tokenCookie.value) return
+
+  try {
+    const wallets = await $fetch<AdminPersonalWallet[]>(`${apiBase}/admin/personal-wallets`, {
+      headers: {
+        Authorization: `Bearer ${tokenCookie.value}`
+      }
+    })
+
+    personalWallets.value = defaultPersonalWallets.map((wallet) => {
+      const remoteWallet = wallets.find(item => item.code === wallet.code)
+      return {
+        ...wallet,
+        ...remoteWallet,
+        walletAddress: remoteWallet?.walletAddress || ''
+      }
+    })
+    walletFetchError.value = ''
+  } catch (err) {
+    console.error('Failed to fetch personal wallets:', err)
+    walletFetchError.value = 'Failed to load linked wallet addresses.'
+  } finally {
+    recomputeActiveWallets()
+  }
+}
+
+const formatWalletAddress = (address: string) => {
+  const value = address.trim()
+  if (!value) return 'No address linked'
+  if (value.length <= 14) return value
+  return `${value.slice(0, 8)}...${value.slice(-6)}`
+}
+
+const openWalletAddressModal = (wallet: PersonalWalletCard) => {
+  selectedWallet.value = wallet
+  walletAddressInput.value = wallet.walletAddress
+  walletAddressError.value = ''
+  walletAddressModalOpen.value = true
+}
+
+const closeWalletAddressModal = () => {
+  if (walletAddressSaving.value) return
+
+  walletAddressModalOpen.value = false
+  selectedWallet.value = null
+  walletAddressInput.value = ''
+  walletAddressError.value = ''
+}
+
+const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
+  personalWallets.value = personalWallets.value.map((item) => {
+    if (item.code !== wallet.code) return item
+    return {
+      ...item,
+      ...wallet,
+      walletAddress: wallet.walletAddress || ''
+    }
+  })
+  recomputeActiveWallets()
+}
+
+const submitWalletAddress = async (clearAddress = false) => {
+  if (!selectedWallet.value || walletAddressSaving.value) return
+
+  const nextAddress = clearAddress ? '' : walletAddressInput.value.trim().toLowerCase()
+  if (!clearAddress && !walletAddressPattern.test(nextAddress)) {
+    walletAddressError.value = 'Enter a valid 0x EVM/BEP-20 wallet address.'
+    return
+  }
+
+  walletAddressSaving.value = true
+  walletAddressError.value = ''
+
+  try {
+    const wallet = await $fetch<AdminPersonalWallet>(`${apiBase}/admin/personal-wallets/${selectedWallet.value.code}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${tokenCookie.value}`
+      },
+      body: {
+        walletAddress: nextAddress
+      }
+    })
+    applyUpdatedPersonalWallet(wallet)
+    closeWalletAddressModal()
+  } catch (err) {
+    console.error('Failed to update personal wallet address:', err)
+    walletAddressError.value = 'Failed to save wallet address.'
+  } finally {
+    walletAddressSaving.value = false
+  }
+}
+
+onMounted(async () => {
+  const gasFeeAddress = config.public.gasFeeDepositAddress as string || ''
+  const balanceVal = await fetchGasFeeWalletBalance(gasFeeAddress)
+
+  await fetchPersonalWallets()
+  gasFeeWalletActive.value = Boolean(gasFeeAddress)
   walletStats.value = {
     totalBalance: balanceVal,
     dailyInflow: 0,
     dailyOutflow: 0,
-    activeWallets: gasFeeAddress ? 1 : 0
+    activeWallets: walletStats.value.activeWallets
   }
+  recomputeActiveWallets()
 
   loading.value = false
 })
@@ -130,47 +289,47 @@ onMounted(async () => {
         <h2 class="section-title">
           Personal Wallets
         </h2>
+        <p
+          v-if="walletFetchError"
+          class="wallet-error"
+        >
+          {{ walletFetchError }}
+        </p>
         <div class="personal-wallets-grid">
-          <div class="wallet-card">
+          <div
+            v-for="wallet in personalWallets"
+            :key="wallet.code"
+            class="wallet-card"
+          >
             <div class="wallet-header">
               <h3 class="wallet-name">
-                WALLET VIKSRY
+                {{ wallet.displayName }}
               </h3>
               <button
                 class="icon-btn"
-                title="Settings"
+                type="button"
+                title="Link wallet address"
+                :aria-label="`Link address for ${wallet.displayName}`"
+                @click="openWalletAddressModal(wallet)"
               >
                 <UIcon name="lucide:settings" />
               </button>
             </div>
             <div class="wallet-balance">
-              <span class="currency">$</span>0.00
+              <span class="currency">$</span>{{ wallet.balance.toFixed(2) }}
+            </div>
+            <div
+              class="wallet-address-status"
+              :class="{ 'wallet-address-status--linked': wallet.walletAddress }"
+            >
+              <UIcon :name="wallet.walletAddress ? 'lucide:link' : 'lucide:unlink'" />
+              <span>{{ formatWalletAddress(wallet.walletAddress) }}</span>
             </div>
             <div class="wallet-actions">
-              <button class="primary-btn withdraw-btn">
-                <UIcon name="lucide:arrow-up-right" />
-                Withdraw
-              </button>
-            </div>
-          </div>
-
-          <div class="wallet-card">
-            <div class="wallet-header">
-              <h3 class="wallet-name">
-                WALLET ARYANTO HONG
-              </h3>
               <button
-                class="icon-btn"
-                title="Settings"
+                class="primary-btn withdraw-btn"
+                type="button"
               >
-                <UIcon name="lucide:settings" />
-              </button>
-            </div>
-            <div class="wallet-balance">
-              <span class="currency">$</span>0.00
-            </div>
-            <div class="wallet-actions">
-              <button class="primary-btn withdraw-btn">
                 <UIcon name="lucide:arrow-up-right" />
                 Withdraw
               </button>
@@ -180,6 +339,92 @@ onMounted(async () => {
       </div>
     </template>
   </div>
+
+  <Teleport to="body">
+    <div
+      v-if="walletAddressModalOpen && selectedWallet"
+      class="wallet-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Link personal wallet address"
+      @click.self="closeWalletAddressModal"
+    >
+      <div class="wallet-modal__box">
+        <div class="wallet-modal__header">
+          <span class="wallet-modal__spacer" />
+          <h3>Wallet Address</h3>
+          <button
+            class="wallet-modal__icon-btn"
+            type="button"
+            aria-label="Close wallet address modal"
+            @click="closeWalletAddressModal"
+          >
+            <UIcon name="lucide:x" />
+          </button>
+        </div>
+
+        <form
+          class="wallet-modal__body"
+          autocomplete="off"
+          @submit.prevent="submitWalletAddress(false)"
+        >
+          <div class="wallet-modal__target">
+            <span>{{ selectedWallet.displayName }}</span>
+            <strong>{{ selectedWallet.walletAddress ? 'Linked' : 'Not Linked' }}</strong>
+          </div>
+
+          <label class="wallet-field">
+            <span>USDT BEP-20 / EVM Address</span>
+            <input
+              v-model="walletAddressInput"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="0x0000000000000000000000000000000000000000"
+              :class="{ 'is-invalid': walletAddressInvalid || walletAddressError }"
+              :disabled="walletAddressSaving"
+            >
+          </label>
+
+          <p
+            v-if="walletAddressError"
+            class="wallet-modal__error"
+          >
+            {{ walletAddressError }}
+          </p>
+          <p
+            v-else-if="walletAddressInvalid"
+            class="wallet-modal__error"
+          >
+            Enter a valid 0x EVM/BEP-20 wallet address.
+          </p>
+
+          <div class="wallet-modal__actions">
+            <button
+              v-if="selectedWallet.walletAddress"
+              class="secondary-btn"
+              type="button"
+              :disabled="walletAddressSaving"
+              @click="submitWalletAddress(true)"
+            >
+              <UIcon name="lucide:unlink" />
+              Clear Address
+            </button>
+            <button
+              class="save-wallet-btn"
+              type="submit"
+              :disabled="!canSaveWalletAddress"
+            >
+              <UIcon name="lucide:link" />
+              {{ walletAddressSaving ? 'Saving...' : 'Save Address' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -282,6 +527,15 @@ onMounted(async () => {
   color: var(--text);
 }
 
+.wallet-error {
+  margin: -0.75rem 0 0;
+  color: #ef4444;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .personal-wallets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -359,6 +613,28 @@ onMounted(async () => {
   color: var(--text-mute);
 }
 
+.wallet-address-status {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.wallet-address-status--linked {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: rgba(16, 185, 129, 0.08);
+  color: #10b981;
+}
+
 .wallet-actions {
   display: flex;
   gap: 1rem;
@@ -388,6 +664,202 @@ onMounted(async () => {
   color: #fff;
 }
 
+.wallet-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.wallet-modal__box {
+  width: min(540px, 100%);
+  max-height: min(640px, calc(100vh - 4rem));
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+}
+
+.wallet-modal__header {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.wallet-modal__header h3 {
+  margin: 0;
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.wallet-modal__spacer {
+  width: 36px;
+  height: 36px;
+}
+
+.wallet-modal__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
+}
+
+.wallet-modal__icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wallet-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.wallet-modal__target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 56px;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+}
+
+.wallet-modal__target span,
+.wallet-modal__target strong {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.wallet-modal__target span {
+  color: var(--text);
+}
+
+.wallet-modal__target strong {
+  color: var(--accent);
+}
+
+.wallet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.wallet-field span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.wallet-field input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+  padding: 0 0.85rem;
+}
+
+.wallet-field input:focus {
+  border-color: var(--accent);
+}
+
+.wallet-field input.is-invalid {
+  border-color: #ef4444;
+}
+
+.wallet-modal__error {
+  margin: -0.25rem 0 0;
+  color: #ef4444;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wallet-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.save-wallet-btn,
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 220ms var(--ease-quiet), border-color 220ms var(--ease-quiet), transform 220ms var(--ease-quiet);
+}
+
+.save-wallet-btn:hover {
+  background: #ff7324;
+  border-color: #ff7324;
+  transform: translateY(-1px);
+}
+
+.secondary-btn {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: transparent;
+  color: #ef4444;
+}
+
+.secondary-btn:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ff6b6b;
+  transform: translateY(-1px);
+}
+
+.save-wallet-btn:disabled,
+.secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
 @media (max-width: 1180px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -397,6 +869,19 @@ onMounted(async () => {
 @media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .wallet-modal {
+    padding: 1rem;
+  }
+
+  .wallet-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .save-wallet-btn,
+  .secondary-btn {
+    width: 100%;
   }
 }
 </style>
