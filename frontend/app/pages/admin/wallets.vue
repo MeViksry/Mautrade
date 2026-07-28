@@ -338,93 +338,93 @@ onMounted(async () => {
         </div>
       </div>
     </template>
-  </div>
 
-  <Teleport to="body">
-    <div
-      v-if="walletAddressModalOpen && selectedWallet"
-      class="wallet-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Link personal wallet address"
-      @click.self="closeWalletAddressModal"
-    >
-      <div class="wallet-modal__box">
-        <div class="wallet-modal__header">
-          <span class="wallet-modal__spacer" />
-          <h3>Wallet Address</h3>
-          <button
-            class="wallet-modal__icon-btn"
-            type="button"
-            aria-label="Close wallet address modal"
-            @click="closeWalletAddressModal"
-          >
-            <UIcon name="lucide:x" />
-          </button>
-        </div>
-
-        <form
-          class="wallet-modal__body"
-          autocomplete="off"
-          @submit.prevent="submitWalletAddress(false)"
-        >
-          <div class="wallet-modal__target">
-            <span>{{ selectedWallet.displayName }}</span>
-            <strong>{{ selectedWallet.walletAddress ? 'Linked' : 'Not Linked' }}</strong>
-          </div>
-
-          <label class="wallet-field">
-            <span>USDT BEP-20 / EVM Address</span>
-            <input
-              v-model="walletAddressInput"
-              type="text"
-              inputmode="text"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-              placeholder="0x0000000000000000000000000000000000000000"
-              :class="{ 'is-invalid': walletAddressInvalid || walletAddressError }"
-              :disabled="walletAddressSaving"
-            >
-          </label>
-
-          <p
-            v-if="walletAddressError"
-            class="wallet-modal__error"
-          >
-            {{ walletAddressError }}
-          </p>
-          <p
-            v-else-if="walletAddressInvalid"
-            class="wallet-modal__error"
-          >
-            Enter a valid 0x EVM/BEP-20 wallet address.
-          </p>
-
-          <div class="wallet-modal__actions">
+    <Teleport to="body">
+      <div
+        v-if="walletAddressModalOpen && selectedWallet"
+        class="wallet-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Link personal wallet address"
+        @click.self="closeWalletAddressModal"
+      >
+        <div class="wallet-modal__box">
+          <div class="wallet-modal__header">
+            <span class="wallet-modal__spacer" />
+            <h3>Wallet Address</h3>
             <button
-              v-if="selectedWallet.walletAddress"
-              class="secondary-btn"
+              class="wallet-modal__icon-btn"
               type="button"
-              :disabled="walletAddressSaving"
-              @click="submitWalletAddress(true)"
+              aria-label="Close wallet address modal"
+              @click="closeWalletAddressModal"
             >
-              <UIcon name="lucide:unlink" />
-              Clear Address
-            </button>
-            <button
-              class="save-wallet-btn"
-              type="submit"
-              :disabled="!canSaveWalletAddress"
-            >
-              <UIcon name="lucide:link" />
-              {{ walletAddressSaving ? 'Saving...' : 'Save Address' }}
+              <UIcon name="lucide:x" />
             </button>
           </div>
-        </form>
+
+          <form
+            class="wallet-modal__body"
+            autocomplete="off"
+            @submit.prevent="submitWalletAddress(false)"
+          >
+            <div class="wallet-modal__target">
+              <span>{{ selectedWallet.displayName }}</span>
+              <strong>{{ selectedWallet.walletAddress ? 'Linked' : 'Not Linked' }}</strong>
+            </div>
+
+            <label class="wallet-field">
+              <span>USDT BEP-20 / EVM Address</span>
+              <input
+                v-model="walletAddressInput"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                placeholder="0x0000000000000000000000000000000000000000"
+                :class="{ 'is-invalid': walletAddressInvalid || walletAddressError }"
+                :disabled="walletAddressSaving"
+              >
+            </label>
+
+            <p
+              v-if="walletAddressError"
+              class="wallet-modal__error"
+            >
+              {{ walletAddressError }}
+            </p>
+            <p
+              v-else-if="walletAddressInvalid"
+              class="wallet-modal__error"
+            >
+              Enter a valid 0x EVM/BEP-20 wallet address.
+            </p>
+
+            <div class="wallet-modal__actions">
+              <button
+                v-if="selectedWallet.walletAddress"
+                class="secondary-btn"
+                type="button"
+                :disabled="walletAddressSaving"
+                @click="submitWalletAddress(true)"
+              >
+                <UIcon name="lucide:unlink" />
+                Clear Address
+              </button>
+              <button
+                class="save-wallet-btn"
+                type="submit"
+                :disabled="!canSaveWalletAddress"
+              >
+                <UIcon name="lucide:link" />
+                {{ walletAddressSaving ? 'Saving...' : 'Save Address' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  </Teleport>
+    </Teleport>
+  </div>
 </template>
 
 <style scoped>

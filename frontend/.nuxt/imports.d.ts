@@ -31,10 +31,10 @@ export { requestIdleCallback, cancelIdleCallback } from '#app/compat/idle-callba
 export { setInterval } from '#app/compat/interval';
 export { definePageMeta, PageMeta } from '#app/composables/pages';
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
-export { useAdminAuth } from '../app/composables/useAdminAuth';
+export { useAdminAuth, AdminUser } from '../app/composables/useAdminAuth';
 export { useAuth, AuthUser } from '../app/composables/useAuth';
 export { useCountries } from '../app/composables/useCountries';
-export { useDashboardData } from '../app/composables/useDashboardData';
+export { useDashboardData, ExchangeBinding, ExchangeCredentialSummary } from '../app/composables/useDashboardData';
 export { defineLocale, extendLocale } from '../node_modules/.pnpm/@nuxt+ui@4.10.0_72e841441c30fe29336f579a838e9678/node_modules/@nuxt/ui/dist/runtime/composables/defineLocale';
 export { defineShortcuts, extractShortcuts } from '../node_modules/.pnpm/@nuxt+ui@4.10.0_72e841441c30fe29336f579a838e9678/node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts';
 export { useContentSearch } from '../node_modules/.pnpm/@nuxt+ui@4.10.0_72e841441c30fe29336f579a838e9678/node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch';

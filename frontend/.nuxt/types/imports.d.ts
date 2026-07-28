@@ -219,8 +219,14 @@ declare global {
   export type { PageMeta } from '../../node_modules/.pnpm/nuxt@4.4.8_@babel+plugin-syntax-jsx@7.28.6_@babel+core@7.29.0__@babel+plugin-syntax-typ_f2d0575807b3a8fe3a8edaae605e18e4/node_modules/nuxt/dist/app/composables/pages'
   import('../../node_modules/.pnpm/nuxt@4.4.8_@babel+plugin-syntax-jsx@7.28.6_@babel+core@7.29.0__@babel+plugin-syntax-typ_f2d0575807b3a8fe3a8edaae605e18e4/node_modules/nuxt/dist/app/composables/pages')
   // @ts-ignore
+  export type { AdminUser } from '../../app/composables/useAdminAuth'
+  import('../../app/composables/useAdminAuth')
+  // @ts-ignore
   export type { AuthUser } from '../../app/composables/useAuth'
   import('../../app/composables/useAuth')
+  // @ts-ignore
+  export type { ExchangeBinding, ExchangeCredentialSummary } from '../../app/composables/useDashboardData'
+  import('../../app/composables/useDashboardData')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
