@@ -181,7 +181,8 @@ SELECT id::text, exchange_name, account_mode, status, api_key_ciphertext, api_se
        api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at
 FROM exchange_bindings
 WHERE user_id = $1::uuid
-  AND exchange_name = $2`, userID, normalizedExchange))
+  AND exchange_name = $2
+  AND status <> 'revoked'`, userID, normalizedExchange))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ExchangeBindingCredentialCiphertext{}, ErrExchangeBindingNotFound
 	}
@@ -236,6 +237,54 @@ RETURNING id::text, exchange_name, account_mode, status, api_key_ciphertext, api
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: commit exchange binding status: %w", err)
+	}
+	return binding, nil
+}
+
+func (s *DashboardStore) DeleteExchangeBinding(ctx context.Context, userID, exchangeName string, now time.Time) (ExchangeBindingCredentialCiphertext, error) {
+	if !s.Ready() {
+		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: exchange binding requires postgres")
+	}
+	normalizedExchange, err := normalizeSupportedExchange(exchangeName)
+	if err != nil {
+		return ExchangeBindingCredentialCiphertext{}, err
+	}
+	now = normalizedNow(now)
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: begin exchange binding delete: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	binding, err := scanExchangeBindingCredential(tx.QueryRow(ctx, `
+UPDATE exchange_bindings
+SET status = 'revoked',
+    api_key_ciphertext = ''::bytea,
+    api_secret_ciphertext = ''::bytea,
+    api_passphrase_ciphertext = NULL,
+    last_verified_at = NULL,
+    revoked_at = $3,
+    updated_at = $3
+WHERE user_id = $1::uuid
+  AND exchange_name = $2
+RETURNING id::text, exchange_name, account_mode, status, api_key_ciphertext, api_secret_ciphertext,
+          api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at`,
+		userID,
+		normalizedExchange,
+		now,
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ExchangeBindingCredentialCiphertext{}, ErrExchangeBindingNotFound
+	}
+	if err != nil {
+		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: delete exchange binding: %w", err)
+	}
+	if err := insertExchangeBindingAudit(ctx, tx, userID, "exchange_binding_deleted", binding); err != nil {
+		return ExchangeBindingCredentialCiphertext{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: commit exchange binding delete: %w", err)
 	}
 	return binding, nil
 }

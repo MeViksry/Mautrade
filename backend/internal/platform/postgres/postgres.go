@@ -34,6 +34,17 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	// This allows the CI/CD deployment to fix the constraint without manual database intervention.
 	_, _ = pool.Exec(ctx, `ALTER TABLE gas_fee_deposits DROP CONSTRAINT IF EXISTS gas_fee_deposits_amount_min`)
 	_, _ = pool.Exec(ctx, `ALTER TABLE gas_fee_deposits ADD CONSTRAINT gas_fee_deposits_amount_min CHECK (amount > 0)`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE exchange_bindings ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ`)
+	_, _ = pool.Exec(ctx, `
+UPDATE exchange_bindings
+SET status = CASE
+  WHEN lower(status) IN ('active', 'connected', 'connect') THEN 'active'
+  WHEN lower(status) IN ('revoked', 'disconnected', 'disconnect', 'deleted', 'delete') THEN 'revoked'
+  WHEN lower(status) = 'invalid' THEN 'invalid'
+  ELSE 'invalid'
+END`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE exchange_bindings DROP CONSTRAINT IF EXISTS exchange_bindings_status_check`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE exchange_bindings ADD CONSTRAINT exchange_bindings_status_check CHECK (status IN ('active', 'invalid', 'revoked'))`)
 
 	return pool, nil
 }

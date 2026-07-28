@@ -270,18 +270,12 @@ func (s *Server) handleDeleteExchangeBinding(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
 	}
-	binding, err := s.store.UpdateExchangeBindingStatus(r.Context(), user.ID, r.PathValue("exchange"), "revoked", time.Now().UTC())
+	binding, err := s.store.DeleteExchangeBinding(r.Context(), user.ID, r.PathValue("exchange"), time.Now().UTC())
 	if err != nil {
 		writeExchangeBindingError(s, w, "delete exchange binding", err)
 		return
 	}
-	response, err := s.exchangeBindingCredentialResponse(binding)
-	if err != nil {
-		s.logger.Error("prepare exchange credential response", "binding_id", binding.ID, "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to read protected exchange credential")
-		return
-	}
-	writeJSON(w, http.StatusOK, response)
+	writeJSON(w, http.StatusOK, exchangeBindingDeletedResponse(binding))
 }
 
 func validateBindExchangeRequest(req bindExchangeRequest) error {
@@ -347,6 +341,22 @@ func (s *Server) exchangeBindingCredentialResponse(binding store.ExchangeBinding
 		CreatedAt:       binding.CreatedAt,
 		UpdatedAt:       binding.UpdatedAt,
 	}, nil
+}
+
+func exchangeBindingDeletedResponse(binding store.ExchangeBindingCredentialCiphertext) exchangeBindingCredentialResponse {
+	return exchangeBindingCredentialResponse{
+		ID:              binding.ID,
+		Exchange:        binding.ExchangeName,
+		AccountMode:     binding.AccountMode,
+		Status:          binding.Status,
+		MaskedAPIKey:    "",
+		HasAPISecret:    false,
+		HasPassphrase:   false,
+		PermissionScope: binding.PermissionScope,
+		LastVerifiedAt:  nil,
+		CreatedAt:       binding.CreatedAt,
+		UpdatedAt:       binding.UpdatedAt,
+	}
 }
 
 func writeExchangeBindingError(s *Server, w http.ResponseWriter, operation string, err error) {
