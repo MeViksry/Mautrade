@@ -14,6 +14,7 @@ func TestCalculatorProfitSharePRDExample(t *testing.T) {
 
 	assertDecimal(t, result.GrossPnL, "50")
 	assertDecimal(t, result.GasFeeAmount, "25.0")
+	assertDecimal(t, result.GasFeeBalanceImpact, "-25.0")
 	assertDecimal(t, result.NetAmountToUser, "25.0")
 	if result.Type != TypeProfitShare {
 		t.Fatalf("expected profit share, got %s", result.Type)
@@ -28,6 +29,7 @@ func TestCalculatorLossRebatePRDExample(t *testing.T) {
 
 	assertDecimal(t, result.GrossPnL, "-20")
 	assertDecimal(t, result.GasFeeAmount, "-10.0")
+	assertDecimal(t, result.GasFeeBalanceImpact, "10.0")
 	assertDecimal(t, result.PlatformRebate, "10.0")
 	assertDecimal(t, result.NetLossToUser, "10.0")
 	if result.Type != TypeLossRebate {
@@ -46,7 +48,39 @@ func TestCalculatorHighPrecisionProfit(t *testing.T) {
 
 	assertDecimal(t, result.GrossPnL, "50.123456789000000000")
 	assertDecimal(t, result.GasFeeAmount, "25.0617283945000000000")
+	assertDecimal(t, result.GasFeeBalanceImpact, "-25.0617283945000000000")
 	assertDecimal(t, result.NetAmountToUser, "25.0617283945000000000")
+}
+
+func TestCalculatorOneUSDTProfitReducesGasFeeBalanceByHalf(t *testing.T) {
+	t.Parallel()
+
+	calculator := MustCalculator("0.5")
+	result := calculator.CalculateFromValues(qdecimal.MustParse("10"), qdecimal.MustParse("11"))
+
+	assertDecimal(t, result.GrossPnL, "1")
+	assertDecimal(t, result.GasFeeAmount, "0.5")
+	assertDecimal(t, result.GasFeeBalanceImpact, "-0.5")
+	assertDecimal(t, result.NetAmountToUser, "0.5")
+	if result.Type != TypeProfitShare {
+		t.Fatalf("expected profit share, got %s", result.Type)
+	}
+}
+
+func TestCalculatorOneUSDTLossAddsGasFeeBalanceByHalf(t *testing.T) {
+	t.Parallel()
+
+	calculator := MustCalculator("0.5")
+	result := calculator.CalculateFromValues(qdecimal.MustParse("10"), qdecimal.MustParse("9"))
+
+	assertDecimal(t, result.GrossPnL, "-1")
+	assertDecimal(t, result.GasFeeAmount, "-0.5")
+	assertDecimal(t, result.GasFeeBalanceImpact, "0.5")
+	assertDecimal(t, result.PlatformRebate, "0.5")
+	assertDecimal(t, result.NetLossToUser, "0.5")
+	if result.Type != TypeLossRebate {
+		t.Fatalf("expected loss rebate, got %s", result.Type)
+	}
 }
 
 func TestCalculatorFromPricesUsesSoldQuantityCostBasis(t *testing.T) {

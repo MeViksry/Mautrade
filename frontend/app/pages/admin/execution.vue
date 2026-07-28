@@ -275,10 +275,13 @@ const currentCoinDetail = computed<ExtendedCoinDetail>(() => {
   }
 })
 
-const orderType = ref<'limit' | 'market'>('limit')
 const orderSide = ref<'buy' | 'sell'>('buy')
-const orderPrice = ref('')
-const orderAmount = ref('')
+const buyAllocationPct = ref('10')
+const sellLayerNumber = ref<number | null>(1)
+const sellPct = ref('100')
+const dispatchingSignal = ref(false)
+const signalMessage = ref('')
+const signalMessageTone = ref<'success' | 'error' | ''>('')
 
 const currentPrice = ref(65000)
 const currentCandle = ref<CandlestickData | null>(null)
@@ -517,7 +520,19 @@ interface OpenOrderResponse {
   createdAt: string
 }
 
+interface CreateAdminSignalResponse {
+  signalId: string
+  status: string
+  idempotencyKey: string
+  jobsCreated: number
+  jobsSkipped: number
+  jobsPublished: number
+  queueState: string
+}
+
 const { tokenCookie } = useAdminAuth()
+const runtimeConfig = useRuntimeConfig()
+const apiBase = runtimeConfig.public.apiBase
 
 interface CompletedLayer {
   id: string
@@ -537,8 +552,6 @@ const loading = ref(true)
 
 const loadExecutionData = async () => {
   try {
-    const config = useRuntimeConfig()
-    const apiBase = config.public.apiBase
     const [signalsRes, ordersRes] = await Promise.all([
       $fetch<ActiveLayerResponse[]>(`${apiBase}/admin/signals/active`, {
         headers: { Authorization: `Bearer ${tokenCookie.value}` }
@@ -620,9 +633,94 @@ onUnmounted(() => {
   if (chart) chart.remove()
 })
 
-const handleExecuteOrder = (side = orderSide.value) => {
+type APIErrorLike = {
+  data?: { error?: string }
+  response?: { _data?: { error?: string } }
+  message?: string
+}
+
+const signalErrorMessage = (error: unknown) => {
+  const apiError = error as APIErrorLike
+  return apiError.data?.error || apiError.response?._data?.error || apiError.message || 'Failed to dispatch signal'
+}
+
+const isPercentInputValid = (value: string) => {
+  const normalized = value.trim().replace(',', '.')
+  if (normalized === '') return false
+  const numberValue = Number(normalized)
+  return Number.isFinite(numberValue) && numberValue > 0 && numberValue <= 100
+}
+
+const createSignalIdempotencyKey = (side: 'buy' | 'sell') => {
+  const randomPart = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return `admin-signal:${side}:${selectedCoin.value}:${randomPart}`
+}
+
+const handleExecuteOrder = async (side = orderSide.value) => {
   orderSide.value = side
-  console.log(`Executing ${orderSide.value} ${orderType.value} for ${selectedCoin.value}`)
+  signalMessage.value = ''
+  signalMessageTone.value = ''
+
+  if (!tokenCookie.value) {
+    signalMessage.value = 'Admin session expired. Please login again.'
+    signalMessageTone.value = 'error'
+    return
+  }
+
+  const idempotencyKey = createSignalIdempotencyKey(side)
+  const body: Record<string, string | number> = {
+    type: side,
+    symbol: selectedCoin.value,
+    idempotency_key: idempotencyKey
+  }
+
+  if (side === 'buy') {
+    const allocation = buyAllocationPct.value.trim().replace(',', '.')
+    if (!isPercentInputValid(allocation)) {
+      signalMessage.value = 'Allocation must be greater than 0 and at most 100.'
+      signalMessageTone.value = 'error'
+      return
+    }
+    body.allocation_pct = allocation
+  } else {
+    const layerNumber = Number(sellLayerNumber.value)
+    const percentage = sellPct.value.trim().replace(',', '.')
+    if (!Number.isInteger(layerNumber) || layerNumber <= 0) {
+      signalMessage.value = 'Layer number must be a positive whole number.'
+      signalMessageTone.value = 'error'
+      return
+    }
+    if (!isPercentInputValid(percentage)) {
+      signalMessage.value = 'Sell percentage must be greater than 0 and at most 100.'
+      signalMessageTone.value = 'error'
+      return
+    }
+    body.layer_number = layerNumber
+    body.sell_pct = percentage
+  }
+
+  try {
+    dispatchingSignal.value = true
+    const response = await $fetch<CreateAdminSignalResponse>(`${apiBase}/admin/signals`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenCookie.value}`,
+        'Idempotency-Key': idempotencyKey
+      },
+      body
+    })
+    const actionLabel = side === 'buy'
+      ? `BUY ${buyAllocationPct.value.trim().replace(',', '.')}%`
+      : `SELL layer ${sellLayerNumber.value} at ${sellPct.value.trim().replace(',', '.')}%`
+    signalMessage.value = `${actionLabel} accepted. Published ${response.jobsPublished}/${response.jobsCreated} jobs, skipped ${response.jobsSkipped}. Queue ${response.queueState}.`
+    signalMessageTone.value = 'success'
+    await loadExecutionData()
+  } catch (error) {
+    signalMessage.value = signalErrorMessage(error)
+    signalMessageTone.value = 'error'
+  } finally {
+    dispatchingSignal.value = false
+  }
 }
 
 const cancelAllLayers = () => {
@@ -846,89 +944,123 @@ const cancelAllLayers = () => {
             <div class="order-entry__tabs">
               <button
                 type="button"
-                :class="{ active: orderType === 'limit' }"
-                @click="orderType = 'limit'"
+                :class="{ active: orderSide === 'buy' }"
+                @click="orderSide = 'buy'"
               >
-                Limit
+                Buy Signal
               </button>
               <button
                 type="button"
-                :class="{ active: orderType === 'market' }"
-                @click="orderType = 'market'"
+                :class="{ active: orderSide === 'sell' }"
+                @click="orderSide = 'sell'"
               >
-                Market
+                Sell Layer
               </button>
+            </div>
+            <div class="signal-scope">
+              <span>{{ selectedCoin }}</span>
+              <strong>All Active Users</strong>
             </div>
           </div>
 
-          <div class="order-ticket-grid">
-            <div class="order-ticket order-ticket--buy">
-              <label for="buy-order-price">Price</label>
+          <div class="order-ticket-grid order-ticket-grid--signal">
+            <div
+              v-if="orderSide === 'buy'"
+              class="order-ticket order-ticket--buy"
+            >
+              <label for="buy-allocation-pct">Allocation Per User</label>
               <div class="ticket-input">
                 <input
-                  id="buy-order-price"
-                  v-model="orderPrice"
-                  name="buy-order-price"
-                  type="number"
-                  placeholder="Market price"
+                  id="buy-allocation-pct"
+                  v-model="buyAllocationPct"
+                  name="buy-allocation-pct"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="10"
                 >
-                <span>{{ quoteAsset }}</span>
+                <span>% {{ quoteAsset }} Spot</span>
               </div>
 
-              <label for="buy-order-amount">Amount</label>
-              <div class="ticket-input">
-                <input
-                  id="buy-order-amount"
-                  v-model="orderAmount"
-                  name="buy-order-amount"
-                  type="number"
-                  placeholder="0.00"
-                >
-                <span>{{ baseAsset }}</span>
+              <div class="ticket-summary">
+                <span>Layer</span>
+                <strong>Next Layer</strong>
               </div>
 
               <button
                 class="submit-order submit-order--buy"
                 type="button"
+                :disabled="dispatchingSignal"
                 @click="handleExecuteOrder('buy')"
               >
-                Buy {{ baseAsset }}
+                {{ dispatchingSignal ? 'Dispatching...' : `Dispatch Buy ${baseAsset}` }}
               </button>
             </div>
 
-            <div class="order-ticket order-ticket--sell">
-              <label for="sell-order-price">Price</label>
+            <div
+              v-else
+              class="order-ticket order-ticket--sell"
+            >
+              <label for="sell-layer-number">Layer Number</label>
               <div class="ticket-input">
                 <input
-                  id="sell-order-price"
-                  v-model="orderPrice"
-                  name="sell-order-price"
+                  id="sell-layer-number"
+                  v-model.number="sellLayerNumber"
+                  name="sell-layer-number"
                   type="number"
-                  placeholder="Market price"
+                  min="1"
+                  step="1"
+                  placeholder="1"
                 >
-                <span>{{ quoteAsset }}</span>
+                <span>{{ selectedCoin }}</span>
               </div>
 
-              <label for="sell-order-amount">Amount</label>
+              <label for="sell-layer-pct">Sell From Layer</label>
               <div class="ticket-input">
                 <input
-                  id="sell-order-amount"
-                  v-model="orderAmount"
-                  name="sell-order-amount"
-                  type="number"
-                  placeholder="0.00"
+                  id="sell-layer-pct"
+                  v-model="sellPct"
+                  name="sell-layer-pct"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="100"
                 >
-                <span>{{ baseAsset }}</span>
+                <span>% Remaining</span>
               </div>
 
               <button
                 class="submit-order submit-order--sell"
                 type="button"
+                :disabled="dispatchingSignal"
                 @click="handleExecuteOrder('sell')"
               >
-                Sell {{ baseAsset }}
+                {{ dispatchingSignal ? 'Dispatching...' : `Dispatch Sell ${baseAsset}` }}
               </button>
             </div>
+
+            <div class="signal-context">
+              <div>
+                <span>Pair</span>
+                <strong>{{ selectedCoin }}</strong>
+              </div>
+              <div>
+                <span>Source Balance</span>
+                <strong>{{ orderSide === 'buy' ? `${quoteAsset} Spot` : `${baseAsset} Spot` }}</strong>
+              </div>
+              <div>
+                <span>Execution Engine</span>
+                <strong>Rust Queue</strong>
+              </div>
+            </div>
+            <p
+              v-if="signalMessage"
+              class="signal-message"
+              :class="{
+                'signal-message--success': signalMessageTone === 'success',
+                'signal-message--error': signalMessageTone === 'error'
+              }"
+            >
+              {{ signalMessage }}
+            </p>
           </div>
         </section>
       </main>
@@ -1768,6 +1900,30 @@ const cancelAllLayers = () => {
   left: auto;
 }
 
+.signal-scope {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.signal-scope span,
+.signal-scope strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signal-scope strong {
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .order-ticket-grid {
   position: relative;
   z-index: 1;
@@ -1775,6 +1931,10 @@ const cancelAllLayers = () => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   padding: 0.9rem;
+}
+
+.order-ticket-grid--signal {
+  align-items: stretch;
 }
 
 .order-ticket {
@@ -1830,6 +1990,64 @@ const cancelAllLayers = () => {
   font-weight: 500;
 }
 
+.signal-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.signal-context div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.signal-context span {
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+
+.signal-context strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signal-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+  border-radius: 4px;
+  padding: 0.65rem 0.75rem;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
+.signal-message--success {
+  border-color: rgba(0, 192, 135, 0.34);
+  color: #00c087;
+}
+
+.signal-message--error {
+  border-color: rgba(246, 70, 93, 0.38);
+  color: #f6465d;
+}
+
 .submit-order {
   height: 40px;
   border: 0;
@@ -1840,6 +2058,11 @@ const cancelAllLayers = () => {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.submit-order:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .submit-order--buy {
@@ -2137,6 +2360,14 @@ const cancelAllLayers = () => {
 @media (max-width: 640px) {
   .market-strip {
     padding: 0.75rem;
+  }
+
+  .signal-scope {
+    flex-wrap: wrap;
+  }
+
+  .signal-context {
+    grid-template-columns: 1fr;
   }
 
   .market-actions,

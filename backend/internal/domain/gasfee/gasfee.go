@@ -15,12 +15,13 @@ const (
 )
 
 type Result struct {
-	Type            Type             `json:"type"`
-	GrossPnL        qdecimal.Decimal `json:"gross_pnl"`
-	GasFeeAmount    qdecimal.Decimal `json:"gas_fee_amount"`
-	PlatformRebate  qdecimal.Decimal `json:"platform_rebate"`
-	NetAmountToUser qdecimal.Decimal `json:"net_amount_to_user"`
-	NetLossToUser   qdecimal.Decimal `json:"net_loss_to_user"`
+	Type                Type             `json:"type"`
+	GrossPnL            qdecimal.Decimal `json:"gross_pnl"`
+	GasFeeAmount        qdecimal.Decimal `json:"gas_fee_amount"`
+	GasFeeBalanceImpact qdecimal.Decimal `json:"gas_fee_balance_impact"`
+	PlatformRebate      qdecimal.Decimal `json:"platform_rebate"`
+	NetAmountToUser     qdecimal.Decimal `json:"net_amount_to_user"`
+	NetLossToUser       qdecimal.Decimal `json:"net_loss_to_user"`
 }
 
 type Calculator struct {
@@ -57,32 +58,35 @@ func (c Calculator) CalculateFromValues(entryValue, exitValue qdecimal.Decimal) 
 	case 1:
 		gasFee := grossPnL.Mul(c.ShareRate)
 		return Result{
-			Type:            TypeProfitShare,
-			GrossPnL:        grossPnL,
-			GasFeeAmount:    gasFee,
-			NetAmountToUser: grossPnL.Sub(gasFee),
-			PlatformRebate:  zero,
-			NetLossToUser:   zero,
+			Type:                TypeProfitShare,
+			GrossPnL:            grossPnL,
+			GasFeeAmount:        gasFee,
+			GasFeeBalanceImpact: gasFee.Neg(),
+			NetAmountToUser:     grossPnL.Sub(gasFee),
+			PlatformRebate:      zero,
+			NetLossToUser:       zero,
 		}
 	case -1:
 		loss := grossPnL.Abs()
 		rebate := loss.Mul(c.ShareRate)
 		return Result{
-			Type:            TypeLossRebate,
-			GrossPnL:        grossPnL,
-			GasFeeAmount:    rebate.Neg(),
-			PlatformRebate:  rebate,
-			NetLossToUser:   loss.Sub(rebate),
-			NetAmountToUser: zero,
+			Type:                TypeLossRebate,
+			GrossPnL:            grossPnL,
+			GasFeeAmount:        rebate.Neg(),
+			GasFeeBalanceImpact: rebate,
+			PlatformRebate:      rebate,
+			NetLossToUser:       loss.Sub(rebate),
+			NetAmountToUser:     zero,
 		}
 	default:
 		return Result{
-			Type:            TypeBreakeven,
-			GrossPnL:        zero,
-			GasFeeAmount:    zero,
-			PlatformRebate:  zero,
-			NetAmountToUser: zero,
-			NetLossToUser:   zero,
+			Type:                TypeBreakeven,
+			GrossPnL:            zero,
+			GasFeeAmount:        zero,
+			GasFeeBalanceImpact: zero,
+			PlatformRebate:      zero,
+			NetAmountToUser:     zero,
+			NetLossToUser:       zero,
 		}
 	}
 }
