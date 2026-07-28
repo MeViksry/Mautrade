@@ -39,7 +39,6 @@ const navItems = [
   { label: 'Deposits', to: '/admin/deposits', icon: 'lucide:wallet' },
   { label: 'Wallets', to: '/admin/wallets', icon: 'lucide:credit-card' },
   { label: 'Execution', to: '/admin/execution', icon: 'lucide:zap' },
-  { label: 'Admins', to: '/admin/admins', icon: 'lucide:shield' },
   { label: 'Settings', to: '/admin/settings', icon: 'lucide:settings' }
 ]
 
