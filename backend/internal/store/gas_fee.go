@@ -115,6 +115,12 @@ type UpdateGasFeeDepositStatusParams struct {
 	Now            time.Time
 }
 
+type adminWalletCommissionAllocation struct {
+	WalletCode string
+	ShareRate  qdecimal.Decimal
+	Amount     qdecimal.Decimal
+}
+
 func (s *DashboardStore) UserGasFeeAccount(ctx context.Context, userID, asset string, limit int) (GasFeeAccountView, error) {
 	if !s.Ready() {
 		return GasFeeAccountView{}, fmt.Errorf("store: gas fee account requires postgres")
@@ -540,7 +546,8 @@ WHERE id = $1::uuid`,
 	); err != nil {
 		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
 	}
-	if err := insertGasFeeDepositAudit(ctx, tx, "admin", params.AdminID, "gas_fee_deposit_"+status, params.DepositID, map[string]any{
+
+	auditState := map[string]any{
 		"previous_status": previous.Status,
 		"previous_amount": previous.Amount,
 		"status":          status,
@@ -549,7 +556,15 @@ WHERE id = $1::uuid`,
 		"asset":           previous.Asset,
 		"user_id":         previous.UserID,
 		"note":            strings.TrimSpace(params.ResolutionNote),
-	}, now); err != nil {
+	}
+	if status == "confirmed" {
+		commissionSplit, err := s.upsertAdminWalletDepositCommissions(ctx, tx, params.DepositID, previous.UserID, previous.Asset, confirmedGasFeeDepositAmount(previous.Amount, params.ActualAmount), now)
+		if err != nil {
+			return GasFeeDepositView{}, err
+		}
+		auditState["commission_split"] = adminWalletCommissionAuditState(commissionSplit)
+	}
+	if err := insertGasFeeDepositAudit(ctx, tx, "admin", params.AdminID, "gas_fee_deposit_"+status, params.DepositID, auditState, now); err != nil {
 		return GasFeeDepositView{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -765,7 +780,7 @@ WHERE id = $1::uuid`,
 		return GasFeeDepositView{}, fmt.Errorf("store: update gas fee deposit: %w", err)
 	}
 
-	if err := insertGasFeeDepositAudit(ctx, tx, "system", "", "gas_fee_deposit_"+status, params.DepositID, map[string]any{
+	auditState := map[string]any{
 		"previous_status": previous.Status,
 		"previous_amount": previous.Amount,
 		"status":          status,
@@ -780,7 +795,16 @@ WHERE id = $1::uuid`,
 		"chain_id":        params.ChainID,
 		"token_contract":  strings.ToLower(strings.TrimSpace(params.TokenContract)),
 		"note":            strings.TrimSpace(params.ResolutionNote),
-	}, now); err != nil {
+	}
+	if status == "confirmed" {
+		commissionSplit, err := s.upsertAdminWalletDepositCommissions(ctx, tx, params.DepositID, previous.UserID, previous.Asset, confirmedGasFeeDepositAmount(previous.Amount, params.ActualAmount), now)
+		if err != nil {
+			return GasFeeDepositView{}, err
+		}
+		auditState["commission_split"] = adminWalletCommissionAuditState(commissionSplit)
+	}
+
+	if err := insertGasFeeDepositAudit(ctx, tx, "system", "", "gas_fee_deposit_"+status, params.DepositID, auditState, now); err != nil {
 		return GasFeeDepositView{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -844,6 +868,100 @@ WHERE d.id = $1::uuid`, depositID).Scan(
 		return GasFeeDepositView{}, fmt.Errorf("store: read gas fee deposit: %w", err)
 	}
 	return deposit, nil
+}
+
+func confirmedGasFeeDepositAmount(previousAmount string, actualAmount *string) string {
+	if actualAmount != nil && strings.TrimSpace(*actualAmount) != "" {
+		return decimalOrZero(*actualAmount)
+	}
+	return decimalOrZero(previousAmount)
+}
+
+func calculateAdminWalletCommissionAllocations(amount qdecimal.Decimal) ([]adminWalletCommissionAllocation, error) {
+	if amount.Sign() < 0 {
+		return nil, fmt.Errorf("store: admin wallet commission amount must be non-negative")
+	}
+
+	viksryAmount, err := amount.Mul(qdecimal.MustParse("0.10")).Truncate(18)
+	if err != nil {
+		return nil, fmt.Errorf("store: calculate viksry commission: %w", err)
+	}
+	aryantoAmount := amount.Sub(viksryAmount)
+	return []adminWalletCommissionAllocation{
+		{
+			WalletCode: "viksry",
+			ShareRate:  qdecimal.MustParse("0.10"),
+			Amount:     viksryAmount,
+		},
+		{
+			WalletCode: "aryanto_hong",
+			ShareRate:  qdecimal.MustParse("0.90"),
+			Amount:     aryantoAmount,
+		},
+	}, nil
+}
+
+func (s *DashboardStore) upsertAdminWalletDepositCommissions(ctx context.Context, tx pgx.Tx, depositID, userID, asset, amountValue string, now time.Time) ([]adminWalletCommissionAllocation, error) {
+	amount, err := qdecimal.Parse(decimalOrZero(amountValue))
+	if err != nil {
+		return nil, fmt.Errorf("store: parse admin wallet commission amount: %w", err)
+	}
+	allocations, err := calculateAdminWalletCommissionAllocations(amount)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := tx.Exec(ctx, `
+INSERT INTO admin_personal_wallets (code, display_name, created_at, updated_at)
+VALUES
+  ('viksry', 'WALLET VIKSRY', $1, $1),
+  ('aryanto_hong', 'WALLET ARYANTO HONG', $1, $1)
+ON CONFLICT (code) DO NOTHING`, now); err != nil {
+		return nil, fmt.Errorf("store: ensure admin personal wallets for commission: %w", err)
+	}
+
+	for _, allocation := range allocations {
+		ledgerID, err := newUUIDText()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+INSERT INTO admin_wallet_commission_ledger (
+  id, deposit_id, wallet_code, user_id, asset, share_rate, amount, created_at, updated_at
+) VALUES (
+  $1::uuid, $2::uuid, $3, $4::uuid, $5, $6::numeric, $7::numeric, $8, $8
+)
+ON CONFLICT (deposit_id, wallet_code) DO UPDATE
+SET user_id = EXCLUDED.user_id,
+    asset = EXCLUDED.asset,
+    share_rate = EXCLUDED.share_rate,
+    amount = EXCLUDED.amount,
+    updated_at = EXCLUDED.updated_at`,
+			ledgerID,
+			depositID,
+			allocation.WalletCode,
+			userID,
+			normalizeGasFeeAsset(asset),
+			allocation.ShareRate.String(),
+			allocation.Amount.String(),
+			now,
+		); err != nil {
+			return nil, fmt.Errorf("store: upsert admin wallet commission: %w", err)
+		}
+	}
+	return allocations, nil
+}
+
+func adminWalletCommissionAuditState(allocations []adminWalletCommissionAllocation) []map[string]string {
+	state := make([]map[string]string, 0, len(allocations))
+	for _, allocation := range allocations {
+		state = append(state, map[string]string{
+			"wallet_code": allocation.WalletCode,
+			"share_rate":  allocation.ShareRate.String(),
+			"amount":      allocation.Amount.String(),
+		})
+	}
+	return state
 }
 
 func normalizeGasFeeAsset(value string) string {

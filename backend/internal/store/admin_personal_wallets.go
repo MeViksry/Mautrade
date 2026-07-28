@@ -18,12 +18,15 @@ var (
 )
 
 type AdminPersonalWalletView struct {
-	Code          string     `json:"code"`
-	DisplayName   string     `json:"displayName"`
-	WalletAddress string     `json:"walletAddress"`
-	UpdatedBy     *string    `json:"updatedBy,omitempty"`
-	CreatedAt     time.Time  `json:"createdAt"`
-	UpdatedAt     *time.Time `json:"updatedAt,omitempty"`
+	Code              string     `json:"code"`
+	DisplayName       string     `json:"displayName"`
+	WalletAddress     string     `json:"walletAddress"`
+	ShareRate         string     `json:"shareRate"`
+	Balance           string     `json:"balance"`
+	CommissionBalance string     `json:"commissionBalance"`
+	UpdatedBy         *string    `json:"updatedBy,omitempty"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	UpdatedAt         *time.Time `json:"updatedAt,omitempty"`
 }
 
 type UpdateAdminPersonalWalletParams struct {
@@ -39,9 +42,23 @@ func (s *DashboardStore) AdminPersonalWallets(ctx context.Context) ([]AdminPerso
 	}
 
 	rows, err := s.db.Query(ctx, `
-SELECT code, display_name, wallet_address, updated_by::text, created_at, updated_at
-FROM admin_personal_wallets
-ORDER BY CASE code WHEN 'viksry' THEN 1 WHEN 'aryanto_hong' THEN 2 ELSE 99 END, code
+WITH commission AS (
+  SELECT wallet_code, COALESCE(SUM(amount), 0)::text AS balance
+  FROM admin_wallet_commission_ledger
+  GROUP BY wallet_code
+)
+SELECT
+  w.code,
+  w.display_name,
+  w.wallet_address,
+  CASE w.code WHEN 'viksry' THEN '0.10' WHEN 'aryanto_hong' THEN '0.90' ELSE '0' END AS share_rate,
+  COALESCE(c.balance, '0') AS balance,
+  w.updated_by::text,
+  w.created_at,
+  w.updated_at
+FROM admin_personal_wallets w
+LEFT JOIN commission c ON c.wallet_code = w.code
+ORDER BY CASE w.code WHEN 'viksry' THEN 1 WHEN 'aryanto_hong' THEN 2 ELSE 99 END, w.code
 `)
 	if err != nil {
 		return nil, fmt.Errorf("store: list admin personal wallets: %w", err)
@@ -55,12 +72,15 @@ ORDER BY CASE code WHEN 'viksry' THEN 1 WHEN 'aryanto_hong' THEN 2 ELSE 99 END, 
 			&wallet.Code,
 			&wallet.DisplayName,
 			&wallet.WalletAddress,
+			&wallet.ShareRate,
+			&wallet.Balance,
 			&wallet.UpdatedBy,
 			&wallet.CreatedAt,
 			&wallet.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("store: scan admin personal wallet: %w", err)
 		}
+		wallet.CommissionBalance = wallet.Balance
 		wallets = append(wallets, wallet)
 	}
 	if err := rows.Err(); err != nil {
@@ -123,17 +143,28 @@ SET wallet_address = $2,
     updated_by = NULLIF($3, '')::uuid,
     updated_at = $4
 WHERE code = $1
-RETURNING code, display_name, wallet_address, updated_by::text, created_at, updated_at
+RETURNING
+  code,
+  display_name,
+  wallet_address,
+  CASE code WHEN 'viksry' THEN '0.10' WHEN 'aryanto_hong' THEN '0.90' ELSE '0' END,
+  COALESCE((SELECT SUM(amount)::text FROM admin_wallet_commission_ledger WHERE wallet_code = $1), '0'),
+  updated_by::text,
+  created_at,
+  updated_at
 `, code, address, strings.TrimSpace(params.AdminID), now).Scan(
 		&wallet.Code,
 		&wallet.DisplayName,
 		&wallet.WalletAddress,
+		&wallet.ShareRate,
+		&wallet.Balance,
 		&wallet.UpdatedBy,
 		&wallet.CreatedAt,
 		&wallet.UpdatedAt,
 	); err != nil {
 		return AdminPersonalWalletView{}, fmt.Errorf("store: update personal wallet: %w", err)
 	}
+	wallet.CommissionBalance = wallet.Balance
 
 	if err := insertPersonalWalletAudit(ctx, tx, params.AdminID, previousAddress, wallet, now); err != nil {
 		return AdminPersonalWalletView{}, err
@@ -196,9 +227,11 @@ func insertPersonalWalletAudit(ctx context.Context, tx pgx.Tx, adminID string, p
 		return fmt.Errorf("store: marshal personal wallet audit before: %w", err)
 	}
 	afterJSON, err := json.Marshal(map[string]any{
-		"code":          wallet.Code,
-		"displayName":   wallet.DisplayName,
-		"walletAddress": wallet.WalletAddress,
+		"code":              wallet.Code,
+		"displayName":       wallet.DisplayName,
+		"walletAddress":     wallet.WalletAddress,
+		"shareRate":         wallet.ShareRate,
+		"commissionBalance": wallet.CommissionBalance,
 	})
 	if err != nil {
 		return fmt.Errorf("store: marshal personal wallet audit after: %w", err)

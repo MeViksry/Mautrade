@@ -21,6 +21,9 @@ type AdminPersonalWallet = {
   code: string
   displayName: string
   walletAddress: string
+  shareRate?: string
+  balance?: string | number
+  commissionBalance?: string
   updatedBy?: string
   createdAt?: string
   updatedAt?: string
@@ -28,6 +31,8 @@ type AdminPersonalWallet = {
 
 type PersonalWalletCard = AdminPersonalWallet & {
   balance: number
+  balanceText: string
+  shareRate: string
 }
 
 const defaultPersonalWallets: PersonalWalletCard[] = [
@@ -35,13 +40,17 @@ const defaultPersonalWallets: PersonalWalletCard[] = [
     code: 'viksry',
     displayName: 'WALLET VIKSRY',
     walletAddress: '',
-    balance: 0
+    shareRate: '0.10',
+    balance: 0,
+    balanceText: '0'
   },
   {
     code: 'aryanto_hong',
     displayName: 'WALLET ARYANTO HONG',
     walletAddress: '',
-    balance: 0
+    shareRate: '0.90',
+    balance: 0,
+    balanceText: '0'
   }
 ]
 
@@ -73,6 +82,35 @@ const canSaveWalletAddress = computed(() => {
     && !walletAddressInvalid.value
     && !walletAddressSaving.value
 })
+
+const parseWalletBalance = (value: string | number | undefined) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  if (!value) return 0
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const walletBalanceText = (value: string | number | undefined) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '0'
+  const trimmed = value?.trim()
+  return trimmed || '0'
+}
+
+const formatDecimalText = (value: string) => {
+  const normalized = value.trim()
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) return '0.00'
+
+  const sign = normalized.startsWith('-') ? '-' : ''
+  const unsigned = sign ? normalized.slice(1) : normalized
+  const parts = unsigned.split('.')
+  const rawInteger = parts[0] || '0'
+  const rawFraction = parts[1] || ''
+  const integer = (rawInteger.replace(/^0+(?=\d)/, '') || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const fraction = rawFraction.replace(/0+$/, '')
+
+  return `${sign}${integer}.${(fraction || '').padEnd(2, '0')}`
+}
 
 const recomputeActiveWallets = () => {
   walletStats.value.activeWallets = (gasFeeWalletActive.value ? 1 : 0) + personalWallets.value.filter(wallet => wallet.walletAddress.trim() !== '').length
@@ -133,10 +171,15 @@ const fetchPersonalWallets = async () => {
 
     personalWallets.value = defaultPersonalWallets.map((wallet) => {
       const remoteWallet = wallets.find(item => item.code === wallet.code)
+      const balanceText = walletBalanceText(remoteWallet?.commissionBalance ?? remoteWallet?.balance ?? wallet.balanceText)
+      const balance = parseWalletBalance(balanceText)
       return {
         ...wallet,
         ...remoteWallet,
-        walletAddress: remoteWallet?.walletAddress || ''
+        walletAddress: remoteWallet?.walletAddress || '',
+        shareRate: remoteWallet?.shareRate || wallet.shareRate,
+        balance,
+        balanceText
       }
     })
   } catch (err) {
@@ -172,10 +215,14 @@ const closeWalletAddressModal = () => {
 const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
   personalWallets.value = personalWallets.value.map((item) => {
     if (item.code !== wallet.code) return item
+    const balanceText = walletBalanceText(wallet.commissionBalance ?? wallet.balance ?? item.balanceText)
     return {
       ...item,
       ...wallet,
-      walletAddress: wallet.walletAddress || ''
+      walletAddress: wallet.walletAddress || '',
+      shareRate: wallet.shareRate || item.shareRate,
+      balance: parseWalletBalance(balanceText),
+      balanceText
     }
   })
   recomputeActiveWallets()
@@ -307,7 +354,10 @@ onMounted(async () => {
               </button>
             </div>
             <div class="wallet-balance">
-              <span class="currency">$</span>{{ wallet.balance.toFixed(2) }}
+              <span class="currency">$</span>{{ formatDecimalText(wallet.balanceText) }}
+            </div>
+            <div class="wallet-share">
+              {{ Number(wallet.shareRate) * 100 }}% Gas Fee Deposit Share
             </div>
             <div
               class="wallet-address-status"
@@ -593,6 +643,16 @@ onMounted(async () => {
 .wallet-balance .currency {
   font-size: 1.5rem;
   color: var(--text-mute);
+}
+
+.wallet-share {
+  margin-top: -1rem;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .wallet-address-status {
