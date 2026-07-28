@@ -54,7 +54,6 @@ const walletStats = ref({
 
 const personalWallets = ref<PersonalWalletCard[]>(defaultPersonalWallets.map(wallet => ({ ...wallet })))
 const gasFeeWalletActive = ref(false)
-const walletFetchError = ref('')
 const walletAddressModalOpen = ref(false)
 const selectedWallet = ref<PersonalWalletCard | null>(null)
 const walletAddressInput = ref('')
@@ -140,10 +139,8 @@ const fetchPersonalWallets = async () => {
         walletAddress: remoteWallet?.walletAddress || ''
       }
     })
-    walletFetchError.value = ''
   } catch (err) {
     console.error('Failed to fetch personal wallets:', err)
-    walletFetchError.value = 'Failed to load linked wallet addresses.'
   } finally {
     recomputeActiveWallets()
   }
@@ -289,12 +286,6 @@ onMounted(async () => {
         <h2 class="section-title">
           Personal Wallets
         </h2>
-        <p
-          v-if="walletFetchError"
-          class="wallet-error"
-        >
-          {{ walletFetchError }}
-        </p>
         <div class="personal-wallets-grid">
           <div
             v-for="wallet in personalWallets"
@@ -525,15 +516,6 @@ onMounted(async () => {
   font-weight: 500;
   letter-spacing: 0.05em;
   color: var(--text);
-}
-
-.wallet-error {
-  margin: -0.75rem 0 0;
-  color: #ef4444;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .personal-wallets-grid {
