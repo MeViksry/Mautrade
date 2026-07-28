@@ -50,12 +50,69 @@ func TestFetchBinanceSpotBalance(t *testing.T) {
 	if balance.Free != "120.50" || balance.Locked != "3.25" {
 		t.Fatalf("unexpected balance: %+v", balance)
 	}
+	if balance.AccountMode != AccountModeReal {
+		t.Fatalf("expected real account mode, got %s", balance.AccountMode)
+	}
 }
 
-func TestBinanceDemoUsesDemoModeEndpoint(t *testing.T) {
+func TestNormalizeAccountModeKeepsTestnetSeparateFromDemo(t *testing.T) {
+	if NormalizeAccountMode("demo") != AccountModeDemo {
+		t.Fatalf("expected demo mode")
+	}
+	if NormalizeAccountMode("paper") != AccountModeDemo {
+		t.Fatalf("expected paper to map to demo mode")
+	}
+	if NormalizeAccountMode("testnet") != AccountModeTestnet {
+		t.Fatalf("expected testnet mode")
+	}
+	if NormalizeAccountMode("sandbox") != AccountModeTestnet {
+		t.Fatalf("expected sandbox to map to testnet mode")
+	}
+}
+
+func TestBinanceNonLiveUsesSpotTestnetEndpoint(t *testing.T) {
 	client := NewClient()
-	if client.baseURLs.BinanceDemo != "https://demo-api.binance.com" {
+	if client.baseURLs.BinanceDemo != "https://testnet.binance.vision" {
 		t.Fatalf("unexpected binance demo endpoint %s", client.baseURLs.BinanceDemo)
+	}
+	if client.baseURLs.BinanceTestnet != "https://testnet.binance.vision" {
+		t.Fatalf("unexpected binance testnet endpoint %s", client.baseURLs.BinanceTestnet)
+	}
+}
+
+func TestFetchBinanceTestnetSpotBalance(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.URL.Path != "/api/v3/account" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"balances": []map[string]string{
+				{"asset": "USDT", "free": "33.25", "locked": "0.75"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := NewClientWithBaseURLs(server.Client(), BaseURLs{BinanceTestnet: server.URL})
+	client.now = func() time.Time { return time.UnixMilli(1234567890000) }
+
+	balance, err := client.FetchSpotBalance(context.Background(), Credentials{
+		Exchange:    "binance",
+		APIKey:      "key",
+		APISecret:   "secret",
+		AccountMode: "testnet",
+		Asset:       "USDT",
+	})
+	if err != nil {
+		t.Fatalf("FetchSpotBalance returned error: %v", err)
+	}
+	if requests != 1 {
+		t.Fatalf("expected one testnet request, got %d", requests)
+	}
+	if balance.Free != "33.25" || balance.Locked != "0.75" || balance.AccountMode != AccountModeTestnet {
+		t.Fatalf("unexpected balance: %+v", balance)
 	}
 }
 
@@ -126,6 +183,9 @@ func TestFetchBybitDemoUnifiedBalance(t *testing.T) {
 	if balance.Free != "42.75" || balance.Locked != "0" {
 		t.Fatalf("unexpected balance: %+v", balance)
 	}
+	if balance.AccountMode != AccountModeDemo {
+		t.Fatalf("expected demo account mode, got %s", balance.AccountMode)
+	}
 }
 
 func TestFetchBybitDemoFallsBackToTestnet(t *testing.T) {
@@ -188,6 +248,9 @@ func TestFetchBybitDemoFallsBackToTestnet(t *testing.T) {
 	if balance.Free != "25.5" || balance.Locked != "1.5" {
 		t.Fatalf("unexpected balance: %+v", balance)
 	}
+	if balance.AccountMode != AccountModeTestnet {
+		t.Fatalf("expected fallback to preserve testnet account mode, got %s", balance.AccountMode)
+	}
 }
 
 func TestFetchOKXDemoBalance(t *testing.T) {
@@ -232,6 +295,47 @@ func TestFetchOKXDemoBalance(t *testing.T) {
 	if balance.Free != "7.5" || balance.Locked != "0.25" {
 		t.Fatalf("unexpected balance: %+v", balance)
 	}
+	if balance.AccountMode != AccountModeDemo {
+		t.Fatalf("expected demo account mode, got %s", balance.AccountMode)
+	}
+}
+
+func TestFetchOKXTestnetBalanceUsesSimulatedTradingHeader(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("x-simulated-trading") != "1" {
+			t.Fatalf("missing okx simulated trading header")
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"code": "0",
+			"msg":  "",
+			"data": []map[string]any{
+				{
+					"details": []map[string]string{
+						{"ccy": "USDT", "availBal": "9.5", "frozenBal": "0"},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := NewClientWithBaseURLs(server.Client(), BaseURLs{OKX: server.URL})
+	client.now = func() time.Time { return time.UnixMilli(1234567890000) }
+
+	balance, err := client.FetchSpotBalance(context.Background(), Credentials{
+		Exchange:    "okx",
+		APIKey:      "key",
+		APISecret:   "secret",
+		Passphrase:  "pass",
+		AccountMode: "testnet",
+		Asset:       "USDT",
+	})
+	if err != nil {
+		t.Fatalf("FetchSpotBalance returned error: %v", err)
+	}
+	if balance.AccountMode != AccountModeTestnet {
+		t.Fatalf("expected testnet account mode, got %s", balance.AccountMode)
+	}
 }
 
 func TestTokocryptoDemoUnsupported(t *testing.T) {
@@ -245,5 +349,19 @@ func TestTokocryptoDemoUnsupported(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected tokocrypto demo error")
+	}
+}
+
+func TestTokocryptoTestnetUnsupported(t *testing.T) {
+	client := NewClient()
+	_, err := client.FetchSpotBalance(context.Background(), Credentials{
+		Exchange:    "tokocrypto",
+		APIKey:      "key",
+		APISecret:   "secret",
+		AccountMode: "testnet",
+		Asset:       "USDT",
+	})
+	if err == nil {
+		t.Fatalf("expected tokocrypto testnet error")
 	}
 }

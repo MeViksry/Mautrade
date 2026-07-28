@@ -1,3 +1,5 @@
+type ExchangeAccountMode = 'real' | 'demo' | 'testnet'
+
 export interface ExchangeBinding {
   id: string
   exchange: string
@@ -6,7 +8,7 @@ export interface ExchangeBinding {
   logo: string
   logoDark?: string
   status: 'connected' | 'disconnected'
-  accountMode: 'real' | 'demo'
+  accountMode: ExchangeAccountMode
   lastSynced: string | null
   balance: number
   hasApi: boolean
@@ -15,7 +17,7 @@ export interface ExchangeBinding {
 export interface ExchangeCredentialSummary {
   id: string
   exchange: string
-  accountMode: 'real' | 'demo'
+  accountMode: ExchangeAccountMode
   status: string
   maskedApiKey: string
   hasApiSecret: boolean
@@ -75,8 +77,10 @@ export const useDashboardData = () => {
     return status.toLowerCase() === 'connected' || status.toLowerCase() === 'active' ? 'connected' : 'disconnected'
   }
 
-  const toAccountMode = (mode: string | null | undefined): 'real' | 'demo' => {
-    return mode?.toLowerCase() === 'demo' ? 'demo' : 'real'
+  const toAccountMode = (mode: string | null | undefined): ExchangeAccountMode => {
+    const normalizedMode = mode?.toLowerCase()
+    if (normalizedMode === 'demo' || normalizedMode === 'testnet') return normalizedMode
+    return 'real'
   }
 
   const formatApiError = (error: unknown, fallback: string) => {

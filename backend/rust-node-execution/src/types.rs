@@ -10,6 +10,8 @@ pub struct ExecutionRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layer_id: Option<String>,
     pub exchange: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_mode: Option<String>,
     pub symbol: String,
     pub side: OrderSide,
     #[serde(default, skip_serializing_if = "Option::is_none", with = "rust_decimal::serde::str_option")]

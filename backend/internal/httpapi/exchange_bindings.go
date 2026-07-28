@@ -112,7 +112,7 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	syncCtx, cancel := contextWithExchangeBalanceTimeout(r.Context())
-	_, err = s.syncExchangeBindingBalanceForBind(
+	resolvedAccountMode, err := s.syncExchangeBindingBalanceForBind(
 		syncCtx,
 		user.ID,
 		binding.ID,
@@ -129,9 +129,10 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		if _, statusErr := s.store.UpdateExchangeBindingStatus(r.Context(), user.ID, binding.ExchangeName, "invalid", time.Now().UTC()); statusErr != nil {
 			s.logger.Warn("mark exchange binding invalid", "user_id", user.ID, "binding_id", binding.ID, "exchange", binding.ExchangeName, "error", statusErr)
 		}
-		writeError(w, http.StatusBadGateway, "failed to read USDT spot balance from exchange; check API permissions and supported live/demo spot account")
+		writeError(w, http.StatusBadGateway, "failed to read USDT spot balance from exchange; check API permissions and supported live/demo/testnet spot account")
 		return
 	}
+	s.logger.Info("verified exchange balance during bind", "user_id", user.ID, "binding_id", binding.ID, "exchange", binding.ExchangeName, "account_mode", resolvedAccountMode)
 
 	updatedBinding, err := s.store.ExchangeBindingCredential(r.Context(), user.ID, binding.ExchangeName)
 	if err != nil {
@@ -229,8 +230,8 @@ func (s *Server) handleUpdateExchangeBindingAccountMode(w http.ResponseWriter, r
 		writeExchangeBindingError(s, w, "read exchange credential for account mode update", err)
 		return
 	}
-	if binding.ExchangeName == "tokocrypto" && accountMode == exchangebalance.AccountModeDemo {
-		writeError(w, http.StatusBadRequest, "demo account is not supported for Tokocrypto")
+	if binding.ExchangeName == "tokocrypto" && accountMode != exchangebalance.AccountModeReal {
+		writeError(w, http.StatusBadRequest, "demo/testnet account is not supported for Tokocrypto")
 		return
 	}
 	syncCtx, cancel := contextWithExchangeBalanceTimeout(r.Context())
@@ -293,8 +294,8 @@ func validateBindExchangeRequest(req bindExchangeRequest) error {
 	}
 	switch exchange {
 	case "binance", "bybit", "tokocrypto":
-		if exchange == "tokocrypto" && accountMode == exchangebalance.AccountModeDemo {
-			return fmt.Errorf("demo account is not supported for Tokocrypto")
+		if exchange == "tokocrypto" && accountMode != exchangebalance.AccountModeReal {
+			return fmt.Errorf("demo/testnet account is not supported for Tokocrypto")
 		}
 	case "okx":
 		if strings.TrimSpace(firstNonEmpty(req.APIPassphrase, req.Passphrase)) == "" {
@@ -327,10 +328,10 @@ func bindExchangeAccountModeProvided(req bindExchangeRequest) bool {
 func normalizeExchangeAccountModeValue(value string) (string, error) {
 	mode := exchangebalance.NormalizeAccountMode(value)
 	switch mode {
-	case exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo:
+	case exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo, exchangebalance.AccountModeTestnet:
 		return mode, nil
 	default:
-		return "", fmt.Errorf("account_mode must be real or demo")
+		return "", fmt.Errorf("account_mode must be real, demo, or testnet")
 	}
 }
 
@@ -342,7 +343,7 @@ func (s *Server) syncExchangeBindingBalanceForBind(ctx context.Context, userID, 
 	candidates := exchangeBindingAccountModeCandidates(exchangeName, requestedAccountMode, explicitAccountMode)
 	var failures []string
 	for _, accountMode := range candidates {
-		err := s.syncExchangeBindingBalanceWithPlaintext(
+		resolvedAccountMode, err := s.syncExchangeBindingBalanceWithPlaintext(
 			ctx,
 			userID,
 			bindingID,
@@ -353,7 +354,7 @@ func (s *Server) syncExchangeBindingBalanceForBind(ctx context.Context, userID, 
 			passphrase,
 		)
 		if err == nil {
-			return accountMode, nil
+			return resolvedAccountMode, nil
 		}
 		failures = append(failures, fmt.Sprintf("%s: %v", accountMode, err))
 	}
@@ -361,6 +362,7 @@ func (s *Server) syncExchangeBindingBalanceForBind(ctx context.Context, userID, 
 }
 
 func exchangeBindingAccountModeCandidates(exchangeName, requestedAccountMode string, explicitAccountMode bool) []string {
+	exchangeName = strings.ToLower(strings.TrimSpace(exchangeName))
 	requestedAccountMode = exchangebalance.NormalizeAccountMode(requestedAccountMode)
 	if requestedAccountMode == "" {
 		requestedAccountMode = exchangebalance.AccountModeReal
@@ -369,11 +371,18 @@ func exchangeBindingAccountModeCandidates(exchangeName, requestedAccountMode str
 		return []string{requestedAccountMode}
 	}
 
-	candidates := []string{exchangebalance.AccountModeReal}
-	if exchangeName != "tokocrypto" {
-		candidates = append(candidates, exchangebalance.AccountModeDemo)
+	switch exchangeName {
+	case "tokocrypto":
+		return []string{exchangebalance.AccountModeReal}
+	case "binance":
+		return []string{exchangebalance.AccountModeReal, exchangebalance.AccountModeTestnet}
+	case "bybit":
+		return []string{exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo, exchangebalance.AccountModeTestnet}
+	case "okx":
+		return []string{exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo}
+	default:
+		return []string{exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo, exchangebalance.AccountModeTestnet}
 	}
-	return candidates
 }
 
 func (s *Server) exchangeBindingCredentialResponse(binding store.ExchangeBindingCredentialCiphertext) (exchangeBindingCredentialResponse, error) {

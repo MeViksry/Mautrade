@@ -43,7 +43,7 @@ interface ExchangeBinding {
   logo: string
   logoDark?: string
   status: 'connected' | 'disconnected'
-  accountMode?: 'real' | 'demo'
+  accountMode?: 'real' | 'demo' | 'testnet'
   lastSynced: string | null
   balance: number
   hasApi: boolean

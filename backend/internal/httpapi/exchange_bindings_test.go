@@ -36,12 +36,21 @@ func TestExchangeBindingDeletedResponseDoesNotExposeCredentialState(t *testing.T
 	}
 }
 
-func TestExchangeBindingAccountModeCandidatesAutoDetectsDemoCapableExchanges(t *testing.T) {
+func TestExchangeBindingAccountModeCandidatesAutoDetectsBinanceTestnet(t *testing.T) {
 	t.Parallel()
 
 	candidates := exchangeBindingAccountModeCandidates("binance", "real", false)
-	if len(candidates) != 2 || candidates[0] != "real" || candidates[1] != "demo" {
-		t.Fatalf("expected real then demo candidates, got %#v", candidates)
+	if len(candidates) != 2 || candidates[0] != "real" || candidates[1] != "testnet" {
+		t.Fatalf("expected real then testnet candidates, got %#v", candidates)
+	}
+}
+
+func TestExchangeBindingAccountModeCandidatesAutoDetectsBybitDemoAndTestnet(t *testing.T) {
+	t.Parallel()
+
+	candidates := exchangeBindingAccountModeCandidates("bybit", "real", false)
+	if len(candidates) != 3 || candidates[0] != "real" || candidates[1] != "demo" || candidates[2] != "testnet" {
+		t.Fatalf("expected real, demo, then testnet candidates, got %#v", candidates)
 	}
 }
 
@@ -57,8 +66,20 @@ func TestExchangeBindingAccountModeCandidatesTokocryptoSkipsDemo(t *testing.T) {
 func TestExchangeBindingAccountModeCandidatesHonorsExplicitMode(t *testing.T) {
 	t.Parallel()
 
-	candidates := exchangeBindingAccountModeCandidates("binance", "demo", true)
-	if len(candidates) != 1 || candidates[0] != "demo" {
-		t.Fatalf("expected explicit demo only, got %#v", candidates)
+	candidates := exchangeBindingAccountModeCandidates("binance", "testnet", true)
+	if len(candidates) != 1 || candidates[0] != "testnet" {
+		t.Fatalf("expected explicit testnet only, got %#v", candidates)
+	}
+}
+
+func TestNormalizeExchangeAccountModeValueAcceptsTestnet(t *testing.T) {
+	t.Parallel()
+
+	mode, err := normalizeExchangeAccountModeValue("sandbox")
+	if err != nil {
+		t.Fatalf("expected sandbox alias to be accepted: %v", err)
+	}
+	if mode != "testnet" {
+		t.Fatalf("expected sandbox to normalize to testnet, got %s", mode)
 	}
 }

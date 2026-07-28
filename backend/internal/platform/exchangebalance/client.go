@@ -16,13 +16,15 @@ import (
 )
 
 const (
-	AccountModeReal = "real"
-	AccountModeDemo = "demo"
+	AccountModeReal    = "real"
+	AccountModeDemo    = "demo"
+	AccountModeTestnet = "testnet"
 )
 
 type BaseURLs struct {
 	BinanceReal    string
 	BinanceDemo    string
+	BinanceTestnet string
 	BybitReal      string
 	BybitDemo      string
 	BybitTestnet   string
@@ -46,9 +48,10 @@ type Credentials struct {
 }
 
 type Balance struct {
-	Asset  string
-	Free   string
-	Locked string
+	Asset       string
+	Free        string
+	Locked      string
+	AccountMode string
 }
 
 func NewClient() *Client {
@@ -56,7 +59,8 @@ func NewClient() *Client {
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		baseURLs: BaseURLs{
 			BinanceReal:    "https://api.binance.com",
-			BinanceDemo:    "https://demo-api.binance.com",
+			BinanceDemo:    "https://testnet.binance.vision",
+			BinanceTestnet: "https://testnet.binance.vision",
 			BybitReal:      "https://api.bybit.com",
 			BybitDemo:      "https://api-demo.bybit.com",
 			BybitTestnet:   "https://api-testnet.bybit.com",
@@ -73,7 +77,7 @@ func NewClientWithBaseURLs(httpClient *http.Client, baseURLs BaseURLs) *Client {
 	}
 	client := NewClient()
 	client.httpClient = httpClient
-	client.baseURLs = baseURLs
+	client.baseURLs = mergeBaseURLs(client.baseURLs, baseURLs)
 	return client
 }
 
@@ -106,8 +110,10 @@ func NormalizeAccountMode(mode string) string {
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case "", "real", "live", "production", "prod":
 		return AccountModeReal
-	case "demo", "testnet", "sandbox", "paper":
+	case "demo", "paper", "simulated", "simulation":
 		return AccountModeDemo
+	case "testnet", "sandbox":
+		return AccountModeTestnet
 	default:
 		return strings.ToLower(strings.TrimSpace(mode))
 	}
@@ -115,8 +121,10 @@ func NormalizeAccountMode(mode string) string {
 
 func (c *Client) fetchBinanceSpotBalance(ctx context.Context, credentials Credentials) (Balance, error) {
 	baseURL := strings.TrimRight(c.baseURLs.BinanceReal, "/")
-	if credentials.AccountMode == AccountModeDemo {
-		baseURL = strings.TrimRight(c.baseURLs.BinanceDemo, "/")
+	resolvedMode := AccountModeReal
+	if credentials.AccountMode == AccountModeDemo || credentials.AccountMode == AccountModeTestnet {
+		resolvedMode = AccountModeTestnet
+		baseURL = strings.TrimRight(firstText(c.baseURLs.BinanceTestnet, c.baseURLs.BinanceDemo), "/")
 	}
 
 	values := url.Values{}
@@ -138,15 +146,15 @@ func (c *Client) fetchBinanceSpotBalance(ctx context.Context, credentials Creden
 	}
 	for _, balance := range response.Balances {
 		if strings.EqualFold(balance.Asset, credentials.Asset) {
-			return cleanBalance(credentials.Asset, balance.Free, balance.Locked), nil
+			return balanceWithAccountMode(cleanBalance(credentials.Asset, balance.Free, balance.Locked), resolvedMode), nil
 		}
 	}
-	return cleanBalance(credentials.Asset, "0", "0"), nil
+	return balanceWithAccountMode(cleanBalance(credentials.Asset, "0", "0"), resolvedMode), nil
 }
 
 func (c *Client) fetchTokocryptoSpotBalance(ctx context.Context, credentials Credentials) (Balance, error) {
-	if credentials.AccountMode == AccountModeDemo {
-		return Balance{}, fmt.Errorf("exchange balance: tokocrypto demo account is not supported")
+	if credentials.AccountMode != AccountModeReal {
+		return Balance{}, fmt.Errorf("exchange balance: tokocrypto demo/testnet account is not supported")
 	}
 
 	values := url.Values{}
@@ -171,21 +179,22 @@ func (c *Client) fetchTokocryptoSpotBalance(ctx context.Context, credentials Cre
 		return Balance{}, fmt.Errorf("exchange balance: tokocrypto rejected balance request: %s", response.Message)
 	}
 	if strings.EqualFold(response.Data.Asset, credentials.Asset) {
-		return cleanBalance(credentials.Asset, response.Data.Free, response.Data.Locked), nil
+		return balanceWithAccountMode(cleanBalance(credentials.Asset, response.Data.Free, response.Data.Locked), AccountModeReal), nil
 	}
-	return cleanBalance(credentials.Asset, "0", "0"), nil
+	return balanceWithAccountMode(cleanBalance(credentials.Asset, "0", "0"), AccountModeReal), nil
 }
 
 func (c *Client) fetchBybitSpotBalance(ctx context.Context, credentials Credentials) (Balance, error) {
 	var zeroBalance *Balance
 	var failures []string
-	for _, baseURL := range c.bybitBaseURLs(credentials.AccountMode) {
+	for _, endpoint := range c.bybitBaseURLs(credentials.AccountMode) {
 		for _, accountType := range []string{"UNIFIED", "SPOT"} {
-			balance, err := c.fetchBybitWalletBalance(ctx, credentials, baseURL, accountType)
+			balance, err := c.fetchBybitWalletBalance(ctx, credentials, endpoint.URL, accountType)
 			if err != nil {
-				failures = append(failures, fmt.Sprintf("%s %s: %v", bybitHostLabel(baseURL), accountType, err))
+				failures = append(failures, fmt.Sprintf("%s %s: %v", bybitHostLabel(endpoint.URL), accountType, err))
 				continue
 			}
+			balance = balanceWithAccountMode(balance, endpoint.AccountMode)
 			if balance.Free != "0" || balance.Locked != "0" {
 				return balance, nil
 			}
@@ -201,15 +210,26 @@ func (c *Client) fetchBybitSpotBalance(ctx context.Context, credentials Credenti
 	return Balance{}, fmt.Errorf("exchange balance: bybit balance lookup failed: %s", strings.Join(failures, "; "))
 }
 
-func (c *Client) bybitBaseURLs(accountMode string) []string {
-	urls := []string{c.baseURLs.BybitReal}
-	if NormalizeAccountMode(accountMode) == AccountModeDemo {
-		urls = []string{c.baseURLs.BybitDemo, c.baseURLs.BybitTestnet}
+type bybitEndpoint struct {
+	URL         string
+	AccountMode string
+}
+
+func (c *Client) bybitBaseURLs(accountMode string) []bybitEndpoint {
+	endpoints := []bybitEndpoint{{URL: c.baseURLs.BybitReal, AccountMode: AccountModeReal}}
+	switch NormalizeAccountMode(accountMode) {
+	case AccountModeDemo:
+		endpoints = []bybitEndpoint{
+			{URL: c.baseURLs.BybitDemo, AccountMode: AccountModeDemo},
+			{URL: c.baseURLs.BybitTestnet, AccountMode: AccountModeTestnet},
+		}
+	case AccountModeTestnet:
+		endpoints = []bybitEndpoint{{URL: c.baseURLs.BybitTestnet, AccountMode: AccountModeTestnet}}
 	}
 	seen := map[string]struct{}{}
-	unique := make([]string, 0, len(urls))
-	for _, rawURL := range urls {
-		normalized := strings.TrimRight(strings.TrimSpace(rawURL), "/")
+	unique := make([]bybitEndpoint, 0, len(endpoints))
+	for _, endpoint := range endpoints {
+		normalized := strings.TrimRight(strings.TrimSpace(endpoint.URL), "/")
 		if normalized == "" {
 			continue
 		}
@@ -217,7 +237,7 @@ func (c *Client) bybitBaseURLs(accountMode string) []string {
 			continue
 		}
 		seen[normalized] = struct{}{}
-		unique = append(unique, normalized)
+		unique = append(unique, bybitEndpoint{URL: normalized, AccountMode: endpoint.AccountMode})
 	}
 	return unique
 }
@@ -273,6 +293,10 @@ func (c *Client) fetchOKXSpotBalance(ctx context.Context, credentials Credential
 	if strings.TrimSpace(credentials.Passphrase) == "" {
 		return Balance{}, fmt.Errorf("exchange balance: okx passphrase is required")
 	}
+	resolvedMode := credentials.AccountMode
+	if resolvedMode == "" {
+		resolvedMode = AccountModeReal
+	}
 	baseURL := strings.TrimRight(c.baseURLs.OKX, "/")
 	pathWithQuery := "/api/v5/account/balance?ccy=" + url.QueryEscape(credentials.Asset)
 	timestamp := c.now().UTC().Format("2006-01-02T15:04:05.000Z")
@@ -286,7 +310,7 @@ func (c *Client) fetchOKXSpotBalance(ctx context.Context, credentials Credential
 	req.Header.Set("OK-ACCESS-SIGN", signature)
 	req.Header.Set("OK-ACCESS-TIMESTAMP", timestamp)
 	req.Header.Set("OK-ACCESS-PASSPHRASE", credentials.Passphrase)
-	if credentials.AccountMode == AccountModeDemo {
+	if credentials.AccountMode == AccountModeDemo || credentials.AccountMode == AccountModeTestnet {
 		req.Header.Set("x-simulated-trading", "1")
 	}
 
@@ -302,11 +326,39 @@ func (c *Client) fetchOKXSpotBalance(ctx context.Context, credentials Credential
 			if strings.EqualFold(detail.Currency, credentials.Asset) {
 				free := firstAmount(detail.AvailableBalance, detail.CashBalance)
 				locked := firstAmount(detail.FrozenBalance)
-				return cleanBalance(credentials.Asset, free, locked), nil
+				return balanceWithAccountMode(cleanBalance(credentials.Asset, free, locked), resolvedMode), nil
 			}
 		}
 	}
-	return cleanBalance(credentials.Asset, "0", "0"), nil
+	return balanceWithAccountMode(cleanBalance(credentials.Asset, "0", "0"), resolvedMode), nil
+}
+
+func mergeBaseURLs(defaults, overrides BaseURLs) BaseURLs {
+	if strings.TrimSpace(overrides.BinanceReal) != "" {
+		defaults.BinanceReal = overrides.BinanceReal
+	}
+	if strings.TrimSpace(overrides.BinanceDemo) != "" {
+		defaults.BinanceDemo = overrides.BinanceDemo
+	}
+	if strings.TrimSpace(overrides.BinanceTestnet) != "" {
+		defaults.BinanceTestnet = overrides.BinanceTestnet
+	}
+	if strings.TrimSpace(overrides.BybitReal) != "" {
+		defaults.BybitReal = overrides.BybitReal
+	}
+	if strings.TrimSpace(overrides.BybitDemo) != "" {
+		defaults.BybitDemo = overrides.BybitDemo
+	}
+	if strings.TrimSpace(overrides.BybitTestnet) != "" {
+		defaults.BybitTestnet = overrides.BybitTestnet
+	}
+	if strings.TrimSpace(overrides.OKX) != "" {
+		defaults.OKX = overrides.OKX
+	}
+	if strings.TrimSpace(overrides.TokocryptoReal) != "" {
+		defaults.TokocryptoReal = overrides.TokocryptoReal
+	}
+	return defaults
 }
 
 func (c *Client) doJSON(req *http.Request, target any) error {
@@ -334,6 +386,11 @@ func cleanBalance(asset, free, locked string) Balance {
 	}
 }
 
+func balanceWithAccountMode(balance Balance, accountMode string) Balance {
+	balance.AccountMode = NormalizeAccountMode(accountMode)
+	return balance
+}
+
 func firstAmount(values ...string) string {
 	for _, value := range values {
 		value = strings.TrimSpace(value)
@@ -342,6 +399,16 @@ func firstAmount(values ...string) string {
 		}
 	}
 	return "0"
+}
+
+func firstText(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func hmacSHA256Hex(secret, payload string) string {

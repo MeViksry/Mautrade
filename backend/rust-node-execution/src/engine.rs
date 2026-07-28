@@ -61,6 +61,16 @@ pub fn validate_request(req: &ExecutionRequest) -> Result<(), ExecutionError> {
     if req.symbol.trim().is_empty() {
         return Err(ExecutionError::InvalidOrder("symbol is required".to_string()));
     }
+    if let Some(account_mode) = &req.account_mode {
+        match account_mode.trim().to_ascii_lowercase().as_str() {
+            "" | "real" | "demo" | "testnet" => {}
+            other => {
+                return Err(ExecutionError::InvalidOrder(format!(
+                    "account_mode must be real, demo, or testnet; got {other}"
+                )));
+            }
+        }
+    }
     if req.quantity.is_none() && req.quote_value.is_none() {
         return Err(ExecutionError::InvalidOrder(
             "quantity or quote_value is required".to_string(),
@@ -96,4 +106,41 @@ fn chrono_like_utc_now() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| format!("{}.{:09}Z", duration.as_secs(), duration.subsec_nanos()))
         .unwrap_or_else(|_| "0.000000000Z".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::OrderSide;
+
+    fn request_with_account_mode(account_mode: Option<&str>) -> ExecutionRequest {
+        ExecutionRequest {
+            id: "job-1".to_string(),
+            idempotency_key: "signal:user:binding:buy".to_string(),
+            master_signal_id: "signal-1".to_string(),
+            user_id: "user-1".to_string(),
+            layer_id: None,
+            exchange: "binance".to_string(),
+            account_mode: account_mode.map(str::to_string),
+            symbol: "BTCUSDT".to_string(),
+            side: OrderSide::Buy,
+            quantity: None,
+            quote_value: Some(Decimal::new(10, 0)),
+            created_at: "2026-07-28T00:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn validate_request_accepts_testnet_account_mode() {
+        let req = request_with_account_mode(Some("testnet"));
+
+        assert!(validate_request(&req).is_ok());
+    }
+
+    #[test]
+    fn validate_request_rejects_unknown_account_mode() {
+        let req = request_with_account_mode(Some("practice"));
+
+        assert!(validate_request(&req).is_err());
+    }
 }

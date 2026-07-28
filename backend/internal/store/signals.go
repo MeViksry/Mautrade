@@ -52,6 +52,7 @@ type ExecutionPayload struct {
 	UserID         string `json:"user_id"`
 	LayerID        string `json:"layer_id,omitempty"`
 	Exchange       string `json:"exchange"`
+	AccountMode    string `json:"account_mode,omitempty"`
 	Symbol         string `json:"symbol"`
 	Side           string `json:"side"`
 	Quantity       string `json:"quantity,omitempty"`
@@ -63,6 +64,7 @@ type eligibleBuyBinding struct {
 	UserID            string
 	ExchangeBindingID string
 	Exchange          string
+	AccountMode       string
 	AvailableQuote    string
 	QuoteValue        string
 }
@@ -71,6 +73,7 @@ type eligibleSellLayer struct {
 	UserID            string
 	ExchangeBindingID string
 	Exchange          string
+	AccountMode       string
 	LayerID           string
 	Quantity          string
 	AvailableBase     string
@@ -185,6 +188,7 @@ SELECT
   b.user_id::text,
   b.id::text,
   b.exchange_name,
+  b.account_mode,
   COALESCE(lb.available_balance, 0)::text AS available_quote,
   ((COALESCE(lb.available_balance, 0) * $1::numeric) / 100)::text AS quote_value
 FROM exchange_bindings b
@@ -203,7 +207,7 @@ ORDER BY b.created_at ASC`
 	var bindings []eligibleBuyBinding
 	for rows.Next() {
 		var binding eligibleBuyBinding
-		if err := rows.Scan(&binding.UserID, &binding.ExchangeBindingID, &binding.Exchange, &binding.AvailableQuote, &binding.QuoteValue); err != nil {
+		if err := rows.Scan(&binding.UserID, &binding.ExchangeBindingID, &binding.Exchange, &binding.AccountMode, &binding.AvailableQuote, &binding.QuoteValue); err != nil {
 			return nil, 0, fmt.Errorf("store: scan buy binding: %w", err)
 		}
 		bindings = append(bindings, binding)
@@ -215,7 +219,7 @@ ORDER BY b.created_at ASC`
 	jobs := make([]ExecutionJobRecord, 0, len(bindings))
 	skipped := 0
 	for _, binding := range bindings {
-		job, err := newExecutionJob(signalID, "", binding.UserID, binding.ExchangeBindingID, binding.Exchange, params.Symbol, "buy", "", binding.QuoteValue, params.CreatedAt)
+		job, err := newExecutionJob(signalID, "", binding.UserID, binding.ExchangeBindingID, binding.Exchange, binding.AccountMode, params.Symbol, "buy", "", binding.QuoteValue, params.CreatedAt)
 		if err != nil {
 			return nil, skipped, err
 		}
@@ -274,6 +278,7 @@ SELECT
   l.user_id::text,
   l.exchange_binding_id::text,
   b.exchange_name,
+  b.account_mode,
   l.id::text,
   ((l.remaining_quantity * $3::numeric) / 100)::text AS quantity,
   COALESCE(lb.available_balance, 0)::text AS available_base
@@ -298,7 +303,7 @@ ORDER BY l.opened_at ASC`
 	var layers []eligibleSellLayer
 	for rows.Next() {
 		var layer eligibleSellLayer
-		if err := rows.Scan(&layer.UserID, &layer.ExchangeBindingID, &layer.Exchange, &layer.LayerID, &layer.Quantity, &layer.AvailableBase); err != nil {
+		if err := rows.Scan(&layer.UserID, &layer.ExchangeBindingID, &layer.Exchange, &layer.AccountMode, &layer.LayerID, &layer.Quantity, &layer.AvailableBase); err != nil {
 			return nil, 0, fmt.Errorf("store: scan sell layer: %w", err)
 		}
 		layers = append(layers, layer)
@@ -320,7 +325,7 @@ ORDER BY l.opened_at ASC`
 		if stillOpen {
 			layer.Quantity = currentQuantity
 		}
-		job, err := newExecutionJob(signalID, layer.LayerID, layer.UserID, layer.ExchangeBindingID, layer.Exchange, params.Symbol, "sell", layer.Quantity, "", params.CreatedAt)
+		job, err := newExecutionJob(signalID, layer.LayerID, layer.UserID, layer.ExchangeBindingID, layer.Exchange, layer.AccountMode, params.Symbol, "sell", layer.Quantity, "", params.CreatedAt)
 		if err != nil {
 			return nil, skipped, err
 		}
@@ -466,10 +471,14 @@ LIMIT 1`, layerID).Scan(&jobID)
 	return jobID, true, nil
 }
 
-func newExecutionJob(signalID, layerID, userID, bindingID, exchange, symbol, side, quantity, quoteValue string, createdAt time.Time) (ExecutionJobRecord, error) {
+func newExecutionJob(signalID, layerID, userID, bindingID, exchange, accountMode, symbol, side, quantity, quoteValue string, createdAt time.Time) (ExecutionJobRecord, error) {
 	jobID, err := id.New()
 	if err != nil {
 		return ExecutionJobRecord{}, err
+	}
+	accountMode = strings.ToLower(strings.TrimSpace(accountMode))
+	if accountMode == "" {
+		accountMode = "real"
 	}
 	jobIDText := jobID.String()
 	idempotencyKey := fmt.Sprintf("%s:%s:%s:%s", signalID, userID, bindingID, side)
@@ -489,6 +498,7 @@ func newExecutionJob(signalID, layerID, userID, bindingID, exchange, symbol, sid
 		UserID:         userID,
 		LayerID:        layerID,
 		Exchange:       exchange,
+		AccountMode:    accountMode,
 		Symbol:         symbol,
 		Side:           side,
 		Quantity:       quantity,

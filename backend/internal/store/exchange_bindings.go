@@ -458,8 +458,10 @@ func normalizeExchangeAccountMode(accountMode string) (string, error) {
 	switch accountMode {
 	case "", "real", "live", "production", "prod":
 		return "real", nil
-	case "demo", "testnet", "sandbox", "paper":
+	case "demo", "paper", "simulated", "simulation":
 		return "demo", nil
+	case "testnet", "sandbox":
+		return "testnet", nil
 	default:
 		return "", ErrInvalidExchangeAccountMode
 	}

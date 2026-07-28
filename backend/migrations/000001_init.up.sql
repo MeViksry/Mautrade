@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS exchange_bindings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT exchange_bindings_exchange_check CHECK (exchange_name IN ('binance', 'okx', 'bybit', 'tokocrypto')),
-  CONSTRAINT exchange_bindings_account_mode_check CHECK (account_mode IN ('real', 'demo')),
+  CONSTRAINT exchange_bindings_account_mode_check CHECK (account_mode IN ('real', 'demo', 'testnet')),
   CONSTRAINT exchange_bindings_status_check CHECK (status IN ('active', 'invalid', 'revoked')),
   CONSTRAINT exchange_bindings_one_active_per_exchange UNIQUE (user_id, exchange_name)
 );

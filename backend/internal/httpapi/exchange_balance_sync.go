@@ -57,10 +57,11 @@ func (s *Server) syncExchangeBindingBalance(ctx context.Context, userID string, 
 			return fmt.Errorf("decrypt exchange api passphrase: %w", err)
 		}
 	}
-	return s.syncExchangeBindingBalanceWithPlaintext(ctx, userID, binding.ID, binding.ExchangeName, binding.AccountMode, apiKey, apiSecret, passphrase)
+	_, err = s.syncExchangeBindingBalanceWithPlaintext(ctx, userID, binding.ID, binding.ExchangeName, binding.AccountMode, apiKey, apiSecret, passphrase)
+	return err
 }
 
-func (s *Server) syncExchangeBindingBalanceWithPlaintext(ctx context.Context, userID, bindingID, exchangeName, accountMode, apiKey, apiSecret, passphrase string) error {
+func (s *Server) syncExchangeBindingBalanceWithPlaintext(ctx context.Context, userID, bindingID, exchangeName, accountMode, apiKey, apiSecret, passphrase string) (string, error) {
 	asset := s.defaultBalanceAsset()
 	balance, err := s.exchangeBalance.FetchSpotBalance(ctx, exchangebalance.Credentials{
 		Exchange:    exchangeName,
@@ -71,17 +72,24 @@ func (s *Server) syncExchangeBindingBalanceWithPlaintext(ctx context.Context, us
 		Asset:       asset,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
-	return s.store.RecordExchangeBalanceSnapshot(ctx, store.ExchangeBalanceSnapshotParams{
+	resolvedAccountMode := exchangebalance.NormalizeAccountMode(firstNonEmpty(balance.AccountMode, accountMode))
+	if resolvedAccountMode == "" {
+		resolvedAccountMode = exchangebalance.AccountModeReal
+	}
+	if err := s.store.RecordExchangeBalanceSnapshot(ctx, store.ExchangeBalanceSnapshotParams{
 		UserID:            userID,
 		ExchangeBindingID: bindingID,
-		AccountMode:       accountMode,
+		AccountMode:       resolvedAccountMode,
 		Asset:             balance.Asset,
 		FreeAmount:        balance.Free,
 		LockedAmount:      balance.Locked,
 		CapturedAt:        time.Now().UTC(),
-	})
+	}); err != nil {
+		return "", err
+	}
+	return resolvedAccountMode, nil
 }
 
 func (s *Server) defaultBalanceAsset() string {

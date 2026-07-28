@@ -32,3 +32,27 @@ func TestNormalizeBindingStatusRejectsUnknownValue(t *testing.T) {
 		t.Fatalf("expected ErrInvalidExchangeStatus, got %v", err)
 	}
 }
+
+func TestNormalizeExchangeAccountModeSupportsTestnet(t *testing.T) {
+	t.Parallel()
+
+	mode, err := normalizeExchangeAccountMode("testnet")
+	if err != nil {
+		t.Fatalf("expected testnet mode to be accepted: %v", err)
+	}
+	if mode != "testnet" {
+		t.Fatalf("expected testnet mode, got %s", mode)
+	}
+}
+
+func TestNormalizeExchangeAccountModeKeepsDemoSeparateFromTestnet(t *testing.T) {
+	t.Parallel()
+
+	mode, err := normalizeExchangeAccountMode("paper")
+	if err != nil {
+		t.Fatalf("expected paper alias to be accepted: %v", err)
+	}
+	if mode != "demo" {
+		t.Fatalf("expected paper alias to normalize to demo, got %s", mode)
+	}
+}
