@@ -40,6 +40,10 @@ interface BindExchangePayload {
   passphrase?: string
 }
 
+interface GetExchangeBindingsOptions {
+  includeUnbound?: boolean
+}
+
 export const useDashboardData = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
@@ -127,7 +131,7 @@ export const useDashboardData = () => {
     })
   }
 
-  const getExchangeBindings = async (): Promise<ExchangeBinding[]> => {
+  const getExchangeBindings = async (options: GetExchangeBindingsOptions = {}): Promise<ExchangeBinding[]> => {
     try {
       const bindings = await $fetch<ApiExchangeBinding[]>(`${apiBase}/user/exchange-bindings`, {
         headers: authHeaders()
@@ -136,7 +140,7 @@ export const useDashboardData = () => {
         bindings.map(binding => [normalizeExchangeKey(binding.name), binding])
       )
 
-      return exchangeCatalog.map((catalogExchange) => {
+      const mergedBindings = exchangeCatalog.map((catalogExchange) => {
         const binding = bindingsByExchange.get(catalogExchange.exchange)
         if (!binding) return { ...catalogExchange }
 
@@ -149,9 +153,10 @@ export const useDashboardData = () => {
           hasApi: binding.hasApi
         }
       })
+      return options.includeUnbound ? mergedBindings : mergedBindings.filter(exchange => exchange.hasApi)
     } catch (error) {
       console.warn('Failed to fetch exchange bindings:', error)
-      return exchangeCatalog.map(exchange => ({ ...exchange }))
+      return options.includeUnbound ? exchangeCatalog.map(exchange => ({ ...exchange })) : []
     }
   }
 

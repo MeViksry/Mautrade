@@ -29,6 +29,7 @@ const {
   deleteExchangeBinding
 } = useDashboardData()
 const exchanges = ref<ExchangeBinding[]>([])
+const exchangeOptions = ref<ExchangeBinding[]>([])
 const loading = ref(true)
 const theme = useState<'dark' | 'light'>('dashboard-theme', () => 'dark')
 const bindModalOpen = ref(false)
@@ -54,7 +55,9 @@ const refreshExchangeBindings = async () => {
   loading.value = true
   pageError.value = ''
   try {
-    exchanges.value = await getExchangeBindings()
+    const allExchanges = await getExchangeBindings({ includeUnbound: true })
+    exchangeOptions.value = allExchanges
+    exchanges.value = allExchanges.filter(exchange => exchange.hasApi)
   } catch (error) {
     console.error('Error fetching exchange bindings:', error)
     pageError.value = getErrorMessage(error, 'Failed to load exchange bindings')
@@ -221,7 +224,27 @@ const handleExchangeStatusChange = async (payload: { exchange: string, status: '
         {{ pageError }}
       </p>
 
-      <div class="api-keys-grid">
+      <div
+        v-if="exchanges.length === 0"
+        class="api-empty-state"
+      >
+        <div class="api-empty-state__icon">
+          <UIcon name="lucide:key-round" />
+        </div>
+        <h3>No Exchange Connected</h3>
+        <button
+          class="btn-primary"
+          type="button"
+          @click="openBindModal"
+        >
+          + Bind New Exchange
+        </button>
+      </div>
+
+      <div
+        v-else
+        class="api-keys-grid"
+      >
         <div
           v-for="exchange in exchanges"
           :key="exchange.id"
@@ -278,7 +301,7 @@ const handleExchangeStatusChange = async (payload: { exchange: string, status: '
 
     <ExchangeBindModal
       v-model="bindModalOpen"
-      :exchanges="exchanges"
+      :exchanges="exchangeOptions"
       :theme="theme"
       :submitting="bindSubmitting"
       :error-message="bindError"
@@ -387,6 +410,36 @@ const handleExchangeStatusChange = async (payload: { exchange: string, status: '
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
+}
+
+.api-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 280px;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+
+.api-empty-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 90, 0, 0.28);
+  color: var(--accent);
+}
+
+.api-empty-state h3 {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .exchange-card {
