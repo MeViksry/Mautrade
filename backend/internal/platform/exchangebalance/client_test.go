@@ -59,7 +59,17 @@ func TestBinanceDemoUsesDemoModeEndpoint(t *testing.T) {
 	}
 }
 
-func TestFetchBybitDemoUnifiedFallback(t *testing.T) {
+func TestBybitDemoUsesMainnetDemoTradingEndpoint(t *testing.T) {
+	client := NewClient()
+	if client.baseURLs.BybitDemo != "https://api-demo.bybit.com" {
+		t.Fatalf("unexpected bybit demo endpoint %s", client.baseURLs.BybitDemo)
+	}
+	if client.baseURLs.BybitTestnet != "https://api-testnet.bybit.com" {
+		t.Fatalf("unexpected bybit testnet endpoint %s", client.baseURLs.BybitTestnet)
+	}
+}
+
+func TestFetchBybitDemoUnifiedBalance(t *testing.T) {
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++
@@ -110,10 +120,72 @@ func TestFetchBybitDemoUnifiedFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchSpotBalance returned error: %v", err)
 	}
-	if requests != 2 {
-		t.Fatalf("expected spot and unified requests, got %d", requests)
+	if requests != 1 {
+		t.Fatalf("expected unified request only, got %d", requests)
 	}
 	if balance.Free != "42.75" || balance.Locked != "0" {
+		t.Fatalf("unexpected balance: %+v", balance)
+	}
+}
+
+func TestFetchBybitDemoFallsBackToTestnet(t *testing.T) {
+	demoRequests := 0
+	demoServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		demoRequests++
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"retCode": 10003,
+			"retMsg":  "API key is invalid",
+			"result":  map[string]any{"list": []map[string]any{}},
+		})
+	}))
+	defer demoServer.Close()
+
+	testnetRequests := 0
+	testnetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		testnetRequests++
+		if r.URL.Query().Get("accountType") != "UNIFIED" {
+			t.Fatalf("expected unified account type first")
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"retCode": 0,
+			"retMsg":  "OK",
+			"result": map[string]any{
+				"list": []map[string]any{
+					{
+						"accountType": "UNIFIED",
+						"coin": []map[string]string{
+							{"coin": "USDT", "walletBalance": "25.5", "locked": "1.5"},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer testnetServer.Close()
+
+	client := NewClientWithBaseURLs(testnetServer.Client(), BaseURLs{
+		BybitDemo:    demoServer.URL,
+		BybitTestnet: testnetServer.URL,
+	})
+	client.now = func() time.Time { return time.UnixMilli(1234567890000) }
+
+	balance, err := client.FetchSpotBalance(context.Background(), Credentials{
+		Exchange:    "bybit",
+		APIKey:      "key",
+		APISecret:   "secret",
+		AccountMode: "demo",
+		Asset:       "USDT",
+	})
+	if err != nil {
+		t.Fatalf("FetchSpotBalance returned error: %v", err)
+	}
+	if demoRequests != 2 {
+		t.Fatalf("expected demo unified and spot attempts, got %d", demoRequests)
+	}
+	if testnetRequests != 1 {
+		t.Fatalf("expected one testnet request, got %d", testnetRequests)
+	}
+	if balance.Free != "25.5" || balance.Locked != "1.5" {
 		t.Fatalf("unexpected balance: %+v", balance)
 	}
 }

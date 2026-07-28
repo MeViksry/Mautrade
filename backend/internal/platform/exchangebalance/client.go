@@ -25,6 +25,7 @@ type BaseURLs struct {
 	BinanceDemo    string
 	BybitReal      string
 	BybitDemo      string
+	BybitTestnet   string
 	OKX            string
 	TokocryptoReal string
 }
@@ -57,7 +58,8 @@ func NewClient() *Client {
 			BinanceReal:    "https://api.binance.com",
 			BinanceDemo:    "https://demo-api.binance.com",
 			BybitReal:      "https://api.bybit.com",
-			BybitDemo:      "https://api-testnet.bybit.com",
+			BybitDemo:      "https://api-demo.bybit.com",
+			BybitTestnet:   "https://api-testnet.bybit.com",
 			OKX:            "https://openapi.okx.com",
 			TokocryptoReal: "https://www.tokocrypto.com",
 		},
@@ -175,25 +177,61 @@ func (c *Client) fetchTokocryptoSpotBalance(ctx context.Context, credentials Cre
 }
 
 func (c *Client) fetchBybitSpotBalance(ctx context.Context, credentials Credentials) (Balance, error) {
-	balance, err := c.fetchBybitWalletBalance(ctx, credentials, "SPOT")
-	if err == nil && (balance.Free != "0" || balance.Locked != "0") {
-		return balance, nil
-	}
-	unifiedBalance, unifiedErr := c.fetchBybitWalletBalance(ctx, credentials, "UNIFIED")
-	if unifiedErr != nil {
-		if err != nil {
-			return Balance{}, fmt.Errorf("exchange balance: bybit spot failed: %w; unified failed: %v", err, unifiedErr)
+	var zeroBalance *Balance
+	var failures []string
+	for _, baseURL := range c.bybitBaseURLs(credentials.AccountMode) {
+		for _, accountType := range []string{"UNIFIED", "SPOT"} {
+			balance, err := c.fetchBybitWalletBalance(ctx, credentials, baseURL, accountType)
+			if err != nil {
+				failures = append(failures, fmt.Sprintf("%s %s: %v", bybitHostLabel(baseURL), accountType, err))
+				continue
+			}
+			if balance.Free != "0" || balance.Locked != "0" {
+				return balance, nil
+			}
+			if zeroBalance == nil {
+				copy := balance
+				zeroBalance = &copy
+			}
 		}
-		return balance, nil
 	}
-	return unifiedBalance, nil
+	if zeroBalance != nil {
+		return *zeroBalance, nil
+	}
+	return Balance{}, fmt.Errorf("exchange balance: bybit balance lookup failed: %s", strings.Join(failures, "; "))
 }
 
-func (c *Client) fetchBybitWalletBalance(ctx context.Context, credentials Credentials, accountType string) (Balance, error) {
-	baseURL := strings.TrimRight(c.baseURLs.BybitReal, "/")
-	if credentials.AccountMode == AccountModeDemo {
-		baseURL = strings.TrimRight(c.baseURLs.BybitDemo, "/")
+func (c *Client) bybitBaseURLs(accountMode string) []string {
+	urls := []string{c.baseURLs.BybitReal}
+	if NormalizeAccountMode(accountMode) == AccountModeDemo {
+		urls = []string{c.baseURLs.BybitDemo, c.baseURLs.BybitTestnet}
 	}
+	seen := map[string]struct{}{}
+	unique := make([]string, 0, len(urls))
+	for _, rawURL := range urls {
+		normalized := strings.TrimRight(strings.TrimSpace(rawURL), "/")
+		if normalized == "" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		unique = append(unique, normalized)
+	}
+	return unique
+}
+
+func bybitHostLabel(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" {
+		return "bybit"
+	}
+	return parsed.Host
+}
+
+func (c *Client) fetchBybitWalletBalance(ctx context.Context, credentials Credentials, baseURL string, accountType string) (Balance, error) {
+	baseURL = strings.TrimRight(baseURL, "/")
 
 	values := url.Values{}
 	values.Set("accountType", accountType)
