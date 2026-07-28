@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/MeViksry/Mautrade/backend/internal/config"
 	"github.com/MeViksry/Mautrade/backend/internal/domain/gasfee"
 	"github.com/MeViksry/Mautrade/backend/internal/mailer"
+	"github.com/MeViksry/Mautrade/backend/internal/platform/bscwallet"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/exchangebalance"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/secrets"
@@ -26,6 +28,7 @@ type Server struct {
 	store               *store.DashboardStore
 	credentialEncryptor *secrets.Encryptor
 	exchangeBalance     *exchangebalance.Client
+	gasFeeWithdrawer    *bscwallet.Withdrawer
 	mailer              *mailer.Mailer
 	logger              *slog.Logger
 	mux                 *http.ServeMux
@@ -36,6 +39,10 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 	if err != nil {
 		return nil, err
 	}
+	gasFeeWithdrawer, err := newGasFeeWithdrawer(cfg)
+	if err != nil {
+		return nil, err
+	}
 	server := &Server{
 		config:              cfg,
 		db:                  db,
@@ -43,6 +50,7 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 		store:               store.NewDashboardStore(db),
 		credentialEncryptor: credentialEncryptor,
 		exchangeBalance:     exchangebalance.NewClient(),
+		gasFeeWithdrawer:    gasFeeWithdrawer,
 		mailer:              mailer,
 		logger:              logger,
 		mux:                 http.NewServeMux(),
@@ -52,6 +60,32 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 	}
 	server.routes()
 	return server, nil
+}
+
+func newGasFeeWithdrawer(cfg config.Config) (*bscwallet.Withdrawer, error) {
+	if strings.TrimSpace(cfg.GasFeeWithdrawKey) == "" {
+		return nil, nil
+	}
+
+	withdrawer, err := bscwallet.NewWithdrawer(bscwallet.Config{
+		RPCURLs:       cfg.GasFeeRPCURLs,
+		ChainID:       cfg.GasFeeChainID,
+		TokenContract: cfg.GasFeeUSDTContract,
+		TokenDecimals: cfg.GasFeeTokenDecimals,
+		PrivateKey:    cfg.GasFeeWithdrawKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	depositAddress, err := bscwallet.ParseAddress(cfg.GasFeeDepositAddress)
+	if err != nil {
+		return nil, fmt.Errorf("GAS_FEE_DEPOSIT_ADDRESS must be a valid EVM address when GAS_FEE_WITHDRAW_PRIVATE_KEY is configured: %w", err)
+	}
+	if !strings.EqualFold(depositAddress.Hex(), withdrawer.SignerAddress()) {
+		return nil, fmt.Errorf("GAS_FEE_WITHDRAW_PRIVATE_KEY does not match GAS_FEE_DEPOSIT_ADDRESS")
+	}
+	return withdrawer, nil
 }
 
 func (s *Server) getGasFeeCalculator(ctx context.Context) (gasfee.Calculator, error) {

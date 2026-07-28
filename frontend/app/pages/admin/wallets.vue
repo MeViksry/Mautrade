@@ -375,7 +375,9 @@ const submitWithdrawal = async () => {
         walletAddress: withdrawAddressInput.value.trim().toLowerCase()
       }
     })
-    withdrawSuccess.value = `Withdraw queued: ${formatDecimalText(withdrawal.amount)} ${withdrawal.asset}`
+    withdrawSuccess.value = withdrawal.txId
+      ? `Withdraw broadcast: ${formatDecimalText(withdrawal.amount)} ${withdrawal.asset}`
+      : `Withdraw queued: ${formatDecimalText(withdrawal.amount)} ${withdrawal.asset}`
     withdrawAmountInput.value = ''
     await fetchPersonalWallets()
     const refreshedWallet = personalWallets.value.find(wallet => wallet.code === withdrawal.walletCode)
@@ -385,6 +387,7 @@ const submitWithdrawal = async () => {
   } catch (err) {
     console.error('Failed to create personal wallet withdrawal:', err)
     withdrawError.value = getRequestErrorMessage(err, 'Failed to create withdrawal.')
+    await fetchPersonalWallets()
   } finally {
     withdrawSubmitting.value = false
   }

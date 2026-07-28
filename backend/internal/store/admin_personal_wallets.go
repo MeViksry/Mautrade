@@ -19,6 +19,7 @@ var (
 	ErrInvalidPersonalWalletWithdrawAmount   = errors.New("store: invalid personal wallet withdraw amount")
 	ErrPersonalWalletWithdrawAddressRequired = errors.New("store: personal wallet withdraw address required")
 	ErrPersonalWalletWithdrawInsufficient    = errors.New("store: personal wallet withdraw insufficient balance")
+	ErrPersonalWalletWithdrawalNotFound      = errors.New("store: personal wallet withdrawal not found")
 )
 
 type AdminPersonalWalletView struct {
@@ -62,6 +63,14 @@ type CreateAdminPersonalWalletWithdrawalParams struct {
 	Amount        string
 	AdminID       string
 	Now           time.Time
+}
+
+type UpdateAdminPersonalWalletWithdrawalStatusParams struct {
+	WithdrawalID string
+	AdminID      string
+	TxID         string
+	Reason       string
+	Now          time.Time
 }
 
 func (s *DashboardStore) AdminPersonalWallets(ctx context.Context) ([]AdminPersonalWalletView, error) {
@@ -354,6 +363,61 @@ RETURNING id::text, wallet_code, destination_address, amount::text, asset, statu
 	return withdrawal, nil
 }
 
+func (s *DashboardStore) AdminMarkPersonalWalletWithdrawalBroadcast(ctx context.Context, params UpdateAdminPersonalWalletWithdrawalStatusParams) (AdminPersonalWalletWithdrawalView, error) {
+	if !s.Ready() {
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: update personal wallet withdrawal requires postgres")
+	}
+
+	txID, err := normalizeWithdrawalTxID(params.TxID)
+	if err != nil {
+		return AdminPersonalWalletWithdrawalView{}, err
+	}
+
+	now := normalizedNow(params.Now)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: begin broadcast personal wallet withdrawal: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	withdrawal, err := updatePersonalWalletWithdrawalStatus(ctx, tx, params.WithdrawalID, "broadcast", txID, "", now)
+	if err != nil {
+		return AdminPersonalWalletWithdrawalView{}, err
+	}
+	if err := insertPersonalWalletWithdrawalStatusAudit(ctx, tx, params.AdminID, "admin_personal_wallet_withdraw_broadcast", withdrawal, now); err != nil {
+		return AdminPersonalWalletWithdrawalView{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: commit broadcast personal wallet withdrawal: %w", err)
+	}
+	return withdrawal, nil
+}
+
+func (s *DashboardStore) AdminMarkPersonalWalletWithdrawalFailed(ctx context.Context, params UpdateAdminPersonalWalletWithdrawalStatusParams) (AdminPersonalWalletWithdrawalView, error) {
+	if !s.Ready() {
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: update personal wallet withdrawal requires postgres")
+	}
+
+	now := normalizedNow(params.Now)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: begin fail personal wallet withdrawal: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	withdrawal, err := updatePersonalWalletWithdrawalStatus(ctx, tx, params.WithdrawalID, "failed", "", safeWithdrawalFailureReason(params.Reason), now)
+	if err != nil {
+		return AdminPersonalWalletWithdrawalView{}, err
+	}
+	if err := insertPersonalWalletWithdrawalStatusAudit(ctx, tx, params.AdminID, "admin_personal_wallet_withdraw_failed", withdrawal, now); err != nil {
+		return AdminPersonalWalletWithdrawalView{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: commit fail personal wallet withdrawal: %w", err)
+	}
+	return withdrawal, nil
+}
+
 func normalizePersonalWalletCode(value string) string {
 	code := strings.ToLower(strings.TrimSpace(value))
 	code = strings.ReplaceAll(code, "-", "_")
@@ -428,6 +492,68 @@ func parsePersonalWalletWithdrawalAmount(value string) (qdecimal.Decimal, error)
 	return amount, nil
 }
 
+func normalizeWithdrawalTxID(value string) (string, error) {
+	txID := strings.ToLower(strings.TrimSpace(value))
+	if txID == "" {
+		return "", fmt.Errorf("%w: tx_id is required", ErrInvalidPersonalWalletWithdrawAmount)
+	}
+	if !strings.HasPrefix(txID, "0x") {
+		txID = "0x" + txID
+	}
+	if len(txID) != 66 {
+		return "", fmt.Errorf("%w: tx_id must be 32-byte hex hash", ErrInvalidPersonalWalletWithdrawAmount)
+	}
+	for _, char := range txID[2:] {
+		if !isHexRune(char) {
+			return "", fmt.Errorf("%w: tx_id must be hex", ErrInvalidPersonalWalletWithdrawAmount)
+		}
+	}
+	return txID, nil
+}
+
+func safeWithdrawalFailureReason(value string) string {
+	reason := strings.TrimSpace(value)
+	if reason == "" {
+		return "broadcast failed"
+	}
+	if len(reason) > 700 {
+		return reason[:700]
+	}
+	return reason
+}
+
+func updatePersonalWalletWithdrawalStatus(ctx context.Context, tx pgx.Tx, withdrawalID string, status string, txID string, reason string, now time.Time) (AdminPersonalWalletWithdrawalView, error) {
+	var withdrawal AdminPersonalWalletWithdrawalView
+	if err := tx.QueryRow(ctx, `
+UPDATE admin_wallet_withdrawals
+SET status = $2,
+    tx_id = NULLIF($3, ''),
+    failure_reason = $4,
+    broadcast_at = CASE WHEN $2 = 'broadcast' THEN $5 ELSE broadcast_at END,
+    updated_at = $5
+WHERE id = $1::uuid
+  AND status = 'pending_signing'
+RETURNING id::text, wallet_code, destination_address, amount::text, asset, status, tx_id, failure_reason, requested_at, updated_at
+`, strings.TrimSpace(withdrawalID), status, txID, reason, now).Scan(
+		&withdrawal.ID,
+		&withdrawal.WalletCode,
+		&withdrawal.DestinationAddress,
+		&withdrawal.Amount,
+		&withdrawal.Asset,
+		&withdrawal.Status,
+		&withdrawal.TxID,
+		&withdrawal.FailureReason,
+		&withdrawal.RequestedAt,
+		&withdrawal.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return AdminPersonalWalletWithdrawalView{}, ErrPersonalWalletWithdrawalNotFound
+		}
+		return AdminPersonalWalletWithdrawalView{}, fmt.Errorf("store: update personal wallet withdrawal status: %w", err)
+	}
+	return withdrawal, nil
+}
+
 func insertPersonalWalletAudit(ctx context.Context, tx pgx.Tx, adminID string, previousAddress string, wallet AdminPersonalWalletView, now time.Time) error {
 	auditID, err := id.New()
 	if err != nil {
@@ -463,6 +589,40 @@ INSERT INTO audit_logs (
   $1::uuid, 'admin', $2::uuid, 'admin_personal_wallet_address_updated', 'admin_personal_wallet', $3::jsonb, $4::jsonb, $5
 )`, auditID.String(), actorID, string(beforeJSON), string(afterJSON), now); err != nil {
 		return fmt.Errorf("store: insert personal wallet audit: %w", err)
+	}
+	return nil
+}
+
+func insertPersonalWalletWithdrawalStatusAudit(ctx context.Context, tx pgx.Tx, adminID string, action string, withdrawal AdminPersonalWalletWithdrawalView, now time.Time) error {
+	auditID, err := newUUIDText()
+	if err != nil {
+		return err
+	}
+	afterJSON, err := json.Marshal(map[string]any{
+		"id":                 withdrawal.ID,
+		"walletCode":         withdrawal.WalletCode,
+		"destinationAddress": withdrawal.DestinationAddress,
+		"amount":             withdrawal.Amount,
+		"asset":              withdrawal.Asset,
+		"status":             withdrawal.Status,
+		"txId":               withdrawal.TxID,
+		"failureReason":      withdrawal.FailureReason,
+	})
+	if err != nil {
+		return fmt.Errorf("store: marshal personal wallet withdrawal status audit: %w", err)
+	}
+	var actorID any
+	if strings.TrimSpace(adminID) != "" {
+		actorID = strings.TrimSpace(adminID)
+	}
+
+	if _, err := tx.Exec(ctx, `
+INSERT INTO audit_logs (
+  id, actor_type, actor_id, action, entity, entity_id, after_state, created_at
+) VALUES (
+  $1::uuid, 'admin', $2::uuid, $3, 'admin_personal_wallet_withdrawal', $4::uuid, $5::jsonb, $6
+)`, auditID, actorID, action, withdrawal.ID, string(afterJSON), now); err != nil {
+		return fmt.Errorf("store: insert personal wallet withdrawal status audit: %w", err)
 	}
 	return nil
 }

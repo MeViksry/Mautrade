@@ -273,6 +273,16 @@ if [ -n "${GAS_FEE_DEPOSIT_ADDRESS:-}" ]; then
     audit_log "gas_fee_deposit_address_injected" "status=success"
 fi
 
+if [ -n "${GAS_FEE_WITHDRAW_PRIVATE_KEY:-}" ]; then
+    if grep -q "^GAS_FEE_WITHDRAW_PRIVATE_KEY=" "$PROJECT_DIR/backend/.env"; then
+        sed -i "s|^GAS_FEE_WITHDRAW_PRIVATE_KEY=.*|GAS_FEE_WITHDRAW_PRIVATE_KEY=${GAS_FEE_WITHDRAW_PRIVATE_KEY}|" "$PROJECT_DIR/backend/.env"
+    else
+        echo "GAS_FEE_WITHDRAW_PRIVATE_KEY=${GAS_FEE_WITHDRAW_PRIVATE_KEY}" >> "$PROJECT_DIR/backend/.env"
+    fi
+    echo -e "${GREEN}  ✓ Injected GAS_FEE_WITHDRAW_PRIVATE_KEY into backend/.env${NC}"
+    audit_log "gas_fee_withdraw_private_key_injected" "status=success"
+fi
+
 if [ -n "${EXCHANGE_CREDENTIAL_KEY:-}" ]; then
     if grep -q "^EXCHANGE_CREDENTIAL_KEY=" "$PROJECT_DIR/backend/.env"; then
         sed -i "s|^EXCHANGE_CREDENTIAL_KEY=.*|EXCHANGE_CREDENTIAL_KEY=${EXCHANGE_CREDENTIAL_KEY}|" "$PROJECT_DIR/backend/.env"

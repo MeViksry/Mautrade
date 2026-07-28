@@ -109,5 +109,37 @@ func (s *Server) handleCreateAdminPersonalWalletWithdrawal(w http.ResponseWriter
 		return
 	}
 
+	if s.gasFeeWithdrawer != nil {
+		broadcast, err := s.gasFeeWithdrawer.SendUSDTTransfer(r.Context(), withdrawal.DestinationAddress, withdrawal.Amount)
+		if err != nil {
+			failed, markErr := s.store.AdminMarkPersonalWalletWithdrawalFailed(r.Context(), store.UpdateAdminPersonalWalletWithdrawalStatusParams{
+				WithdrawalID: withdrawal.ID,
+				AdminID:      admin.ID,
+				Reason:       err.Error(),
+				Now:          time.Now().UTC(),
+			})
+			if markErr != nil {
+				s.logger.Error("mark personal wallet withdrawal failed", "error", markErr, "withdrawal_id", withdrawal.ID)
+			} else {
+				withdrawal = failed
+			}
+			s.logger.Error("broadcast personal wallet withdrawal", "error", err, "withdrawal_id", withdrawal.ID, "wallet_code", withdrawal.WalletCode)
+			writeError(w, http.StatusBadGateway, "withdrawal saved but on-chain broadcast failed")
+			return
+		}
+
+		withdrawal, err = s.store.AdminMarkPersonalWalletWithdrawalBroadcast(r.Context(), store.UpdateAdminPersonalWalletWithdrawalStatusParams{
+			WithdrawalID: withdrawal.ID,
+			AdminID:      admin.ID,
+			TxID:         broadcast.TxHash,
+			Now:          time.Now().UTC(),
+		})
+		if err != nil {
+			s.logger.Error("mark personal wallet withdrawal broadcast", "error", err, "withdrawal_id", withdrawal.ID, "tx_id", broadcast.TxHash)
+			writeError(w, http.StatusInternalServerError, "withdrawal broadcasted but failed to save transaction hash")
+			return
+		}
+	}
+
 	writeJSON(w, http.StatusAccepted, withdrawal)
 }

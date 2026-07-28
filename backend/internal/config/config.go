@@ -25,6 +25,7 @@ type Config struct {
 	GasFeeTokenDecimals    int
 	GasFeeMinConfirmations uint64
 	GasFeeVerifierInterval time.Duration
+	GasFeeWithdrawKey      string
 	ExchangeCredentialKey  string
 	AdminOneEmail          string
 	AdminOneName           string
@@ -87,6 +88,7 @@ func Load() (Config, error) {
 		GasFeeTokenDecimals:    gasFeeDecimals,
 		GasFeeMinConfirmations: gasFeeMinConfirmations,
 		GasFeeVerifierInterval: time.Duration(gasFeeVerifierSeconds) * time.Second,
+		GasFeeWithdrawKey:      strings.TrimSpace(stringEnv("GAS_FEE_WITHDRAW_PRIVATE_KEY", "")),
 		ExchangeCredentialKey:  stringEnv("EXCHANGE_CREDENTIAL_KEY", ""),
 		AdminOneEmail:          stringEnv("ACCOUNT_ADMIN_ONE", ""),
 		AdminOneName:           stringEnv("ADMIN_ACCOUNT_ONE_SINGLE_NAME", ""),
