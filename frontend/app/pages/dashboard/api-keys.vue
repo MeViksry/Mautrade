@@ -26,6 +26,7 @@ const {
   bindExchange,
   getExchangeBindingCredentials,
   updateExchangeBindingStatus,
+  updateExchangeBindingAccountMode,
   deleteExchangeBinding
 } = useDashboardData()
 const exchanges = ref<ExchangeBinding[]>([])
@@ -159,6 +160,25 @@ const handleExchangeStatusChange = async (payload: { exchange: string, status: '
     manageModalOpen.value = false
   } catch (error) {
     manageError.value = getErrorMessage(error, 'Failed to update exchange status')
+  } finally {
+    manageSubmitting.value = null
+  }
+}
+
+const handleExchangeAccountModeChange = async (payload: { exchange: string, accountMode: 'real' | 'demo' }) => {
+  if (manageSubmitting.value) return
+
+  manageSubmitting.value = payload.exchange
+  manageError.value = ''
+  try {
+    await updateExchangeBindingAccountMode(payload.exchange, payload.accountMode)
+    await refreshExchangeBindings()
+    managedExchange.value = exchanges.value.find(exchange => exchange.exchange === payload.exchange) ?? null
+    if (managedExchange.value?.hasApi) {
+      managedCredentials.value = await getExchangeBindingCredentials(payload.exchange)
+    }
+  } catch (error) {
+    manageError.value = getErrorMessage(error, 'Failed to update account mode')
   } finally {
     manageSubmitting.value = null
   }
@@ -322,6 +342,7 @@ const handleExchangeStatusChange = async (payload: { exchange: string, status: '
       :submitting="Boolean(manageSubmitting)"
       :error-message="manageError"
       @status-change="handleExchangeStatusChange"
+      @account-mode-change="handleExchangeAccountModeChange"
     />
   </div>
 </template>

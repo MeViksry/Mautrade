@@ -215,6 +215,18 @@ export const useDashboardData = () => {
     }
   }
 
+  const updateExchangeBindingAccountMode = async (exchange: string, accountMode: 'real' | 'demo'): Promise<ExchangeCredentialSummary> => {
+    try {
+      return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings/${encodeURIComponent(exchange)}/account-mode`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: { account_mode: accountMode }
+      })
+    } catch (error) {
+      throw new Error(formatApiError(error, 'Failed to update exchange account mode'), { cause: error })
+    }
+  }
+
   const deleteExchangeBinding = async (exchange: string): Promise<ExchangeCredentialSummary> => {
     try {
       return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings/${encodeURIComponent(exchange)}`, {
@@ -604,6 +616,7 @@ export const useDashboardData = () => {
     bindExchange,
     getExchangeBindingCredentials,
     updateExchangeBindingStatus,
+    updateExchangeBindingAccountMode,
     deleteExchangeBinding,
     getActiveLayers,
     getHistory

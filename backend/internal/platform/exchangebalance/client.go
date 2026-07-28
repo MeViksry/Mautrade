@@ -55,7 +55,7 @@ func NewClient() *Client {
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		baseURLs: BaseURLs{
 			BinanceReal:    "https://api.binance.com",
-			BinanceDemo:    "https://testnet.binance.vision",
+			BinanceDemo:    "https://demo-api.binance.com",
 			BybitReal:      "https://api.bybit.com",
 			BybitDemo:      "https://api-testnet.bybit.com",
 			OKX:            "https://openapi.okx.com",

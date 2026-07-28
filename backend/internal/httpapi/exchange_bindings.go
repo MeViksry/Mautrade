@@ -28,6 +28,11 @@ type updateExchangeBindingStatusRequest struct {
 	Status string `json:"status"`
 }
 
+type updateExchangeBindingAccountModeRequest struct {
+	AccountMode    string `json:"account_mode"`
+	AccountModeAlt string `json:"accountMode"`
+}
+
 type exchangeBindingCredentialResponse struct {
 	ID              string     `json:"id"`
 	Exchange        string     `json:"exchange"`
@@ -192,6 +197,69 @@ func (s *Server) handleUpdateExchangeBindingStatus(w http.ResponseWriter, r *htt
 	writeJSON(w, http.StatusOK, response)
 }
 
+func (s *Server) handleUpdateExchangeBindingAccountMode(w http.ResponseWriter, r *http.Request) {
+	if !s.store.Ready() {
+		writeError(w, http.StatusServiceUnavailable, "postgres is required to update exchange binding")
+		return
+	}
+	user, err := s.authUserFromRequest(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid or expired session")
+		return
+	}
+	var req updateExchangeBindingAccountModeRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	accountMode, err := normalizeExchangeAccountModeValue(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	binding, err := s.store.ExchangeBindingCredential(r.Context(), user.ID, r.PathValue("exchange"))
+	if err != nil {
+		writeExchangeBindingError(s, w, "read exchange credential for account mode update", err)
+		return
+	}
+	if binding.ExchangeName == "tokocrypto" && accountMode == exchangebalance.AccountModeDemo {
+		writeError(w, http.StatusBadRequest, "demo account is not supported for Tokocrypto")
+		return
+	}
+	syncCtx, cancel := contextWithExchangeBalanceTimeout(r.Context())
+	err = s.syncExchangeBindingBalance(syncCtx, user.ID, store.ExchangeBindingCredentialCiphertext{
+		ID:                      binding.ID,
+		ExchangeName:            binding.ExchangeName,
+		AccountMode:             accountMode,
+		Status:                  binding.Status,
+		APIKeyCiphertext:        binding.APIKeyCiphertext,
+		APISecretCiphertext:     binding.APISecretCiphertext,
+		APIPassphraseCiphertext: binding.APIPassphraseCiphertext,
+		PermissionScope:         binding.PermissionScope,
+		LastVerifiedAt:          binding.LastVerifiedAt,
+		CreatedAt:               binding.CreatedAt,
+		UpdatedAt:               binding.UpdatedAt,
+	})
+	cancel()
+	if err != nil {
+		s.logger.Warn("update exchange account mode sync failed", "user_id", user.ID, "binding_id", binding.ID, "exchange", binding.ExchangeName, "account_mode", accountMode, "error", err)
+		writeError(w, http.StatusBadGateway, "failed to read USDT spot balance with selected account mode")
+		return
+	}
+	updatedBinding, err := s.store.ExchangeBindingCredential(r.Context(), user.ID, binding.ExchangeName)
+	if err != nil {
+		writeExchangeBindingError(s, w, "read updated exchange credential", err)
+		return
+	}
+	response, err := s.exchangeBindingCredentialResponse(updatedBinding)
+	if err != nil {
+		s.logger.Error("prepare exchange credential response", "binding_id", updatedBinding.ID, "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to read protected exchange credential")
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
 func (s *Server) handleDeleteExchangeBinding(w http.ResponseWriter, r *http.Request) {
 	if !s.store.Ready() {
 		writeError(w, http.StatusServiceUnavailable, "postgres is required to delete exchange binding")
@@ -218,7 +286,7 @@ func (s *Server) handleDeleteExchangeBinding(w http.ResponseWriter, r *http.Requ
 
 func validateBindExchangeRequest(req bindExchangeRequest) error {
 	exchange := strings.ToLower(strings.TrimSpace(req.Exchange))
-	accountMode, err := normalizeBindExchangeAccountMode(req)
+	accountMode, err := normalizeExchangeAccountModeValue(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
 	if err != nil {
 		return err
 	}
@@ -244,7 +312,11 @@ func validateBindExchangeRequest(req bindExchangeRequest) error {
 }
 
 func normalizeBindExchangeAccountMode(req bindExchangeRequest) (string, error) {
-	mode := exchangebalance.NormalizeAccountMode(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
+	return normalizeExchangeAccountModeValue(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
+}
+
+func normalizeExchangeAccountModeValue(value string) (string, error) {
+	mode := exchangebalance.NormalizeAccountMode(value)
 	switch mode {
 	case exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo:
 		return mode, nil

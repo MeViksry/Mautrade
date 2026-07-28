@@ -76,6 +76,7 @@ func (s *Server) syncExchangeBindingBalanceWithPlaintext(ctx context.Context, us
 	return s.store.RecordExchangeBalanceSnapshot(ctx, store.ExchangeBalanceSnapshotParams{
 		UserID:            userID,
 		ExchangeBindingID: bindingID,
+		AccountMode:       accountMode,
 		Asset:             balance.Asset,
 		FreeAmount:        balance.Free,
 		LockedAmount:      balance.Locked,

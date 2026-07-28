@@ -52,6 +52,13 @@ func TestFetchBinanceSpotBalance(t *testing.T) {
 	}
 }
 
+func TestBinanceDemoUsesDemoModeEndpoint(t *testing.T) {
+	client := NewClient()
+	if client.baseURLs.BinanceDemo != "https://demo-api.binance.com" {
+		t.Fatalf("unexpected binance demo endpoint %s", client.baseURLs.BinanceDemo)
+	}
+}
+
 func TestFetchBybitDemoUnifiedFallback(t *testing.T) {
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

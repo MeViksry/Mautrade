@@ -120,6 +120,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/user/exchange-bindings", s.handleBindExchange)
 	s.mux.HandleFunc("GET /api/v1/user/exchange-bindings/{exchange}/credentials", s.handleExchangeBindingCredentials)
 	s.mux.HandleFunc("PATCH /api/v1/user/exchange-bindings/{exchange}/status", s.handleUpdateExchangeBindingStatus)
+	s.mux.HandleFunc("PATCH /api/v1/user/exchange-bindings/{exchange}/account-mode", s.handleUpdateExchangeBindingAccountMode)
 	s.mux.HandleFunc("DELETE /api/v1/user/exchange-bindings/{exchange}", s.handleDeleteExchangeBinding)
 	s.mux.HandleFunc("GET /api/v1/user/gas-fee", s.handleUserGasFeeAccount)
 	s.mux.HandleFunc("POST /api/v1/user/gas-fee/deposits", s.handleCreateGasFeeDeposit)

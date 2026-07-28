@@ -287,6 +287,7 @@ ORDER BY updated_at ASC`, userID, asset, staleBefore)
 type ExchangeBalanceSnapshotParams struct {
 	UserID            string
 	ExchangeBindingID string
+	AccountMode       string
 	Asset             string
 	FreeAmount        string
 	LockedAmount      string
@@ -300,6 +301,14 @@ func (s *DashboardStore) RecordExchangeBalanceSnapshot(ctx context.Context, para
 	asset := strings.ToUpper(strings.TrimSpace(params.Asset))
 	if asset == "" {
 		asset = "USDT"
+	}
+	accountMode := ""
+	if strings.TrimSpace(params.AccountMode) != "" {
+		var err error
+		accountMode, err = normalizeExchangeAccountMode(params.AccountMode)
+		if err != nil {
+			return err
+		}
 	}
 	freeAmount, err := normalizeSnapshotAmount(params.FreeAmount)
 	if err != nil {
@@ -338,13 +347,26 @@ INSERT INTO exchange_balance_snapshots (
 		return fmt.Errorf("store: insert exchange balance snapshot: %w", err)
 	}
 
-	tag, err := tx.Exec(ctx, `
+	updateQuery := `
 UPDATE exchange_bindings
 SET status = 'active',
     last_verified_at = $3,
     updated_at = $3
 WHERE user_id = $1::uuid
-  AND id = $2::uuid`, params.UserID, params.ExchangeBindingID, now)
+  AND id = $2::uuid`
+	updateArgs := []any{params.UserID, params.ExchangeBindingID, now}
+	if accountMode != "" {
+		updateQuery = `
+UPDATE exchange_bindings
+SET status = 'active',
+    account_mode = $4,
+    last_verified_at = $3,
+    updated_at = $3
+WHERE user_id = $1::uuid
+  AND id = $2::uuid`
+		updateArgs = append(updateArgs, accountMode)
+	}
+	tag, err := tx.Exec(ctx, updateQuery, updateArgs...)
 	if err != nil {
 		return fmt.Errorf("store: mark exchange binding verified: %w", err)
 	}
