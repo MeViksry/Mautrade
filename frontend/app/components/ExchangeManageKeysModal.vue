@@ -47,7 +47,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'status-change': [payload: { exchange: string, status: 'connected' | 'disconnected' }]
-  'account-mode-change': [payload: { exchange: string, accountMode: 'real' | 'demo' }]
 }>()
 
 const manageStep = ref<'keys' | 'verify'>('keys')
@@ -136,9 +135,6 @@ const actionLabel = computed(() => {
   return pendingAction.value === 'connect' ? 'Connect' : 'Disconnect'
 })
 
-const currentAccountMode = computed<'real' | 'demo'>(() => props.exchange?.accountMode === 'demo' ? 'demo' : 'real')
-const exchangeSupportsDemo = computed(() => props.exchange?.exchange !== 'tokocrypto')
-
 const emailOtpInvalid = computed(() => emailOtp.value.trim().length !== 6)
 const googleOtpInvalid = computed(() => props.googleAuthenticatorEnabled && googleOtp.value.trim().length !== 6)
 const verificationHasErrors = computed(() => emailOtpInvalid.value || googleOtpInvalid.value)
@@ -159,17 +155,6 @@ const startVerification = (action: 'connect' | 'disconnect') => {
   emailOtp.value = ''
   googleOtp.value = ''
   submitAttempted.value = false
-}
-
-const updateAccountMode = (accountMode: 'real' | 'demo') => {
-  if (!props.exchange || props.submitting) return
-  if (accountMode === currentAccountMode.value) return
-  if (accountMode === 'demo' && !exchangeSupportsDemo.value) return
-
-  emit('account-mode-change', {
-    exchange: props.exchange.exchange,
-    accountMode
-  })
 }
 
 const submitVerification = () => {
@@ -267,33 +252,6 @@ const submitVerification = () => {
             </span>
           </div>
         </label>
-
-        <div
-          class="account-mode"
-          role="group"
-          aria-label="Account mode"
-        >
-          <span>Account Mode</span>
-          <div class="account-mode__toggle">
-            <button
-              type="button"
-              :class="{ 'is-active': currentAccountMode === 'real' }"
-              :disabled="submitting || credentialsLoading"
-              @click="updateAccountMode('real')"
-            >
-              Real Account
-            </button>
-            <button
-              type="button"
-              :class="{ 'is-active': currentAccountMode === 'demo' }"
-              :disabled="submitting || credentialsLoading || !exchangeSupportsDemo"
-              :title="exchangeSupportsDemo ? 'Demo Account' : 'Demo is not supported for Tokocrypto'"
-              @click="updateAccountMode('demo')"
-            >
-              Demo Account
-            </button>
-          </div>
-        </div>
 
         <div class="key-actions">
           <button
@@ -566,57 +524,6 @@ const submitVerification = () => {
   border: 1px solid var(--line);
   background: var(--charcoal);
   color: var(--text);
-}
-
-.account-mode {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.account-mode > span {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text-mute);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.account-mode__toggle {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--line);
-  background: var(--charcoal);
-}
-
-.account-mode__toggle button {
-  min-width: 0;
-  height: 42px;
-  border: 0;
-  background: transparent;
-  color: var(--text-mute);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
-}
-
-.account-mode__toggle button + button {
-  border-left: 1px solid var(--line);
-}
-
-.account-mode__toggle button:hover:not(:disabled),
-.account-mode__toggle button.is-active {
-  background: var(--accent);
-  color: #000;
-}
-
-.account-mode__toggle button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .key-actions {

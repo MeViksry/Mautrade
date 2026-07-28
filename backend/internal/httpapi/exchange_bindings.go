@@ -67,6 +67,7 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	explicitAccountMode := bindExchangeAccountModeProvided(req)
 	accountMode, err := normalizeBindExchangeAccountMode(req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -111,12 +112,13 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	syncCtx, cancel := contextWithExchangeBalanceTimeout(r.Context())
-	err = s.syncExchangeBindingBalanceWithPlaintext(
+	_, err = s.syncExchangeBindingBalanceForBind(
 		syncCtx,
 		user.ID,
 		binding.ID,
 		binding.ExchangeName,
 		binding.AccountMode,
+		explicitAccountMode,
 		strings.TrimSpace(req.APIKey),
 		strings.TrimSpace(req.APISecret),
 		passphrase,
@@ -127,13 +129,18 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		if _, statusErr := s.store.UpdateExchangeBindingStatus(r.Context(), user.ID, binding.ExchangeName, "invalid", time.Now().UTC()); statusErr != nil {
 			s.logger.Warn("mark exchange binding invalid", "user_id", user.ID, "binding_id", binding.ID, "exchange", binding.ExchangeName, "error", statusErr)
 		}
-		writeError(w, http.StatusBadGateway, "failed to read USDT spot balance from exchange; check API permissions and account mode")
+		writeError(w, http.StatusBadGateway, "failed to read USDT spot balance from exchange; check API permissions and supported live/demo spot account")
 		return
 	}
 
-	response, err := s.exchangeBindingCredentialResponse(binding)
+	updatedBinding, err := s.store.ExchangeBindingCredential(r.Context(), user.ID, binding.ExchangeName)
 	if err != nil {
-		s.logger.Error("prepare exchange credential response", "binding_id", binding.ID, "error", err)
+		writeExchangeBindingError(s, w, "read verified exchange credential", err)
+		return
+	}
+	response, err := s.exchangeBindingCredentialResponse(updatedBinding)
+	if err != nil {
+		s.logger.Error("prepare exchange credential response", "binding_id", updatedBinding.ID, "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to read protected exchange credential")
 		return
 	}
@@ -280,7 +287,7 @@ func (s *Server) handleDeleteExchangeBinding(w http.ResponseWriter, r *http.Requ
 
 func validateBindExchangeRequest(req bindExchangeRequest) error {
 	exchange := strings.ToLower(strings.TrimSpace(req.Exchange))
-	accountMode, err := normalizeExchangeAccountModeValue(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
+	accountMode, err := normalizeBindExchangeAccountMode(req)
 	if err != nil {
 		return err
 	}
@@ -306,7 +313,15 @@ func validateBindExchangeRequest(req bindExchangeRequest) error {
 }
 
 func normalizeBindExchangeAccountMode(req bindExchangeRequest) (string, error) {
+	if !bindExchangeAccountModeProvided(req) {
+		return exchangebalance.AccountModeReal, nil
+	}
 	return normalizeExchangeAccountModeValue(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
+}
+
+func bindExchangeAccountModeProvided(req bindExchangeRequest) bool {
+	value := strings.ToLower(strings.TrimSpace(firstNonEmpty(req.AccountMode, req.AccountModeAlt)))
+	return value != "" && value != "auto" && value != "automatic"
 }
 
 func normalizeExchangeAccountModeValue(value string) (string, error) {
@@ -321,6 +336,44 @@ func normalizeExchangeAccountModeValue(value string) (string, error) {
 
 func contextWithExchangeBalanceTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, exchangeBalanceSyncTimeout)
+}
+
+func (s *Server) syncExchangeBindingBalanceForBind(ctx context.Context, userID, bindingID, exchangeName, requestedAccountMode string, explicitAccountMode bool, apiKey, apiSecret, passphrase string) (string, error) {
+	candidates := exchangeBindingAccountModeCandidates(exchangeName, requestedAccountMode, explicitAccountMode)
+	var failures []string
+	for _, accountMode := range candidates {
+		err := s.syncExchangeBindingBalanceWithPlaintext(
+			ctx,
+			userID,
+			bindingID,
+			exchangeName,
+			accountMode,
+			apiKey,
+			apiSecret,
+			passphrase,
+		)
+		if err == nil {
+			return accountMode, nil
+		}
+		failures = append(failures, fmt.Sprintf("%s: %v", accountMode, err))
+	}
+	return "", fmt.Errorf("exchange balance auto-detect failed: %s", strings.Join(failures, "; "))
+}
+
+func exchangeBindingAccountModeCandidates(exchangeName, requestedAccountMode string, explicitAccountMode bool) []string {
+	requestedAccountMode = exchangebalance.NormalizeAccountMode(requestedAccountMode)
+	if requestedAccountMode == "" {
+		requestedAccountMode = exchangebalance.AccountModeReal
+	}
+	if explicitAccountMode {
+		return []string{requestedAccountMode}
+	}
+
+	candidates := []string{exchangebalance.AccountModeReal}
+	if exchangeName != "tokocrypto" {
+		candidates = append(candidates, exchangebalance.AccountModeDemo)
+	}
+	return candidates
 }
 
 func (s *Server) exchangeBindingCredentialResponse(binding store.ExchangeBindingCredentialCiphertext) (exchangeBindingCredentialResponse, error) {

@@ -40,7 +40,6 @@ interface BindExchangePayload {
   exchange: string
   apiKey: string
   apiSecret: string
-  accountMode?: 'real' | 'demo'
   passphrase?: string
 }
 
@@ -174,7 +173,6 @@ export const useDashboardData = () => {
       exchange: payload.exchange,
       api_key: payload.apiKey,
       api_secret: payload.apiSecret,
-      account_mode: payload.accountMode || 'real',
       permission_scope: 'trade_only'
     }
 
@@ -212,18 +210,6 @@ export const useDashboardData = () => {
       })
     } catch (error) {
       throw new Error(formatApiError(error, 'Failed to update exchange status'), { cause: error })
-    }
-  }
-
-  const updateExchangeBindingAccountMode = async (exchange: string, accountMode: 'real' | 'demo'): Promise<ExchangeCredentialSummary> => {
-    try {
-      return await $fetch<ExchangeCredentialSummary>(`${apiBase}/user/exchange-bindings/${encodeURIComponent(exchange)}/account-mode`, {
-        method: 'PATCH',
-        headers: authHeaders(),
-        body: { account_mode: accountMode }
-      })
-    } catch (error) {
-      throw new Error(formatApiError(error, 'Failed to update exchange account mode'), { cause: error })
     }
   }
 
@@ -616,7 +602,6 @@ export const useDashboardData = () => {
     bindExchange,
     getExchangeBindingCredentials,
     updateExchangeBindingStatus,
-    updateExchangeBindingAccountMode,
     deleteExchangeBinding,
     getActiveLayers,
     getHistory
