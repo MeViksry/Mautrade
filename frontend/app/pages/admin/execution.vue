@@ -511,17 +511,6 @@ interface ActiveLayerResponse {
   remainingValueQuote: number
 }
 
-interface OpenOrderResponse {
-  id: string
-  symbol: string
-  action: string
-  quantity: number
-  price: number
-  status: string
-  exchange: string
-  createdAt: string
-}
-
 interface CreateAdminSignalResponse {
   signalId: string
   status: string
@@ -546,7 +535,6 @@ interface CompletedLayer {
 }
 
 const activeLayers = ref<ActiveLayerResponse[]>([])
-const openOrders = ref<OpenOrderResponse[]>([])
 const completedLayers = ref<CompletedLayer[]>([
   { id: 'layer-eth-c', pair: 'ETH/USDT', entryPrice: 3400, closePrice: 3550, pnl: 4.4, date: '2026-07-18' }
 ])
@@ -554,17 +542,9 @@ const loading = ref(true)
 
 const loadExecutionData = async () => {
   try {
-    const [signalsRes, ordersRes] = await Promise.all([
-      $fetch<ActiveLayerResponse[]>(`${apiBase}/admin/signals/active`, {
-        headers: { Authorization: `Bearer ${tokenCookie.value}` }
-      }),
-      $fetch<OpenOrderResponse[]>(`${apiBase}/admin/signals/orders`, {
-        headers: { Authorization: `Bearer ${tokenCookie.value}` }
-      })
-    ])
-
-    activeLayers.value = signalsRes
-    openOrders.value = ordersRes
+    activeLayers.value = await $fetch<ActiveLayerResponse[]>(`${apiBase}/admin/signals/active`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
   } catch (err) {
     console.error('Failed to load execution data', err)
   }
@@ -1093,9 +1073,6 @@ const cancelAllLayers = () => {
     <section class="bottom-desk terminal-panel">
       <div class="bottom-tabs">
         <button class="active">
-          Open Orders({{ openOrders.length }})
-        </button>
-        <button>
           Active Layers({{ activeLayers.length }})
         </button>
         <button>
@@ -1113,40 +1090,6 @@ const cancelAllLayers = () => {
             Cancel All
           </button>
         </div>
-      </div>
-
-      <div class="orders-table-wrap">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Symbol</th>
-              <th>Action</th>
-              <th>Quantity</th>
-              <th>Price</th>
-              <th>Exchange</th>
-              <th>Status</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="order in openOrders"
-              :key="order.id"
-            >
-              <td>{{ order.id.split('-')[0] }}</td>
-              <td>{{ order.symbol }}</td>
-              <td :class="order.action === 'buy' ? 'price-buy' : 'price-sell'">
-                {{ order.action.toUpperCase() }}
-              </td>
-              <td>{{ order.quantity }}</td>
-              <td>{{ order.price }}</td>
-              <td>{{ order.exchange }}</td>
-              <td>{{ order.status }}</td>
-              <td>{{ new Date(order.createdAt).toLocaleDateString() }}</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
 
       <div class="layers-list">
@@ -2150,33 +2093,6 @@ const cancelAllLayers = () => {
 
 .cancel-all {
   color: #f6465d !important;
-}
-
-.orders-table-wrap {
-  overflow-x: auto;
-}
-
-.orders-table {
-  width: 100%;
-  min-width: 760px;
-  border-collapse: collapse;
-}
-
-.orders-table th,
-.orders-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line);
-  color: var(--silver);
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  text-align: left;
-}
-
-.orders-table th {
-  color: var(--text-mute);
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-transform: uppercase;
 }
 
 .layers-list {
