@@ -83,12 +83,13 @@ const openBindModal = () => {
   bindModalOpen.value = true
 }
 
-const handleExchangeBindSubmitted = async (payload: { exchange: string, apiKey: string, apiSecret: string, extras: Record<string, string> }) => {
+const handleExchangeBindSubmitted = async (payload: { exchange: string, accountMode: 'real' | 'demo', apiKey: string, apiSecret: string, extras: Record<string, string> }) => {
   bindSubmitting.value = true
   bindError.value = ''
   try {
     await bindExchange({
       exchange: payload.exchange,
+      accountMode: payload.accountMode,
       apiKey: payload.apiKey,
       apiSecret: payload.apiSecret,
       passphrase: payload.extras.passphrase
@@ -270,6 +271,10 @@ const handleExchangeStatusChange = async (payload: { exchange: string, status: '
             <div class="exchange-stat">
               <span class="exchange-stat__label">Balance</span>
               <span class="exchange-stat__val">${{ exchange.balance.toLocaleString() }}</span>
+            </div>
+            <div class="exchange-stat">
+              <span class="exchange-stat__label">Account</span>
+              <span class="exchange-stat__val-time">{{ exchange.accountMode }}</span>
             </div>
             <div class="exchange-stat">
               <span class="exchange-stat__label">Last Synced</span>

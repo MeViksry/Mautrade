@@ -1,12 +1,14 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/MeViksry/Mautrade/backend/internal/platform/exchangebalance"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/secrets"
 	"github.com/MeViksry/Mautrade/backend/internal/store"
 )
@@ -17,6 +19,8 @@ type bindExchangeRequest struct {
 	APISecret       string `json:"api_secret"`
 	APIPassphrase   string `json:"api_passphrase"`
 	Passphrase      string `json:"passphrase"`
+	AccountMode     string `json:"account_mode"`
+	AccountModeAlt  string `json:"accountMode"`
 	PermissionScope string `json:"permission_scope"`
 }
 
@@ -27,6 +31,7 @@ type updateExchangeBindingStatusRequest struct {
 type exchangeBindingCredentialResponse struct {
 	ID              string     `json:"id"`
 	Exchange        string     `json:"exchange"`
+	AccountMode     string     `json:"accountMode"`
 	Status          string     `json:"status"`
 	MaskedAPIKey    string     `json:"maskedApiKey"`
 	HasAPISecret    bool       `json:"hasApiSecret"`
@@ -54,6 +59,11 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validateBindExchangeRequest(req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	accountMode, err := normalizeBindExchangeAccountMode(req)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -87,11 +97,32 @@ func (s *Server) handleBindExchange(w http.ResponseWriter, r *http.Request) {
 		APIKeyCiphertext:        apiKeyCiphertext,
 		APISecretCiphertext:     apiSecretCiphertext,
 		APIPassphraseCiphertext: passphraseCiphertext,
+		AccountMode:             accountMode,
 		PermissionScope:         req.PermissionScope,
 		Now:                     time.Now().UTC(),
 	})
 	if err != nil {
 		writeExchangeBindingError(s, w, "bind exchange", err)
+		return
+	}
+	syncCtx, cancel := contextWithExchangeBalanceTimeout(r.Context())
+	err = s.syncExchangeBindingBalanceWithPlaintext(
+		syncCtx,
+		user.ID,
+		binding.ID,
+		binding.ExchangeName,
+		binding.AccountMode,
+		strings.TrimSpace(req.APIKey),
+		strings.TrimSpace(req.APISecret),
+		passphrase,
+	)
+	cancel()
+	if err != nil {
+		s.logger.Warn("verify exchange balance during bind", "user_id", user.ID, "binding_id", binding.ID, "exchange", binding.ExchangeName, "account_mode", binding.AccountMode, "error", err)
+		if _, statusErr := s.store.UpdateExchangeBindingStatus(r.Context(), user.ID, binding.ExchangeName, "invalid", time.Now().UTC()); statusErr != nil {
+			s.logger.Warn("mark exchange binding invalid", "user_id", user.ID, "binding_id", binding.ID, "exchange", binding.ExchangeName, "error", statusErr)
+		}
+		writeError(w, http.StatusBadGateway, "failed to read USDT spot balance from exchange; check API permissions and account mode")
 		return
 	}
 
@@ -187,8 +218,15 @@ func (s *Server) handleDeleteExchangeBinding(w http.ResponseWriter, r *http.Requ
 
 func validateBindExchangeRequest(req bindExchangeRequest) error {
 	exchange := strings.ToLower(strings.TrimSpace(req.Exchange))
+	accountMode, err := normalizeBindExchangeAccountMode(req)
+	if err != nil {
+		return err
+	}
 	switch exchange {
 	case "binance", "bybit", "tokocrypto":
+		if exchange == "tokocrypto" && accountMode == exchangebalance.AccountModeDemo {
+			return fmt.Errorf("demo account is not supported for Tokocrypto")
+		}
 	case "okx":
 		if strings.TrimSpace(firstNonEmpty(req.APIPassphrase, req.Passphrase)) == "" {
 			return fmt.Errorf("api_passphrase is required for OKX")
@@ -205,6 +243,20 @@ func validateBindExchangeRequest(req bindExchangeRequest) error {
 	return nil
 }
 
+func normalizeBindExchangeAccountMode(req bindExchangeRequest) (string, error) {
+	mode := exchangebalance.NormalizeAccountMode(firstNonEmpty(req.AccountMode, req.AccountModeAlt))
+	switch mode {
+	case exchangebalance.AccountModeReal, exchangebalance.AccountModeDemo:
+		return mode, nil
+	default:
+		return "", fmt.Errorf("account_mode must be real or demo")
+	}
+}
+
+func contextWithExchangeBalanceTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, exchangeBalanceSyncTimeout)
+}
+
 func (s *Server) exchangeBindingCredentialResponse(binding store.ExchangeBindingCredentialCiphertext) (exchangeBindingCredentialResponse, error) {
 	apiKey, err := s.credentialEncryptor.OpenString(binding.APIKeyCiphertext)
 	if err != nil {
@@ -213,6 +265,7 @@ func (s *Server) exchangeBindingCredentialResponse(binding store.ExchangeBinding
 	return exchangeBindingCredentialResponse{
 		ID:              binding.ID,
 		Exchange:        binding.ExchangeName,
+		AccountMode:     binding.AccountMode,
 		Status:          binding.Status,
 		MaskedAPIKey:    secrets.Mask(apiKey),
 		HasAPISecret:    len(binding.APISecretCiphertext) > 0,
@@ -230,6 +283,8 @@ func writeExchangeBindingError(s *Server, w http.ResponseWriter, operation strin
 		writeError(w, http.StatusBadRequest, "unsupported exchange")
 	case errors.Is(err, store.ErrInvalidExchangeStatus):
 		writeError(w, http.StatusBadRequest, "invalid exchange status")
+	case errors.Is(err, store.ErrInvalidExchangeAccountMode):
+		writeError(w, http.StatusBadRequest, "invalid exchange account mode")
 	case errors.Is(err, store.ErrExchangeBindingNotFound):
 		writeError(w, http.StatusNotFound, "exchange binding not found")
 	default:

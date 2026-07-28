@@ -9,6 +9,7 @@ interface ExchangeBinding {
   logo: string
   logoDark?: string
   status: 'connected' | 'disconnected'
+  accountMode?: 'real' | 'demo'
   lastSynced: string | null
   balance: number
   hasApi: boolean
@@ -36,7 +37,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'submitted': [payload: { exchange: string, apiKey: string, apiSecret: string, extras: Record<string, string> }]
+  'submitted': [payload: { exchange: string, accountMode: 'real' | 'demo', apiKey: string, apiSecret: string, extras: Record<string, string> }]
 }>()
 
 const exchangeConfigs: Record<string, ExchangeConfig> = {
@@ -64,6 +65,7 @@ const exchangeConfigs: Record<string, ExchangeConfig> = {
 
 const bindStep = ref<'exchanges' | 'credentials'>('exchanges')
 const selectedExchange = ref<ExchangeBinding | null>(null)
+const accountMode = ref<'real' | 'demo'>('real')
 const apiKey = ref('')
 const apiSecret = ref('')
 const extras = reactive<Record<string, string>>({})
@@ -78,6 +80,7 @@ const fieldShake = reactive<Record<string, boolean>>({})
 const resetBindState = () => {
   bindStep.value = 'exchanges'
   selectedExchange.value = null
+  accountMode.value = 'real'
   apiKey.value = ''
   apiSecret.value = ''
   submitAttempted.value = false
@@ -126,10 +129,19 @@ const selectedConfig = computed(() => {
   return exchangeConfigs[selectedExchange.value.name] ?? { extraFields: [] }
 })
 
+const selectedExchangeSupportsDemo = computed(() => selectedExchange.value?.exchange !== 'tokocrypto')
+
+const setAccountMode = (mode: 'real' | 'demo') => {
+  if (mode === 'demo' && !selectedExchangeSupportsDemo.value) return
+
+  accountMode.value = mode
+}
+
 const selectExchange = (exchange: ExchangeBinding) => {
   if (isExchangeBound(exchange)) return
 
   selectedExchange.value = exchange
+  accountMode.value = 'real'
   bindStep.value = 'credentials'
   submitAttempted.value = false
 
@@ -188,6 +200,7 @@ const submitBindExchange = () => {
 
   emit('submitted', {
     exchange: selectedExchange.value.exchange,
+    accountMode: accountMode.value,
     apiKey: apiKey.value.trim(),
     apiSecret: apiSecret.value.trim(),
     extras: Object.fromEntries(
@@ -282,6 +295,33 @@ const submitBindExchange = () => {
             :alt="`${selectedExchange.name} logo`"
           >
           <span>{{ selectedExchange.name }}</span>
+        </div>
+
+        <div
+          class="account-mode"
+          role="group"
+          aria-label="Account mode"
+        >
+          <span>Account Mode</span>
+          <div class="account-mode__toggle">
+            <button
+              type="button"
+              :class="{ 'is-active': accountMode === 'real' }"
+              :disabled="submitting"
+              @click="setAccountMode('real')"
+            >
+              Real Account
+            </button>
+            <button
+              type="button"
+              :class="{ 'is-active': accountMode === 'demo' }"
+              :disabled="submitting || !selectedExchangeSupportsDemo"
+              :title="selectedExchangeSupportsDemo ? 'Demo Account' : 'Demo is not supported for Tokocrypto'"
+              @click="setAccountMode('demo')"
+            >
+              Demo Account
+            </button>
+          </div>
         </div>
 
         <label class="bind-field">
@@ -605,6 +645,57 @@ const submitBindExchange = () => {
   color: var(--text-mute);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.account-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.account-mode > span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-mode__toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  background: var(--charcoal);
+}
+
+.account-mode__toggle button {
+  min-width: 0;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 220ms var(--ease-quiet), color 220ms var(--ease-quiet);
+}
+
+.account-mode__toggle button + button {
+  border-left: 1px solid var(--line);
+}
+
+.account-mode__toggle button:hover:not(:disabled),
+.account-mode__toggle button.is-active {
+  background: var(--accent);
+  color: #000;
+}
+
+.account-mode__toggle button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .bind-field {

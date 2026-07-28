@@ -11,6 +11,7 @@ import (
 	"github.com/MeViksry/Mautrade/backend/internal/config"
 	"github.com/MeViksry/Mautrade/backend/internal/domain/gasfee"
 	"github.com/MeViksry/Mautrade/backend/internal/mailer"
+	"github.com/MeViksry/Mautrade/backend/internal/platform/exchangebalance"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/secrets"
 	"github.com/MeViksry/Mautrade/backend/internal/store"
@@ -24,6 +25,7 @@ type Server struct {
 	queue               *queue.Client
 	store               *store.DashboardStore
 	credentialEncryptor *secrets.Encryptor
+	exchangeBalance     *exchangebalance.Client
 	mailer              *mailer.Mailer
 	logger              *slog.Logger
 	mux                 *http.ServeMux
@@ -40,6 +42,7 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 		queue:               queueClient,
 		store:               store.NewDashboardStore(db),
 		credentialEncryptor: credentialEncryptor,
+		exchangeBalance:     exchangebalance.NewClient(),
 		mailer:              mailer,
 		logger:              logger,
 		mux:                 http.NewServeMux(),

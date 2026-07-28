@@ -8,13 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MeViksry/qdecimal"
 	"github.com/jackc/pgx/v5"
 )
 
 var (
-	ErrUnsupportedExchange     = errors.New("store: unsupported exchange")
-	ErrExchangeBindingNotFound = errors.New("store: exchange binding not found")
-	ErrInvalidExchangeStatus   = errors.New("store: invalid exchange binding status")
+	ErrUnsupportedExchange        = errors.New("store: unsupported exchange")
+	ErrExchangeBindingNotFound    = errors.New("store: exchange binding not found")
+	ErrInvalidExchangeStatus      = errors.New("store: invalid exchange binding status")
+	ErrInvalidExchangeAccountMode = errors.New("store: invalid exchange account mode")
 )
 
 type UpsertExchangeBindingParams struct {
@@ -23,6 +25,7 @@ type UpsertExchangeBindingParams struct {
 	APIKeyCiphertext        []byte
 	APISecretCiphertext     []byte
 	APIPassphraseCiphertext []byte
+	AccountMode             string
 	PermissionScope         string
 	Now                     time.Time
 }
@@ -30,6 +33,7 @@ type UpsertExchangeBindingParams struct {
 type ExchangeBindingCredentialCiphertext struct {
 	ID                      string     `json:"id"`
 	ExchangeName            string     `json:"exchange"`
+	AccountMode             string     `json:"accountMode"`
 	Status                  string     `json:"status"`
 	APIKeyCiphertext        []byte     `json:"-"`
 	APISecretCiphertext     []byte     `json:"-"`
@@ -60,6 +64,7 @@ SELECT
     WHEN 'tokocrypto' THEN 'Tokocrypto'
     ELSE b.exchange_name
   END AS name,
+  b.account_mode,
   CASE WHEN b.status = 'active' THEN 'connected' ELSE 'disconnected' END AS status,
   b.last_verified_at,
   COALESCE(lb.amount, 0)::text AS balance,
@@ -78,7 +83,7 @@ ORDER BY b.created_at ASC`
 	var bindings []ExchangeBindingView
 	for rows.Next() {
 		var binding ExchangeBindingView
-		if err := rows.Scan(&binding.ID, &binding.Name, &binding.Status, &binding.LastSynced, &binding.Balance, &binding.HasAPI); err != nil {
+		if err := rows.Scan(&binding.ID, &binding.Name, &binding.AccountMode, &binding.Status, &binding.LastSynced, &binding.Balance, &binding.HasAPI); err != nil {
 			return nil, fmt.Errorf("store: scan user exchange binding: %w", err)
 		}
 		bindings = append(bindings, binding)
@@ -94,6 +99,10 @@ func (s *DashboardStore) UpsertExchangeBinding(ctx context.Context, params Upser
 		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: exchange binding requires postgres")
 	}
 	exchangeName, err := normalizeSupportedExchange(params.ExchangeName)
+	if err != nil {
+		return ExchangeBindingCredentialCiphertext{}, err
+	}
+	accountMode, err := normalizeExchangeAccountMode(params.AccountMode)
 	if err != nil {
 		return ExchangeBindingCredentialCiphertext{}, err
 	}
@@ -119,21 +128,22 @@ func (s *DashboardStore) UpsertExchangeBinding(ctx context.Context, params Upser
 	row := tx.QueryRow(ctx, `
 INSERT INTO exchange_bindings (
   id, user_id, exchange_name, api_key_ciphertext, api_secret_ciphertext,
-  api_passphrase_ciphertext, permission_scope, status, last_verified_at,
+  api_passphrase_ciphertext, account_mode, permission_scope, status, last_verified_at,
   revoked_at, created_at, updated_at
 ) VALUES (
-  $1::uuid, $2::uuid, $3, $4, $5, $6, $7, 'active', $8, NULL, $8, $8
+  $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, 'active', $9, NULL, $9, $9
 )
 ON CONFLICT (user_id, exchange_name) DO UPDATE SET
   api_key_ciphertext = EXCLUDED.api_key_ciphertext,
   api_secret_ciphertext = EXCLUDED.api_secret_ciphertext,
   api_passphrase_ciphertext = EXCLUDED.api_passphrase_ciphertext,
+  account_mode = EXCLUDED.account_mode,
   permission_scope = EXCLUDED.permission_scope,
   status = 'active',
   last_verified_at = EXCLUDED.last_verified_at,
   revoked_at = NULL,
   updated_at = EXCLUDED.updated_at
-RETURNING id::text, exchange_name, status, api_key_ciphertext, api_secret_ciphertext,
+RETURNING id::text, exchange_name, account_mode, status, api_key_ciphertext, api_secret_ciphertext,
           api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at`,
 		bindingID,
 		params.UserID,
@@ -141,6 +151,7 @@ RETURNING id::text, exchange_name, status, api_key_ciphertext, api_secret_cipher
 		params.APIKeyCiphertext,
 		params.APISecretCiphertext,
 		nullableBytes(params.APIPassphraseCiphertext),
+		accountMode,
 		permissionScope,
 		now,
 	)
@@ -166,7 +177,7 @@ func (s *DashboardStore) ExchangeBindingCredential(ctx context.Context, userID, 
 		return ExchangeBindingCredentialCiphertext{}, err
 	}
 	binding, err := scanExchangeBindingCredential(s.db.QueryRow(ctx, `
-SELECT id::text, exchange_name, status, api_key_ciphertext, api_secret_ciphertext,
+SELECT id::text, exchange_name, account_mode, status, api_key_ciphertext, api_secret_ciphertext,
        api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at
 FROM exchange_bindings
 WHERE user_id = $1::uuid
@@ -207,7 +218,7 @@ SET status = $3,
     updated_at = $4
 WHERE user_id = $1::uuid
   AND exchange_name = $2
-RETURNING id::text, exchange_name, status, api_key_ciphertext, api_secret_ciphertext,
+RETURNING id::text, exchange_name, account_mode, status, api_key_ciphertext, api_secret_ciphertext,
           api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at`,
 		userID,
 		normalizedExchange,
@@ -227,6 +238,124 @@ RETURNING id::text, exchange_name, status, api_key_ciphertext, api_secret_cipher
 		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: commit exchange binding status: %w", err)
 	}
 	return binding, nil
+}
+
+func (s *DashboardStore) DueActiveExchangeBindingCredentials(ctx context.Context, userID, asset string, staleBefore time.Time) ([]ExchangeBindingCredentialCiphertext, error) {
+	if !s.Ready() {
+		return nil, fmt.Errorf("store: exchange binding requires postgres")
+	}
+	asset = strings.ToUpper(strings.TrimSpace(asset))
+	if asset == "" {
+		asset = "USDT"
+	}
+	rows, err := s.db.Query(ctx, `
+SELECT id::text, exchange_name, account_mode, status, api_key_ciphertext, api_secret_ciphertext,
+       api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at
+FROM exchange_bindings
+WHERE user_id = $1::uuid
+  AND status = 'active'
+  AND (
+    last_verified_at IS NULL
+    OR last_verified_at < $3
+    OR NOT EXISTS (
+      SELECT 1
+      FROM exchange_balance_snapshots s
+      WHERE s.exchange_binding_id = exchange_bindings.id
+        AND s.asset = $2
+    )
+  )
+ORDER BY updated_at ASC`, userID, asset, staleBefore)
+	if err != nil {
+		return nil, fmt.Errorf("store: due exchange binding credentials: %w", err)
+	}
+	defer rows.Close()
+
+	var bindings []ExchangeBindingCredentialCiphertext
+	for rows.Next() {
+		binding, err := scanExchangeBindingCredential(rows)
+		if err != nil {
+			return nil, fmt.Errorf("store: scan due exchange binding credential: %w", err)
+		}
+		bindings = append(bindings, binding)
+	}
+	if bindings == nil {
+		bindings = []ExchangeBindingCredentialCiphertext{}
+	}
+	return bindings, rows.Err()
+}
+
+type ExchangeBalanceSnapshotParams struct {
+	UserID            string
+	ExchangeBindingID string
+	Asset             string
+	FreeAmount        string
+	LockedAmount      string
+	CapturedAt        time.Time
+}
+
+func (s *DashboardStore) RecordExchangeBalanceSnapshot(ctx context.Context, params ExchangeBalanceSnapshotParams) error {
+	if !s.Ready() {
+		return fmt.Errorf("store: exchange balance snapshot requires postgres")
+	}
+	asset := strings.ToUpper(strings.TrimSpace(params.Asset))
+	if asset == "" {
+		asset = "USDT"
+	}
+	freeAmount, err := normalizeSnapshotAmount(params.FreeAmount)
+	if err != nil {
+		return fmt.Errorf("store: invalid free balance amount: %w", err)
+	}
+	lockedAmount, err := normalizeSnapshotAmount(params.LockedAmount)
+	if err != nil {
+		return fmt.Errorf("store: invalid locked balance amount: %w", err)
+	}
+	now := normalizedNow(params.CapturedAt)
+	snapshotID, err := newUUIDText()
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("store: begin exchange balance snapshot: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
+INSERT INTO exchange_balance_snapshots (
+  id, user_id, exchange_binding_id, asset, free_amount, locked_amount, captured_at
+) VALUES (
+  $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7
+)`,
+		snapshotID,
+		params.UserID,
+		params.ExchangeBindingID,
+		asset,
+		freeAmount,
+		lockedAmount,
+		now,
+	); err != nil {
+		return fmt.Errorf("store: insert exchange balance snapshot: %w", err)
+	}
+
+	tag, err := tx.Exec(ctx, `
+UPDATE exchange_bindings
+SET status = 'active',
+    last_verified_at = $3,
+    updated_at = $3
+WHERE user_id = $1::uuid
+  AND id = $2::uuid`, params.UserID, params.ExchangeBindingID, now)
+	if err != nil {
+		return fmt.Errorf("store: mark exchange binding verified: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrExchangeBindingNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("store: commit exchange balance snapshot: %w", err)
+	}
+	return nil
 }
 
 func normalizeSupportedExchange(exchangeName string) (string, error) {
@@ -253,11 +382,39 @@ func normalizeBindingStatus(status string) (string, error) {
 	}
 }
 
+func normalizeExchangeAccountMode(accountMode string) (string, error) {
+	accountMode = strings.ToLower(strings.TrimSpace(accountMode))
+	switch accountMode {
+	case "", "real", "live", "production", "prod":
+		return "real", nil
+	case "demo", "testnet", "sandbox", "paper":
+		return "demo", nil
+	default:
+		return "", ErrInvalidExchangeAccountMode
+	}
+}
+
+func normalizeSnapshotAmount(amount string) (string, error) {
+	amount = strings.TrimSpace(amount)
+	if amount == "" {
+		amount = "0"
+	}
+	parsed, err := qdecimal.Parse(amount)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Sign() < 0 {
+		return "", fmt.Errorf("amount must be non-negative")
+	}
+	return parsed.String(), nil
+}
+
 func scanExchangeBindingCredential(row pgx.Row) (ExchangeBindingCredentialCiphertext, error) {
 	var binding ExchangeBindingCredentialCiphertext
 	if err := row.Scan(
 		&binding.ID,
 		&binding.ExchangeName,
+		&binding.AccountMode,
 		&binding.Status,
 		&binding.APIKeyCiphertext,
 		&binding.APISecretCiphertext,
@@ -286,6 +443,7 @@ func insertExchangeBindingAudit(ctx context.Context, tx pgx.Tx, userID, action s
 	}
 	afterJSON, err := json.Marshal(map[string]any{
 		"exchange":         binding.ExchangeName,
+		"account_mode":     binding.AccountMode,
 		"status":           binding.Status,
 		"permission_scope": binding.PermissionScope,
 		"has_api_key":      len(binding.APIKeyCiphertext) > 0,

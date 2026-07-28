@@ -6,6 +6,7 @@ export interface ExchangeBinding {
   logo: string
   logoDark?: string
   status: 'connected' | 'disconnected'
+  accountMode: 'real' | 'demo'
   lastSynced: string | null
   balance: number
   hasApi: boolean
@@ -14,6 +15,7 @@ export interface ExchangeBinding {
 export interface ExchangeCredentialSummary {
   id: string
   exchange: string
+  accountMode: 'real' | 'demo'
   status: string
   maskedApiKey: string
   hasApiSecret: boolean
@@ -27,6 +29,7 @@ export interface ExchangeCredentialSummary {
 interface ApiExchangeBinding {
   id: string
   name: string
+  accountMode?: string
   status: string
   lastSynced: string | null
   balance: string | number
@@ -37,6 +40,7 @@ interface BindExchangePayload {
   exchange: string
   apiKey: string
   apiSecret: string
+  accountMode?: 'real' | 'demo'
   passphrase?: string
 }
 
@@ -49,10 +53,10 @@ export const useDashboardData = () => {
   const apiBase = config.public.apiBase
   const tokenCookie = useCookie<string | null>('auth_token')
   const exchangeCatalog: ExchangeBinding[] = [
-    { id: 'binance', exchange: 'binance', name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false },
-    { id: 'okx', exchange: 'okx', name: 'OKX', logo: '/UserDashboard/OKX_logo.svg', logoDark: '/UserDashboard/OKX_logo_dark.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false },
-    { id: 'bybit', exchange: 'bybit', name: 'Bybit', logo: '/UserDashboard/Bybit_logo.svg', logoDark: '/UserDashboard/Bybit_logo_dark.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false },
-    { id: 'tokocrypto', exchange: 'tokocrypto', name: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg', status: 'disconnected', lastSynced: null, balance: 0, hasApi: false }
+    { id: 'binance', exchange: 'binance', name: 'Binance', logo: '/UserDashboard/Binance_logo.svg', status: 'disconnected', accountMode: 'real', lastSynced: null, balance: 0, hasApi: false },
+    { id: 'okx', exchange: 'okx', name: 'OKX', logo: '/UserDashboard/OKX_logo.svg', logoDark: '/UserDashboard/OKX_logo_dark.svg', status: 'disconnected', accountMode: 'real', lastSynced: null, balance: 0, hasApi: false },
+    { id: 'bybit', exchange: 'bybit', name: 'Bybit', logo: '/UserDashboard/Bybit_logo.svg', logoDark: '/UserDashboard/Bybit_logo_dark.svg', status: 'disconnected', accountMode: 'real', lastSynced: null, balance: 0, hasApi: false },
+    { id: 'tokocrypto', exchange: 'tokocrypto', name: 'Tokocrypto', logo: '/UserDashboard/Tokocrypto_logo.svg', status: 'disconnected', accountMode: 'real', lastSynced: null, balance: 0, hasApi: false }
   ]
 
   const authHeaders = () => ({
@@ -70,6 +74,10 @@ export const useDashboardData = () => {
 
   const toExchangeStatus = (status: string): 'connected' | 'disconnected' => {
     return status.toLowerCase() === 'connected' || status.toLowerCase() === 'active' ? 'connected' : 'disconnected'
+  }
+
+  const toAccountMode = (mode: string | null | undefined): 'real' | 'demo' => {
+    return mode?.toLowerCase() === 'demo' ? 'demo' : 'real'
   }
 
   const formatApiError = (error: unknown, fallback: string) => {
@@ -148,6 +156,7 @@ export const useDashboardData = () => {
           ...catalogExchange,
           bindingId: binding.id,
           status: toExchangeStatus(binding.status),
+          accountMode: toAccountMode(binding.accountMode),
           lastSynced: binding.lastSynced,
           balance: numberValue(binding.balance),
           hasApi: binding.hasApi
@@ -165,6 +174,7 @@ export const useDashboardData = () => {
       exchange: payload.exchange,
       api_key: payload.apiKey,
       api_secret: payload.apiSecret,
+      account_mode: payload.accountMode || 'real',
       permission_scope: 'trade_only'
     }
 

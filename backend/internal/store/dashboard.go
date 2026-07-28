@@ -102,12 +102,13 @@ FROM balance_sum, gas_sum, layer_sum`
 }
 
 type ExchangeBindingView struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	Status     string     `json:"status"`
-	LastSynced *time.Time `json:"lastSynced"`
-	Balance    string     `json:"balance"`
-	HasAPI     bool       `json:"hasApi"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	AccountMode string     `json:"accountMode"`
+	Status      string     `json:"status"`
+	LastSynced  *time.Time `json:"lastSynced"`
+	Balance     string     `json:"balance"`
+	HasAPI      bool       `json:"hasApi"`
 }
 
 func (s *DashboardStore) ExchangeBindings(ctx context.Context, defaultCurrency string) ([]ExchangeBindingView, error) {
@@ -130,6 +131,7 @@ SELECT
     WHEN 'tokocrypto' THEN 'Tokocrypto'
     ELSE b.exchange_name
   END AS name,
+  b.account_mode,
   CASE WHEN b.status = 'active' THEN 'connected' ELSE 'disconnected' END AS status,
   b.last_verified_at,
   COALESCE(lb.amount, 0)::text AS balance,
@@ -147,7 +149,7 @@ ORDER BY b.created_at ASC`
 	var bindings []ExchangeBindingView
 	for rows.Next() {
 		var binding ExchangeBindingView
-		if err := rows.Scan(&binding.ID, &binding.Name, &binding.Status, &binding.LastSynced, &binding.Balance, &binding.HasAPI); err != nil {
+		if err := rows.Scan(&binding.ID, &binding.Name, &binding.AccountMode, &binding.Status, &binding.LastSynced, &binding.Balance, &binding.HasAPI); err != nil {
 			return nil, fmt.Errorf("store: scan exchange binding: %w", err)
 		}
 		bindings = append(bindings, binding)

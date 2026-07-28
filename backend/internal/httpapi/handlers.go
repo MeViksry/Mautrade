@@ -12,6 +12,7 @@ func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
 	}
+	s.syncDueUserExchangeBalances(r.Context(), user.ID)
 	stats, err := s.store.UserStats(r.Context(), user.ID, s.config.DefaultCurrency)
 	if err != nil {
 		s.logger.Error("read user stats", "error", err)
@@ -27,6 +28,7 @@ func (s *Server) handleExchangeBindings(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
 	}
+	s.syncDueUserExchangeBalances(r.Context(), user.ID)
 	bindings, err := s.store.UserExchangeBindings(r.Context(), user.ID, s.config.DefaultCurrency)
 	if err != nil {
 		s.logger.Error("read exchange bindings", "error", err)
