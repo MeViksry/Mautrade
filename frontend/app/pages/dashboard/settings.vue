@@ -143,6 +143,7 @@ const saveProfile = async (successMessage = 'Profile updated.') => {
     profileSuccess.value = successMessage
   } catch (error) {
     profileError.value = profileErrorMessage(error)
+    applyUserProfile()
   } finally {
     profileSaving.value = false
   }
@@ -233,9 +234,16 @@ const openTimezoneDropdown = () => {
 }
 
 const selectTimezone = (timezone: string) => {
+  if (profileSaving.value) return
+
+  const currentTimezone = user.value?.timezone || browserTimezone()
   profileForm.value.timezone = timezone
   timezoneSearch.value = ''
   timezoneDropdownOpen.value = false
+
+  if (timezone !== currentTimezone) {
+    void saveProfile('Timezone saved.')
+  }
 }
 
 const loading = ref(true)
@@ -352,10 +360,7 @@ onBeforeUnmount(() => {
               Update your account's profile information and timezone.
             </p>
 
-            <form
-              class="settings-form"
-              @submit.prevent="saveProfile()"
-            >
+            <div class="settings-form">
               <div class="profile-photo-field">
                 <div class="profile-photo-preview">
                   <img
@@ -405,7 +410,7 @@ onBeforeUnmount(() => {
                   v-model="profileForm.fullName"
                   type="text"
                   class="form-input"
-                  :disabled="profileSaving"
+                  disabled
                 >
               </div>
 
@@ -492,15 +497,8 @@ onBeforeUnmount(() => {
                     {{ profileSuccess }}
                   </p>
                 </div>
-                <button
-                  class="btn-primary"
-                  type="submit"
-                  :disabled="profileSaving"
-                >
-                  {{ profileSaving ? 'Saving...' : 'Save Changes' }}
-                </button>
               </div>
-            </form>
+            </div>
           </div>
 
           <!-- Notifications Tab -->
