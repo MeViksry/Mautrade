@@ -271,7 +271,7 @@ SELECT
   COALESCE(lb.available_balance, 0)::text AS available_quote,
   ((COALESCE(lb.available_balance, 0) * $1::numeric) / 100)::text AS quote_value,
   (COALESCE(gd.confirmed_deposits, 0) - COALESCE(gm.net_movement, 0))::text AS gas_fee_balance,
-  COALESCE(lb.captured_at >= now() - interval '10 minutes', false) AS balance_fresh
+  COALESCE(lb.captured_at >= now() - interval '7 days', false) AS balance_fresh
 FROM exchange_bindings b
 JOIN users u ON u.id = b.user_id
 LEFT JOIN latest_balances lb ON lb.exchange_binding_id = b.id
@@ -343,27 +343,17 @@ ORDER BY b.created_at ASC`
 			continue
 		}
 		if !binding.BalanceFresh {
-			reason := fmt.Sprintf("risk: fresh %s balance snapshot is required before buy signal; sync exchange API and retry", params.DefaultAsset)
-			if err := insertExecutionJobWithStatus(ctx, tx, job, "skipped", reason); err != nil {
-				return nil, skipped, err
-			}
-			if err := insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+			reason := fmt.Sprintf("warning: %s balance snapshot is older than 7 days for %s; proceeding with last known balance=%s", params.DefaultAsset, binding.Exchange, binding.AvailableQuote)
+			_ = insertReconciliationEvent(ctx, tx, reconciliationEventInput{
 				UserID:            binding.UserID,
 				ExchangeBindingID: binding.ExchangeBindingID,
 				MasterSignalID:    signalID,
-				EventType:         "buy_stale_quote_balance",
+				EventType:         "buy_stale_quote_balance_warning",
 				Asset:             params.DefaultAsset,
 				RequiredAmount:    binding.QuoteValue,
 				AvailableAmount:   binding.AvailableQuote,
 				Reason:            reason,
-			}); err != nil {
-				return nil, skipped, err
-			}
-			if err := insertNotification(ctx, tx, binding.UserID, "Buy Signal Skipped", reason); err != nil {
-				return nil, skipped, err
-			}
-			skipped++
-			continue
+			})
 		}
 		hasQuote, err := decimalGreaterThanZero(binding.QuoteValue)
 		if err != nil {
@@ -425,7 +415,7 @@ SELECT
   l.id::text,
   ((l.remaining_quantity * $3::numeric) / 100)::text AS quantity,
   COALESCE(lb.available_balance, 0)::text AS available_base,
-  COALESCE(lb.captured_at >= now() - interval '10 minutes', false) AS balance_fresh
+  COALESCE(lb.captured_at >= now() - interval '7 days', false) AS balance_fresh
 FROM layers l
 JOIN users u ON u.id = l.user_id
 JOIN exchange_bindings b ON b.id = l.exchange_binding_id
@@ -524,28 +514,18 @@ ORDER BY b.exchange_name ASC, l.opened_at ASC`
 			continue
 		}
 		if !layer.BalanceFresh {
-			reason := fmt.Sprintf("risk: fresh %s balance snapshot is required before layer sell; sync exchange API and retry", baseAsset)
-			if err := insertExecutionJobWithStatus(ctx, tx, job, "skipped", reason); err != nil {
-				return nil, skipped, err
-			}
-			if err := insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+			reason := fmt.Sprintf("warning: %s balance snapshot is older than 7 days for %s; proceeding with last known balance=%s", baseAsset, layer.Exchange, layer.AvailableBase)
+			_ = insertReconciliationEvent(ctx, tx, reconciliationEventInput{
 				UserID:            layer.UserID,
 				ExchangeBindingID: layer.ExchangeBindingID,
 				MasterSignalID:    signalID,
 				LayerID:           layer.LayerID,
-				EventType:         "sell_stale_base_balance",
+				EventType:         "sell_stale_base_balance_warning",
 				Asset:             baseAsset,
 				RequiredAmount:    layer.Quantity,
 				AvailableAmount:   layer.AvailableBase,
 				Reason:            reason,
-			}); err != nil {
-				return nil, skipped, err
-			}
-			if err := insertNotification(ctx, tx, layer.UserID, "Layer Sell Skipped", reason); err != nil {
-				return nil, skipped, err
-			}
-			skipped++
-			continue
+			})
 		}
 		insufficient, err := decimalLessThan(layer.AvailableBase, layer.Quantity)
 		if err != nil {
