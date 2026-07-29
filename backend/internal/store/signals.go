@@ -279,9 +279,10 @@ LEFT JOIN confirmed_gas_deposits gd ON gd.user_id = b.user_id
 LEFT JOIN gas_fee_movements gm ON gm.user_id = b.user_id
 WHERE b.status = 'active'
   AND u.status = 'active'
+  AND ($3 = '' OR b.exchange_name = $3)
 ORDER BY b.created_at ASC`
 
-	rows, err := tx.Query(ctx, query, params.AllocationPct, params.DefaultAsset)
+	rows, err := tx.Query(ctx, query, params.AllocationPct, params.DefaultAsset, params.ExchangeName)
 	if err != nil {
 		return nil, 0, fmt.Errorf("store: query buy eligible bindings: %w", err)
 	}

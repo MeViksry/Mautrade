@@ -77,6 +77,8 @@ const initialSelectedCoin = normalizeCoinSymbol(route.query.symbol)
 const selectedCoin = ref(initialSelectedCoin)
 selectedCoinCookie.value = initialSelectedCoin
 
+const selectedExchange = ref('')
+
 interface ExtendedCoinDetail {
   rank: number | string
   circulatingSupply: number
@@ -709,11 +711,14 @@ const handleBuySignal = async () => {
     return
   }
 
-  const idempotencyKey = createSignalIdempotencyKey('buy')
+  const idempotencyKey = createSignalIdempotencyKey('buy', selectedCoin.value, undefined, selectedExchange.value)
   const body: Record<string, string | number> = {
     type: 'buy',
     symbol: selectedCoin.value,
     idempotency_key: idempotencyKey
+  }
+  if (selectedExchange.value) {
+    body.exchange_name = selectedExchange.value
   }
 
   const allocation = buyAllocationPct.value.trim().replace(',', '.')
@@ -1023,6 +1028,33 @@ const cancelAllLayers = () => {
                   placeholder="10"
                 >
                 <span>% {{ quoteAsset }} Spot</span>
+              </div>
+              <label
+                for="buy-exchange-select"
+                style="margin-top: 1rem;"
+              >Exchange</label>
+              <div class="ticket-input">
+                <select
+                  id="buy-exchange-select"
+                  v-model="selectedExchange"
+                  class="ticket-select"
+                >
+                  <option value="">
+                    All Exchanges
+                  </option>
+                  <option value="binance">
+                    Binance
+                  </option>
+                  <option value="bybit">
+                    Bybit
+                  </option>
+                  <option value="okx">
+                    OKX
+                  </option>
+                  <option value="tokocrypto">
+                    Tokocrypto
+                  </option>
+                </select>
               </div>
 
               <div class="ticket-summary">
@@ -1920,7 +1952,8 @@ const cancelAllLayers = () => {
   overflow: hidden;
 }
 
-.ticket-input input {
+.ticket-input input,
+.ticket-input select {
   width: 100%;
   height: 38px;
   border: 0;

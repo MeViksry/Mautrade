@@ -507,9 +507,7 @@ func parsePersonalWalletWithdrawalAmount(value string) (qdecimal.Decimal, error)
 	if amountText == "" {
 		return qdecimal.Decimal{}, ErrInvalidPersonalWalletWithdrawAmount
 	}
-	if strings.HasPrefix(amountText, "+") {
-		amountText = strings.TrimPrefix(amountText, "+")
-	}
+	amountText = strings.TrimPrefix(amountText, "+")
 
 	parts := strings.Split(amountText, ".")
 	if len(parts) > 2 || parts[0] == "" {
