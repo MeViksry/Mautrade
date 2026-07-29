@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -402,26 +403,23 @@ func applyBuyExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFor
 		return ExecutionResultApplySummary{}, err
 	}
 
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, "layer-number:"+job.UserID+":"+job.ExchangeBindingID+":"+result.Symbol); err != nil {
-		return ExecutionResultApplySummary{}, fmt.Errorf("store: acquire layer-number lock: %w", err)
-	}
-
-	var layerNumber int
-	if err := tx.QueryRow(ctx, `
-SELECT COALESCE(MAX(layer_number), 0) + 1
-FROM layers
-WHERE user_id = $1::uuid
-  AND symbol = $2
-  AND exchange_binding_id = $3::uuid`, job.UserID, result.Symbol, job.ExchangeBindingID).Scan(&layerNumber); err != nil {
-		return ExecutionResultApplySummary{}, fmt.Errorf("store: next layer number: %w", err)
-	}
-
 	var allocationPct string
+	var masterLayerNumber sql.NullInt64
 	if err := tx.QueryRow(ctx, `
-SELECT allocation_pct::text
+SELECT allocation_pct::text, layer_number
 FROM master_signals
-WHERE id = $1::uuid`, job.MasterSignalID).Scan(&allocationPct); err != nil {
-		return ExecutionResultApplySummary{}, fmt.Errorf("store: buy allocation pct: %w", err)
+WHERE id = $1::uuid`, job.MasterSignalID).Scan(&allocationPct, &masterLayerNumber); err != nil {
+		return ExecutionResultApplySummary{}, fmt.Errorf("store: buy signal metadata: %w", err)
+	}
+
+	layerNumber := 0
+	if masterLayerNumber.Valid && masterLayerNumber.Int64 > 0 {
+		layerNumber = int(masterLayerNumber.Int64)
+	} else {
+		layerNumber, err = legacyNextBindingLayerNumber(ctx, tx, job, result.Symbol)
+		if err != nil {
+			return ExecutionResultApplySummary{}, err
+		}
 	}
 
 	if _, err := tx.Exec(ctx, `
@@ -483,6 +481,23 @@ INSERT INTO layers (
 		Side:        "buy",
 		AppliedAt:   time.Now().UTC(),
 	}, nil
+}
+
+func legacyNextBindingLayerNumber(ctx context.Context, tx pgx.Tx, job executionJobForResult, symbol string) (int, error) {
+	if err := acquireExecutionScopeLock(ctx, tx, "legacy-layer-number:"+job.UserID+":"+job.ExchangeBindingID+":"+symbol); err != nil {
+		return 0, err
+	}
+
+	var layerNumber int
+	if err := tx.QueryRow(ctx, `
+SELECT COALESCE(MAX(layer_number), 0) + 1
+FROM layers
+WHERE user_id = $1::uuid
+  AND symbol = $2
+  AND exchange_binding_id = $3::uuid`, job.UserID, symbol, job.ExchangeBindingID).Scan(&layerNumber); err != nil {
+		return 0, fmt.Errorf("store: next legacy binding layer number: %w", err)
+	}
+	return layerNumber, nil
 }
 
 func applySellExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobForResult, result ExecutionResult, parsed parsedExecutionResult, calculator gasfee.Calculator) (ExecutionResultApplySummary, error) {

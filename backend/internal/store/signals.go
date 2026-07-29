@@ -85,6 +85,9 @@ func (s *DashboardStore) CreateSignalDispatch(ctx context.Context, params Create
 	if !s.Ready() {
 		return SignalDispatch{}, fmt.Errorf("store: signal dispatch requires postgres")
 	}
+	if params.Type == "buy" {
+		params.LayerNumber = nil
+	}
 
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -151,6 +154,26 @@ INSERT INTO master_signals (
 		return SignalDispatch{}, err
 	}
 
+	if params.Type == "buy" && len(jobs) > 0 {
+		layerNumber, err := reserveNextBuyLayerNumber(ctx, tx, params.Symbol)
+		if err != nil {
+			return SignalDispatch{}, err
+		}
+		params.LayerNumber = &layerNumber
+		preview["layer_number"] = params.LayerNumber
+		previewJSON, err = json.Marshal(preview)
+		if err != nil {
+			return SignalDispatch{}, fmt.Errorf("store: marshal buy signal layer preview: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+UPDATE master_signals
+SET layer_number = $2,
+    preview_snapshot = $3::jsonb
+WHERE id = $1::uuid`, signalIDText, layerNumber, string(previewJSON)); err != nil {
+			return SignalDispatch{}, fmt.Errorf("store: update buy signal layer number: %w", err)
+		}
+	}
+
 	status := "dispatching"
 	if len(jobs) == 0 {
 		status = "completed"
@@ -174,6 +197,31 @@ WHERE id = $1::uuid`, signalIDText, params.CreatedAt.UTC()); err != nil {
 		JobsSkipped:    skipped,
 		Jobs:           jobs,
 	}, nil
+}
+
+func reserveNextBuyLayerNumber(ctx context.Context, tx pgx.Tx, symbol string) (int, error) {
+	if err := acquireExecutionScopeLock(ctx, tx, "buy-layer-number:"+symbol); err != nil {
+		return 0, err
+	}
+
+	var layerNumber int
+	if err := tx.QueryRow(ctx, `
+WITH existing_numbers AS (
+  SELECT layer_number
+  FROM master_signals
+  WHERE type = 'buy'
+    AND symbol = $1
+    AND layer_number IS NOT NULL
+  UNION ALL
+  SELECT layer_number
+  FROM layers
+  WHERE symbol = $1
+)
+SELECT COALESCE(MAX(layer_number), 0) + 1
+FROM existing_numbers`, symbol).Scan(&layerNumber); err != nil {
+		return 0, fmt.Errorf("store: reserve buy layer number: %w", err)
+	}
+	return layerNumber, nil
 }
 
 func (s *DashboardStore) createBuyJobs(ctx context.Context, tx pgx.Tx, signalID string, params CreateSignalParams) ([]ExecutionJobRecord, int, error) {

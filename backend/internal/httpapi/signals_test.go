@@ -48,3 +48,24 @@ func TestValidateCreateAdminSignalRequestRejectsInvalidExchangeFilter(t *testing
 		t.Fatal("expected invalid exchange filter to fail validation")
 	}
 }
+
+func TestValidateCreateAdminSignalRequestIgnoresBuyLayerNumber(t *testing.T) {
+	t.Parallel()
+
+	server := &Server{config: config.Config{DefaultCurrency: "USDT"}}
+	layerNumber := 999
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/admin/signals", nil)
+	params, err := server.validateCreateAdminSignalRequest(request, createAdminSignalRequest{
+		Type:           "buy",
+		Symbol:         "BTC/USDT",
+		LayerNumber:    &layerNumber,
+		AllocationPct:  "10",
+		IdempotencyKey: "signal-test",
+	}, "00000000-0000-0000-0000-000000000001")
+	if err != nil {
+		t.Fatalf("expected valid buy signal request, got %v", err)
+	}
+	if params.LayerNumber != nil {
+		t.Fatalf("buy LayerNumber = %v, want nil", *params.LayerNumber)
+	}
+}

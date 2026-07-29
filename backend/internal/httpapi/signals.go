@@ -124,14 +124,16 @@ func (s *Server) validateCreateAdminSignalRequest(r *http.Request, req createAdm
 
 	allocationPct := firstNonEmpty(req.AllocationPct, req.Percentage)
 	sellPct := firstNonEmpty(req.SellPct, req.SellPercentage)
+	layerNumber := req.LayerNumber
 	if signalType == "buy" {
 		if _, err := validatePercent(allocationPct, "allocation_pct"); err != nil {
 			return store.CreateSignalParams{}, err
 		}
+		layerNumber = nil
 		sellPct = "0"
 	}
 	if signalType == "sell" {
-		if req.LayerNumber == nil || *req.LayerNumber <= 0 {
+		if layerNumber == nil || *layerNumber <= 0 {
 			return store.CreateSignalParams{}, fmt.Errorf("layer_number is required for sell signals")
 		}
 		if _, err := validatePercent(sellPct, "sell_pct"); err != nil {
@@ -148,7 +150,7 @@ func (s *Server) validateCreateAdminSignalRequest(r *http.Request, req createAdm
 		AdminID:        adminID,
 		Type:           signalType,
 		Symbol:         symbol,
-		LayerNumber:    req.LayerNumber,
+		LayerNumber:    layerNumber,
 		ExchangeName:   exchangeName,
 		AllocationPct:  allocationPct,
 		SellPct:        sellPct,
