@@ -421,6 +421,17 @@ func applyBuyExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFor
 		if err := markExecutionJobTerminal(ctx, tx, job.ID, "failed", result.ErrorMessage); err != nil {
 			return ExecutionResultApplySummary{}, err
 		}
+
+		reason := fmt.Sprintf("Buy execution failed for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+		title := "Buy Order Failed"
+		if result.Status == "skipped" {
+			reason = fmt.Sprintf("Buy execution skipped for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+			title = "Buy Order Skipped"
+		}
+		if err := insertNotification(ctx, tx, job.UserID, title, reason); err != nil {
+			return ExecutionResultApplySummary{}, err
+		}
+
 		return ExecutionResultApplySummary{
 			JobID:       job.ID,
 			ExecutionID: executionID,
@@ -585,6 +596,17 @@ func applySellExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFo
 		if err := markExecutionJobTerminal(ctx, tx, job.ID, "failed", result.ErrorMessage); err != nil {
 			return ExecutionResultApplySummary{}, err
 		}
+
+		reason := fmt.Sprintf("Sell execution failed for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+		title := "Sell Order Failed"
+		if result.Status == "skipped" {
+			reason = fmt.Sprintf("Sell execution skipped for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+			title = "Sell Order Skipped"
+		}
+		if err := insertNotification(ctx, tx, job.UserID, title, reason); err != nil {
+			return ExecutionResultApplySummary{}, err
+		}
+
 		return ExecutionResultApplySummary{
 			JobID:       job.ID,
 			LayerID:     layerID,
