@@ -324,7 +324,7 @@ export const useDashboardData = () => {
 
   const getHistory = async (): Promise<TradeHistory[]> => {
     try {
-      const history = await $fetch<ApiTradeHistory[]>(`${apiBase}/user/history`, {
+      const history = await $fetch<ApiTradeHistory[]>(`${apiBase}/user/history/trades`, {
         headers: authHeaders()
       })
 

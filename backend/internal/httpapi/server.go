@@ -159,6 +159,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/user/gas-fee", s.handleUserGasFeeAccount)
 	s.mux.HandleFunc("POST /api/v1/user/gas-fee/deposits", s.handleCreateGasFeeDeposit)
 	s.mux.HandleFunc("GET /api/v1/user/layers", s.handleLayers)
+	s.mux.HandleFunc("GET /api/v1/user/history", s.handleTradeHistory)
 	s.mux.HandleFunc("GET /api/v1/user/history/trades", s.handleTradeHistory)
 	s.mux.HandleFunc("POST /api/v1/admin/auth/login", s.handleAdminLogin)
 	s.mux.HandleFunc("GET /api/v1/admin/auth/me", s.handleAdminMe)
