@@ -29,6 +29,7 @@ type AdminPersonalWallet = {
   withdrawnBalance?: string
   dailyInflow?: string
   dailyOutflow?: string
+  canManage?: boolean
   updatedBy?: string
   createdAt?: string
   updatedAt?: string
@@ -60,7 +61,8 @@ const defaultPersonalWallets: PersonalWalletCard[] = [
     walletAddress: '',
     shareRate: '0.10',
     balance: 0,
-    balanceText: '0'
+    balanceText: '0',
+    canManage: true
   },
   {
     code: 'aryanto_hong',
@@ -68,7 +70,8 @@ const defaultPersonalWallets: PersonalWalletCard[] = [
     walletAddress: '',
     shareRate: '0.90',
     balance: 0,
-    balanceText: '0'
+    balanceText: '0',
+    canManage: true
   }
 ]
 
@@ -144,6 +147,7 @@ const withdrawAmountValidationMessage = computed(() => {
 const canSubmitWithdrawal = computed(() => {
   const amount = withdrawAmountUnits.value
   return withdrawWallet.value !== null
+    && canManagePersonalWallet(withdrawWallet.value)
     && withdrawAddressInput.value.trim().length > 0
     && !withdrawAddressInvalid.value
     && amount !== null
@@ -200,6 +204,22 @@ const sumDecimalTexts = (values: Array<string | number | undefined>) => {
 
 const formatCurrencyText = (value: string | number | undefined) => {
   return `$${formatDecimalText(walletBalanceText(value))}`
+}
+
+const canManagePersonalWallet = (wallet: Pick<PersonalWalletCard, 'canManage'> | null) => {
+  return Boolean(wallet?.canManage)
+}
+
+const walletManageLockedTitle = 'This admin can only manage WALLET ARYANTO HONG.'
+
+const walletSettingsTitle = (wallet: PersonalWalletCard) => {
+  return canManagePersonalWallet(wallet) ? 'Link wallet address' : walletManageLockedTitle
+}
+
+const walletWithdrawTitle = (wallet: PersonalWalletCard) => {
+  if (!canManagePersonalWallet(wallet)) return walletManageLockedTitle
+  if (wallet.balance <= 0) return 'No balance available'
+  return 'Withdraw'
 }
 
 const recomputeDailyWalletStats = () => {
@@ -300,6 +320,7 @@ const fetchPersonalWallets = async () => {
         shareRate: remoteWallet?.shareRate || wallet.shareRate,
         dailyInflow: remoteWallet?.dailyInflow || '0',
         dailyOutflow: remoteWallet?.dailyOutflow || '0',
+        canManage: remoteWallet?.canManage ?? wallet.canManage,
         balance,
         balanceText
       }
@@ -319,6 +340,8 @@ const formatWalletAddress = (address: string) => {
 }
 
 const openWalletAddressModal = (wallet: PersonalWalletCard) => {
+  if (!canManagePersonalWallet(wallet)) return
+
   selectedWallet.value = wallet
   walletAddressInput.value = wallet.walletAddress
   walletAddressError.value = ''
@@ -346,6 +369,7 @@ const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
       shareRate: wallet.shareRate || item.shareRate,
       dailyInflow: wallet.dailyInflow || '0',
       dailyOutflow: wallet.dailyOutflow || '0',
+      canManage: wallet.canManage ?? item.canManage,
       balance: parseWalletBalance(balanceText),
       balanceText
     }
@@ -399,6 +423,8 @@ const submitWalletAddress = async (clearAddress = false) => {
 }
 
 const openWithdrawModal = (wallet: PersonalWalletCard) => {
+  if (!canManagePersonalWallet(wallet)) return
+
   withdrawWallet.value = wallet
   withdrawAmountInput.value = ''
   withdrawAddressInput.value = wallet.walletAddress
@@ -543,8 +569,9 @@ onMounted(async () => {
               <button
                 class="icon-btn"
                 type="button"
-                title="Link wallet address"
+                :title="walletSettingsTitle(wallet)"
                 :aria-label="`Link address for ${wallet.displayName}`"
+                :disabled="!canManagePersonalWallet(wallet)"
                 @click="openWalletAddressModal(wallet)"
               >
                 <UIcon name="lucide:settings" />
@@ -564,8 +591,8 @@ onMounted(async () => {
               <button
                 class="primary-btn withdraw-btn"
                 type="button"
-                :disabled="wallet.balance <= 0"
-                :title="wallet.balance <= 0 ? 'No balance available' : 'Withdraw'"
+                :disabled="wallet.balance <= 0 || !canManagePersonalWallet(wallet)"
+                :title="walletWithdrawTitle(wallet)"
                 @click="openWithdrawModal(wallet)"
               >
                 <UIcon name="lucide:arrow-up-right" />
@@ -946,6 +973,16 @@ onMounted(async () => {
 .icon-btn:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.icon-btn:disabled:hover {
+  color: var(--text-mute);
+  background: transparent;
 }
 
 .wallet-balance {

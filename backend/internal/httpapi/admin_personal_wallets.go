@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/MeViksry/Mautrade/backend/internal/store"
@@ -19,7 +20,8 @@ type createAdminPersonalWalletWithdrawalRequest struct {
 }
 
 func (s *Server) handleAdminPersonalWallets(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireAdmin(w, r); !ok {
+	admin, ok := s.requireAdmin(w, r)
+	if !ok {
 		return
 	}
 
@@ -29,12 +31,19 @@ func (s *Server) handleAdminPersonalWallets(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "failed to read personal wallets")
 		return
 	}
+	for index := range wallets {
+		wallets[index].CanManage = s.adminCanManagePersonalWallet(admin, wallets[index].Code)
+	}
 	writeJSON(w, http.StatusOK, wallets)
 }
 
 func (s *Server) handleUpdateAdminPersonalWallet(w http.ResponseWriter, r *http.Request) {
 	admin, ok := s.requireAdmin(w, r)
 	if !ok {
+		return
+	}
+	if !s.adminCanManagePersonalWallet(admin, r.PathValue("code")) {
+		writeError(w, http.StatusForbidden, "admin can only manage their assigned personal wallet")
 		return
 	}
 
@@ -63,12 +72,17 @@ func (s *Server) handleUpdateAdminPersonalWallet(w http.ResponseWriter, r *http.
 		return
 	}
 
+	wallet.CanManage = true
 	writeJSON(w, http.StatusOK, wallet)
 }
 
 func (s *Server) handleCreateAdminPersonalWalletWithdrawal(w http.ResponseWriter, r *http.Request) {
 	admin, ok := s.requireAdmin(w, r)
 	if !ok {
+		return
+	}
+	if !s.adminCanManagePersonalWallet(admin, r.PathValue("code")) {
+		writeError(w, http.StatusForbidden, "admin can only manage their assigned personal wallet")
 		return
 	}
 
@@ -142,4 +156,42 @@ func (s *Server) handleCreateAdminPersonalWalletWithdrawal(w http.ResponseWriter
 	}
 
 	writeJSON(w, http.StatusAccepted, withdrawal)
+}
+
+func (s *Server) adminCanManagePersonalWallet(admin store.AdminUserView, code string) bool {
+	normalizedCode := normalizePersonalWalletRouteCode(code)
+	if normalizedCode == "" {
+		return true
+	}
+	if !s.isAssignedToAryantoPersonalWallet(admin) {
+		return true
+	}
+	return normalizedCode == "aryanto_hong"
+}
+
+func (s *Server) isAssignedToAryantoPersonalWallet(admin store.AdminUserView) bool {
+	adminEmail := normalizeAdminIdentity(admin.Email)
+	adminName := normalizeAdminIdentity(admin.DisplayName)
+	configEmail := normalizeAdminIdentity(s.config.AdminTwoEmail)
+	configName := normalizeAdminIdentity(s.config.AdminTwoName)
+
+	return (configEmail != "" && adminEmail == configEmail) ||
+		(configName != "" && adminName == configName) ||
+		adminEmail == "admin@mautrade.com" ||
+		adminName == "aryanto hong"
+}
+
+func normalizePersonalWalletRouteCode(value string) string {
+	code := strings.ToLower(strings.TrimSpace(value))
+	code = strings.ReplaceAll(code, "-", "_")
+	switch code {
+	case "viksry", "aryanto_hong":
+		return code
+	default:
+		return ""
+	}
+}
+
+func normalizeAdminIdentity(value string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(value))), " ")
 }

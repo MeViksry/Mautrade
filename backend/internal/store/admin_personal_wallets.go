@@ -34,6 +34,7 @@ type AdminPersonalWalletView struct {
 	WithdrawnBalance         string     `json:"withdrawnBalance"`
 	DailyInflow              string     `json:"dailyInflow"`
 	DailyOutflow             string     `json:"dailyOutflow"`
+	CanManage                bool       `json:"canManage"`
 	UpdatedBy                *string    `json:"updatedBy,omitempty"`
 	CreatedAt                time.Time  `json:"createdAt"`
 	UpdatedAt                *time.Time `json:"updatedAt,omitempty"`
