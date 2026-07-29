@@ -469,6 +469,8 @@ WHERE id = $1::uuid`, job.MasterSignalID).Scan(&allocationPct, &masterLayerNumbe
 		}
 	}
 
+	netQuantity := parsed.FilledQuantity.Sub(parsed.ExchangeFee)
+
 	if _, err := tx.Exec(ctx, `
 INSERT INTO layers (
   id, user_id, exchange_binding_id, master_signal_id, layer_number, symbol,
@@ -486,7 +488,7 @@ INSERT INTO layers (
 		layerNumber,
 		result.Symbol,
 		parsed.FillPrice.String(),
-		parsed.FilledQuantity.String(),
+		netQuantity.String(),
 		parsed.FillValueQuote.String(),
 		allocationPct,
 		parsed.ExecutedAt,
