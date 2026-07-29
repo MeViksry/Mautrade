@@ -15,7 +15,14 @@ useSeoMeta({
   description: seoDescription
 })
 
-const selectedCoin = ref('BTC/USDT')
+const defaultSelectedCoin = 'BTC/USDT'
+const selectedCoinCookie = useCookie<string>('mautrade_admin_execution_selected_coin', {
+  default: () => defaultSelectedCoin,
+  maxAge: 60 * 60 * 24 * 365,
+  path: '/',
+  sameSite: 'lax'
+})
+const route = useRoute()
 const activeChartTab = ref('Chart')
 
 type CoinOption = {
@@ -46,6 +53,29 @@ const coinOptions = ref<CoinOption[]>([
   { symbol: 'NEAR/USDT', name: 'NEAR Protocol', price: '...', change: '...', volume: '...' },
   { symbol: 'SUI/USDT', name: 'Sui', price: '...', change: '...', volume: '...' }
 ])
+
+const normalizeCoinSymbol = (value: unknown) => {
+  const rawValue = Array.isArray(value) ? value[0] : value
+  if (typeof rawValue !== 'string') return ''
+
+  const compactSymbol = rawValue.trim().toUpperCase()
+  if (!compactSymbol) return ''
+
+  const symbol = compactSymbol.includes('/')
+    ? compactSymbol
+    : compactSymbol.endsWith('USDT')
+      ? `${compactSymbol.slice(0, -4)}/USDT`
+      : `${compactSymbol}/USDT`
+
+  return coinOptions.value.some(coin => coin.symbol === symbol) ? symbol : ''
+}
+
+const initialSelectedCoin = normalizeCoinSymbol(route.query.symbol)
+  || normalizeCoinSymbol(route.query.pair)
+  || normalizeCoinSymbol(selectedCoinCookie.value)
+  || defaultSelectedCoin
+const selectedCoin = ref(initialSelectedCoin)
+selectedCoinCookie.value = initialSelectedCoin
 
 interface ExtendedCoinDetail {
   rank: number | string
@@ -298,6 +328,16 @@ const selectedCoinMeta = computed<CoinOption>(() => {
 const selectedCoinTrend = computed(() => {
   const coin = coinOptions.value.find(c => c.symbol === selectedCoin.value) ?? coinOptions.value[0]!
   return coin.change.startsWith('-') ? 'down' : 'up'
+})
+
+watch(selectedCoin, (symbol) => {
+  const normalizedSymbol = normalizeCoinSymbol(symbol) || defaultSelectedCoin
+  if (normalizedSymbol !== symbol) {
+    selectedCoin.value = normalizedSymbol
+    return
+  }
+
+  selectedCoinCookie.value = normalizedSymbol
 })
 
 const initChart = () => {
