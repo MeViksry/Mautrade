@@ -3,6 +3,10 @@ defineProps<{
   history: {
     id: string
     pair: string
+    layerNumber?: number
+    exchangeName?: string
+    exchangeDisplayName?: string
+    layerLabel?: string
     exitPrice: number
     pnl: number
     gasFee: number
@@ -14,6 +18,12 @@ const formatDate = (dateString: string) => {
   const d = new Date(dateString)
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+const historyIdentity = (history: { id: string, layerLabel?: string, layerNumber?: number, exchangeDisplayName?: string }) => {
+  if (history.layerLabel?.trim()) return history.layerLabel
+  if (history.layerNumber && history.exchangeDisplayName?.trim()) return `L${history.layerNumber} ${history.exchangeDisplayName}`
+  return history.id
+}
 </script>
 
 <template>
@@ -23,7 +33,7 @@ const formatDate = (dateString: string) => {
         {{ history.pair }}
       </div>
       <div class="history-row__meta">
-        <span class="history-row__id">{{ history.id }}</span>
+        <span class="history-row__id">{{ historyIdentity(history) }}</span>
         <span class="history-row__dot" />
         <span class="history-row__time">Closed: {{ formatDate(history.closedAt) }}</span>
       </div>

@@ -246,12 +246,16 @@ LIMIT 100`
 }
 
 type TradeHistoryView struct {
-	ID        string `json:"id"`
-	Pair      string `json:"pair"`
-	ExitPrice string `json:"exitPrice"`
-	PnL       string `json:"pnl"`
-	GasFee    string `json:"gasFee"`
-	ClosedAt  string `json:"closedAt"`
+	ID              string `json:"id"`
+	Pair            string `json:"pair"`
+	LayerNumber     int    `json:"layerNumber"`
+	ExchangeName    string `json:"exchangeName"`
+	ExchangeDisplay string `json:"exchangeDisplayName"`
+	LayerLabel      string `json:"layerLabel"`
+	ExitPrice       string `json:"exitPrice"`
+	PnL             string `json:"pnl"`
+	GasFee          string `json:"gasFee"`
+	ClosedAt        string `json:"closedAt"`
 }
 
 func (s *DashboardStore) TradeHistory(ctx context.Context, userID string) ([]TradeHistoryView, error) {
@@ -259,6 +263,8 @@ func (s *DashboardStore) TradeHistory(ctx context.Context, userID string) ([]Tra
 SELECT
   l.id::text,
   l.symbol,
+  l.layer_number,
+  b.exchange_name,
   e.price::text,
   g.gross_pnl::text,
   g.gas_fee_amount::text,
@@ -266,6 +272,7 @@ SELECT
 FROM gas_fee_ledger g
 JOIN layers l ON l.id = g.layer_id
 JOIN layer_executions e ON e.id = g.execution_id
+JOIN exchange_bindings b ON b.id = l.exchange_binding_id
 WHERE g.user_id = $1::uuid
 ORDER BY COALESCE(e.executed_at, g.calculated_at) DESC
 LIMIT 100`
@@ -279,9 +286,11 @@ LIMIT 100`
 	var history []TradeHistoryView
 	for rows.Next() {
 		var item TradeHistoryView
-		if err := rows.Scan(&item.ID, &item.Pair, &item.ExitPrice, &item.PnL, &item.GasFee, &item.ClosedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.Pair, &item.LayerNumber, &item.ExchangeName, &item.ExitPrice, &item.PnL, &item.GasFee, &item.ClosedAt); err != nil {
 			return nil, fmt.Errorf("store: scan trade history: %w", err)
 		}
+		item.ExchangeDisplay = exchangeDisplayName(item.ExchangeName)
+		item.LayerLabel = fmt.Sprintf("L%d %s", item.LayerNumber, item.ExchangeDisplay)
 		history = append(history, item)
 	}
 	if history == nil {

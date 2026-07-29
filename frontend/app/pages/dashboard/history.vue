@@ -22,6 +22,10 @@ useSeoMeta({
 interface TradeHistory {
   id: string
   pair: string
+  layerNumber?: number
+  exchangeName?: string
+  exchangeDisplayName?: string
+  layerLabel?: string
   exitPrice: number
   pnl: number
   gasFee: number
