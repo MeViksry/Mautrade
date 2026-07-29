@@ -76,11 +76,10 @@ const walletStats = ref({
   totalBalance: '0',
   dailyInflow: '0',
   dailyOutflow: '0',
-  activeWallets: 0
+  bnbGasFeeBalance: '0'
 })
 
 const personalWallets = ref<PersonalWalletCard[]>(defaultPersonalWallets.map(wallet => ({ ...wallet })))
-const gasFeeWalletActive = ref(false)
 const walletAddressModalOpen = ref(false)
 const selectedWallet = ref<PersonalWalletCard | null>(null)
 const walletAddressInput = ref('')
@@ -203,10 +202,6 @@ const formatCurrencyText = (value: string | number | undefined) => {
   return `$${formatDecimalText(walletBalanceText(value))}`
 }
 
-const recomputeActiveWallets = () => {
-  walletStats.value.activeWallets = (gasFeeWalletActive.value ? 1 : 0) + personalWallets.value.filter(wallet => wallet.walletAddress.trim() !== '').length
-}
-
 const recomputeDailyWalletStats = () => {
   walletStats.value.dailyInflow = sumDecimalTexts(personalWallets.value.map(wallet => wallet.dailyInflow))
   walletStats.value.dailyOutflow = sumDecimalTexts(personalWallets.value.map(wallet => wallet.dailyOutflow))
@@ -252,6 +247,38 @@ const fetchGasFeeWalletBalance = async (gasFeeAddress: string) => {
   return balanceVal
 }
 
+const fetchGasFeeWalletBNBBalance = async (gasFeeAddress: string) => {
+  let balanceVal = '0'
+
+  if (walletAddressPattern.test(gasFeeAddress)) {
+    try {
+      const response = await fetch('https://bsc-dataseed.binance.org/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_getBalance',
+          params: [
+            gasFeeAddress,
+            'latest'
+          ]
+        })
+      })
+      const res = await response.json()
+      if (res.result && res.result !== '0x') {
+        balanceVal = atomicUnitsToDecimalText(BigInt(res.result))
+      }
+    } catch (err) {
+      console.error('Failed to fetch BNB gas fee balance:', err)
+    }
+  }
+
+  return balanceVal
+}
+
 const fetchPersonalWallets = async () => {
   if (!tokenCookie.value) return
 
@@ -280,7 +307,6 @@ const fetchPersonalWallets = async () => {
   } catch (err) {
     console.error('Failed to fetch personal wallets:', err)
   } finally {
-    recomputeActiveWallets()
     recomputeDailyWalletStats()
   }
 }
@@ -328,7 +354,7 @@ const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
   if (selectedWallet.value?.code === wallet.code && updatedWallet) {
     selectedWallet.value = updatedWallet
   }
-  recomputeActiveWallets()
+  recomputeDailyWalletStats()
 }
 
 const getRequestErrorMessage = (error: unknown, fallback: string) => {
@@ -430,17 +456,18 @@ const submitWithdrawal = async () => {
 
 onMounted(async () => {
   const gasFeeAddress = config.public.gasFeeDepositAddress as string || ''
-  const balanceVal = await fetchGasFeeWalletBalance(gasFeeAddress)
+  const [balanceVal, bnbGasFeeBalance] = await Promise.all([
+    fetchGasFeeWalletBalance(gasFeeAddress),
+    fetchGasFeeWalletBNBBalance(gasFeeAddress)
+  ])
 
   await fetchPersonalWallets()
-  gasFeeWalletActive.value = Boolean(gasFeeAddress)
   walletStats.value = {
     totalBalance: balanceVal,
     dailyInflow: walletStats.value.dailyInflow,
     dailyOutflow: walletStats.value.dailyOutflow,
-    activeWallets: walletStats.value.activeWallets
+    bnbGasFeeBalance
   }
-  recomputeActiveWallets()
 
   loading.value = false
 })
@@ -492,8 +519,8 @@ onMounted(async () => {
           :value="`-${formatCurrencyText(walletStats.dailyOutflow)}`"
         />
         <StatCard
-          title="Active Wallets"
-          :value="walletStats.activeWallets.toString()"
+          title="BNB Gasfee Wallet"
+          :value="`${formatDecimalText(walletStats.bnbGasFeeBalance)} BNB`"
         />
       </div>
 
