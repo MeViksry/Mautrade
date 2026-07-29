@@ -45,9 +45,13 @@ const formatDate = (dateString: string) => {
 }
 
 const layerIdentity = (layer: ActiveLayer) => {
-  if (layer.layerLabel?.trim()) return layer.layerLabel
-  if (layer.exchangeDisplayName?.trim()) return `L${layer.layerNumber} ${layer.exchangeDisplayName}`
-  return `Layer ${layer.layerNumber}`
+  if (Number.isInteger(layer.layerNumber) && layer.layerNumber > 0) return `L${layer.layerNumber}`
+
+  const label = layer.layerLabel?.trim()
+  const layerMatch = label?.match(/^L\d+/i)
+  if (layerMatch) return layerMatch[0].toUpperCase()
+
+  return 'Layer'
 }
 </script>
 
