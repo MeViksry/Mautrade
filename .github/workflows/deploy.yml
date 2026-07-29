@@ -299,6 +299,7 @@ jobs:
             export GAS_FEE_DEPOSIT_ADDRESS='${{ fromJson(toJson(secrets)).GAS_FEE_DEPOSIT_ADDRESS }}'
             export GAS_FEE_WITHDRAW_PRIVATE_KEY='${{ fromJson(toJson(secrets)).GAS_FEE_WITHDRAW_PRIVATE_KEY }}'
             export EXCHANGE_CREDENTIAL_KEY='${{ fromJson(toJson(secrets)).EXCHANGE_CREDENTIAL_KEY }}'
+            export EXECUTION_INTERNAL_TOKEN='${{ fromJson(toJson(secrets)).EXECUTION_INTERNAL_TOKEN }}'
 
             export ACCOUNT_ADMIN_ONE='${{ fromJson(toJson(secrets)).ACCOUNT_ADMIN_ONE }}'
             export ADMIN_ACCOUNT_ONE_SINGLE_NAME='${{ fromJson(toJson(secrets)).ADMIN_ACCOUNT_ONE_SINGLE_NAME }}'

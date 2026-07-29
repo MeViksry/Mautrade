@@ -127,7 +127,7 @@ fi
 
 if [ "$REBUILD_ALL" = true ]; then
     echo -e "${CYAN}  No change list found — rebuilding ALL services${NC}"
-    SERVICES_TO_REBUILD=("traefik" "frontend" "api" "postgres" "nats" "keydb" "questdb")
+    SERVICES_TO_REBUILD=("traefik" "frontend" "api" "rust-engine" "postgres" "nats" "keydb" "questdb")
 else
     if [ "$CHANGED_FILES_SOURCE" = "env" ]; then
         IFS=' ' read -ra FILES <<< "$CHANGED_FILES"
@@ -145,7 +145,7 @@ else
             backend/cmd/*|backend/internal/*|backend/go.mod|backend/go.sum|backend/Dockerfile|backend/migrations/*)
                 API_CHANGED=true
                 ;;
-            backend/rust-node-execution/*)
+            backend/rust-node-execution/*|backend/rust-node-execution/src/*|backend/rust-node-execution/src/adapters/*)
                 RUST_CHANGED=true
                 ;;
             frontend/*)
@@ -164,6 +164,7 @@ else
 
     if [ "$RUST_CHANGED" = true ]; then
         echo -e "${CYAN}  ✓ Rust worker changed${NC}"
+        SERVICES_TO_REBUILD+=("rust-engine")
         if ! contains_item "api" "${SERVICES_TO_REBUILD[@]+"${SERVICES_TO_REBUILD[@]}"}"; then
             SERVICES_TO_REBUILD+=("api")
         fi
@@ -176,7 +177,7 @@ else
 
     if [ "$INFRA_CHANGED" = true ]; then
         echo -e "${CYAN}  ✓ Infrastructure config changed — rebuilding all${NC}"
-        SERVICES_TO_REBUILD=("traefik" "frontend" "api" "postgres" "nats" "keydb" "questdb")
+        SERVICES_TO_REBUILD=("traefik" "frontend" "api" "rust-engine" "postgres" "nats" "keydb" "questdb")
     fi
 fi
 
@@ -293,6 +294,21 @@ if [ -n "${EXCHANGE_CREDENTIAL_KEY:-}" ]; then
     audit_log "exchange_credential_key_injected" "status=success"
 fi
 
+if [ -n "${EXECUTION_INTERNAL_TOKEN:-}" ]; then
+    if grep -q "^EXECUTION_INTERNAL_TOKEN=" "$PROJECT_DIR/backend/.env"; then
+        sed -i "s|^EXECUTION_INTERNAL_TOKEN=.*|EXECUTION_INTERNAL_TOKEN=${EXECUTION_INTERNAL_TOKEN}|" "$PROJECT_DIR/backend/.env"
+    else
+        echo "EXECUTION_INTERNAL_TOKEN=${EXECUTION_INTERNAL_TOKEN}" >> "$PROJECT_DIR/backend/.env"
+    fi
+    if grep -q "^EXECUTION_INTERNAL_TOKEN=" "$PROJECT_DIR/.env"; then
+        sed -i "s|^EXECUTION_INTERNAL_TOKEN=.*|EXECUTION_INTERNAL_TOKEN=${EXECUTION_INTERNAL_TOKEN}|" "$PROJECT_DIR/.env"
+    else
+        echo "EXECUTION_INTERNAL_TOKEN=${EXECUTION_INTERNAL_TOKEN}" >> "$PROJECT_DIR/.env"
+    fi
+    echo -e "${GREEN}  ✓ Injected EXECUTION_INTERNAL_TOKEN into .env and backend/.env${NC}"
+    audit_log "execution_internal_token_injected" "status=success"
+fi
+
 if [ -n "${ACCOUNT_ADMIN_ONE:-}" ] || [ -n "${ACCOUNT_ADMIN_TWO:-}" ]; then
     for VAR in "ACCOUNT_ADMIN_ONE" "ADMIN_ACCOUNT_ONE_SINGLE_NAME" "ADMIN_ACCOUNT_ONE_PASSWORD" \
                "ACCOUNT_ADMIN_TWO" "ADMIN_ACCOUNT_TWO_SINGLE_NAME" "ADMIN_ACCOUNT_TWO_PASSWORD"; do
@@ -317,7 +333,7 @@ if [ ${#SERVICES_TO_REBUILD[@]} -gt 0 ]; then
     BUILDABLE_SERVICES=()
     for SERVICE in "${SERVICES_TO_REBUILD[@]}"; do
         case "$SERVICE" in
-            api|frontend)
+            api|frontend|rust-engine)
                 BUILDABLE_SERVICES+=("$SERVICE")
                 ;;
         esac

@@ -90,6 +90,7 @@ services:
       DATABASE_URL: postgres://${DB_USER:-mautrade}:${DB_PASSWORD:-mautrade}@postgres:5432/${DB_NAME:-mautrade}?sslmode=disable
       NATS_URL: nats://nats:4222
       ALLOWED_CORS_ORIGIN: https://${DOMAIN:-mautrade.com}
+      EXECUTION_INTERNAL_TOKEN: ${EXECUTION_INTERNAL_TOKEN:-${EXCHANGE_CREDENTIAL_KEY}}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=mautrade_web"
@@ -130,9 +131,13 @@ services:
     environment:
       NATS_URL: nats://nats:4222
       EXECUTOR_DURABLE: mautrade-rust-executor
+      MAUTRADE_INTERNAL_API_URL: http://api:8080
+      EXECUTION_INTERNAL_TOKEN: ${EXECUTION_INTERNAL_TOKEN:-${EXCHANGE_CREDENTIAL_KEY}}
     networks:
       - internal
     depends_on:
+      api:
+        condition: service_started
       nats:
         condition: service_started
 

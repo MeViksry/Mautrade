@@ -192,6 +192,29 @@ WHERE user_id = $1::uuid
 	return binding, nil
 }
 
+func (s *DashboardStore) ExchangeBindingCredentialByID(ctx context.Context, bindingID string) (ExchangeBindingCredentialCiphertext, error) {
+	if !s.Ready() {
+		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: exchange binding requires postgres")
+	}
+	bindingID = strings.TrimSpace(bindingID)
+	if bindingID == "" {
+		return ExchangeBindingCredentialCiphertext{}, ErrExchangeBindingNotFound
+	}
+	binding, err := scanExchangeBindingCredential(s.db.QueryRow(ctx, `
+SELECT id::text, exchange_name, account_mode, status, api_key_ciphertext, api_secret_ciphertext,
+       api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at
+FROM exchange_bindings
+WHERE id = $1::uuid
+  AND status = 'active'`, bindingID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ExchangeBindingCredentialCiphertext{}, ErrExchangeBindingNotFound
+	}
+	if err != nil {
+		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: exchange binding credential by id: %w", err)
+	}
+	return binding, nil
+}
+
 func (s *DashboardStore) UpdateExchangeBindingStatus(ctx context.Context, userID, exchangeName, status string, now time.Time) (ExchangeBindingCredentialCiphertext, error) {
 	if !s.Ready() {
 		return ExchangeBindingCredentialCiphertext{}, fmt.Errorf("store: exchange binding requires postgres")

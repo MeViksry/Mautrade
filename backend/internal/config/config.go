@@ -27,6 +27,7 @@ type Config struct {
 	GasFeeVerifierInterval time.Duration
 	GasFeeWithdrawKey      string
 	ExchangeCredentialKey  string
+	ExecutionInternalToken string
 	AdminOneEmail          string
 	AdminOneName           string
 	AdminOnePassword       string
@@ -71,6 +72,9 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	exchangeCredentialKey := stringEnv("EXCHANGE_CREDENTIAL_KEY", "")
+	executionInternalToken := strings.TrimSpace(stringEnv("EXECUTION_INTERNAL_TOKEN", exchangeCredentialKey))
+
 	return Config{
 		Environment:            stringEnv("APP_ENV", "development"),
 		HTTPAddr:               stringEnv("HTTP_ADDR", ":8080"),
@@ -89,7 +93,8 @@ func Load() (Config, error) {
 		GasFeeMinConfirmations: gasFeeMinConfirmations,
 		GasFeeVerifierInterval: time.Duration(gasFeeVerifierSeconds) * time.Second,
 		GasFeeWithdrawKey:      strings.TrimSpace(stringEnv("GAS_FEE_WITHDRAW_PRIVATE_KEY", "")),
-		ExchangeCredentialKey:  stringEnv("EXCHANGE_CREDENTIAL_KEY", ""),
+		ExchangeCredentialKey:  exchangeCredentialKey,
+		ExecutionInternalToken: executionInternalToken,
 		AdminOneEmail:          stringEnv("ACCOUNT_ADMIN_ONE", ""),
 		AdminOneName:           stringEnv("ADMIN_ACCOUNT_ONE_SINGLE_NAME", ""),
 		AdminOnePassword:       stringEnv("ADMIN_ACCOUNT_ONE_PASSWORD", ""),

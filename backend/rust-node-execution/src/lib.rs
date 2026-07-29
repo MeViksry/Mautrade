@@ -1,4 +1,5 @@
 pub mod adapters;
+pub mod credentials;
 pub mod engine;
 pub mod types;
 

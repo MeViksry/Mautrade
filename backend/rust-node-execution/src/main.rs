@@ -3,6 +3,7 @@ use futures_util::StreamExt;
 use mautrade_rust_node_execution::adapters::{
     BinanceExecutionClient, BybitExecutionClient, OkxExecutionClient, TokocryptoExecutionClient,
 };
+use mautrade_rust_node_execution::credentials::InternalCredentialProvider;
 use mautrade_rust_node_execution::engine::{failed_report, ExecutionRouter, StaticRouter};
 use mautrade_rust_node_execution::ExecutionRequest;
 use std::sync::Arc;
@@ -32,11 +33,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .await?;
 
+    let credential_provider = Arc::new(InternalCredentialProvider::from_env()?);
     let router = StaticRouter::new()
-        .with_client("binance", Arc::new(BinanceExecutionClient))
-        .with_client("okx", Arc::new(OkxExecutionClient))
-        .with_client("bybit", Arc::new(BybitExecutionClient))
-        .with_client("tokocrypto", Arc::new(TokocryptoExecutionClient));
+        .with_client("binance", Arc::new(BinanceExecutionClient::new(credential_provider.clone())))
+        .with_client("okx", Arc::new(OkxExecutionClient::new(credential_provider.clone())))
+        .with_client("bybit", Arc::new(BybitExecutionClient::new(credential_provider.clone())))
+        .with_client(
+            "tokocrypto",
+            Arc::new(TokocryptoExecutionClient::new(credential_provider.clone())),
+        );
 
     info!(durable = durable_name, "mautrade rust execution worker started");
     let mut messages = consumer.messages().await?;

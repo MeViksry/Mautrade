@@ -10,6 +10,9 @@ import (
 )
 
 func (s *Server) handleExecutionResult(w http.ResponseWriter, r *http.Request) {
+	if !s.requireInternalToken(w, r) {
+		return
+	}
 	if !s.store.Ready() {
 		writeError(w, http.StatusServiceUnavailable, "postgres is required to apply execution results")
 		return
@@ -34,6 +37,7 @@ func (s *Server) handleExecutionResult(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	s.syncExchangeBalanceAfterExecutionResult(r.Context(), result)
 
 	writeJSON(w, http.StatusAccepted, summary)
 }
@@ -59,6 +63,23 @@ func (s *Server) StartExecutionResultConsumer(ctx context.Context) (func(), erro
 			return err
 		}
 		s.logger.Info("execution result applied", "job_id", summary.JobID, "side", summary.Side, "status", summary.Status, "duplicate", summary.Duplicate)
+		s.syncExchangeBalanceAfterExecutionResult(ctx, result)
 		return nil
 	})
+}
+
+func (s *Server) syncExchangeBalanceAfterExecutionResult(ctx context.Context, result store.ExecutionResult) {
+	if result.Status != "success" && result.Status != "partial" {
+		return
+	}
+	binding, err := s.store.ExchangeBindingCredential(ctx, result.UserID, result.Exchange)
+	if err != nil {
+		s.logger.Warn("load exchange credential after execution", "user_id", result.UserID, "exchange", result.Exchange, "error", err)
+		return
+	}
+	syncCtx, cancel := context.WithTimeout(ctx, exchangeBalanceSyncTimeout)
+	defer cancel()
+	if err := s.syncExchangeBindingBalance(syncCtx, result.UserID, binding); err != nil {
+		s.logger.Warn("sync exchange balance after execution", "user_id", result.UserID, "binding_id", binding.ID, "exchange", result.Exchange, "error", err)
+	}
 }

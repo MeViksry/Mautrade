@@ -69,6 +69,7 @@ type eligibleBuyBinding struct {
 	AccountMode       string
 	AvailableQuote    string
 	QuoteValue        string
+	GasFeeBalance     string
 }
 
 type eligibleSellLayer struct {
@@ -234,6 +235,18 @@ WITH latest_balances AS (
   FROM exchange_balance_snapshots
   WHERE asset = $2
   ORDER BY exchange_binding_id, asset, captured_at DESC
+),
+confirmed_gas_deposits AS (
+  SELECT user_id, COALESCE(SUM(amount), 0) AS confirmed_deposits
+  FROM gas_fee_deposits
+  WHERE status = 'confirmed'
+    AND asset = $2
+  GROUP BY user_id
+),
+gas_fee_movements AS (
+  SELECT user_id, COALESCE(SUM(gas_fee_amount), 0) AS net_movement
+  FROM gas_fee_ledger
+  GROUP BY user_id
 )
 SELECT
   b.user_id::text,
@@ -241,10 +254,13 @@ SELECT
   b.exchange_name,
   b.account_mode,
   COALESCE(lb.available_balance, 0)::text AS available_quote,
-  ((COALESCE(lb.available_balance, 0) * $1::numeric) / 100)::text AS quote_value
+  ((COALESCE(lb.available_balance, 0) * $1::numeric) / 100)::text AS quote_value,
+  (COALESCE(gd.confirmed_deposits, 0) - COALESCE(gm.net_movement, 0))::text AS gas_fee_balance
 FROM exchange_bindings b
 JOIN users u ON u.id = b.user_id
 LEFT JOIN latest_balances lb ON lb.exchange_binding_id = b.id
+LEFT JOIN confirmed_gas_deposits gd ON gd.user_id = b.user_id
+LEFT JOIN gas_fee_movements gm ON gm.user_id = b.user_id
 WHERE b.status = 'active'
   AND u.status = 'active'
 ORDER BY b.created_at ASC`
@@ -258,7 +274,7 @@ ORDER BY b.created_at ASC`
 	var bindings []eligibleBuyBinding
 	for rows.Next() {
 		var binding eligibleBuyBinding
-		if err := rows.Scan(&binding.UserID, &binding.ExchangeBindingID, &binding.Exchange, &binding.AccountMode, &binding.AvailableQuote, &binding.QuoteValue); err != nil {
+		if err := rows.Scan(&binding.UserID, &binding.ExchangeBindingID, &binding.Exchange, &binding.AccountMode, &binding.AvailableQuote, &binding.QuoteValue, &binding.GasFeeBalance); err != nil {
 			return nil, 0, fmt.Errorf("store: scan buy binding: %w", err)
 		}
 		bindings = append(bindings, binding)
@@ -273,6 +289,41 @@ ORDER BY b.created_at ASC`
 		job, err := newExecutionJob(signalID, "", binding.UserID, binding.ExchangeBindingID, binding.Exchange, binding.AccountMode, params.Symbol, "buy", "", binding.QuoteValue, params.CreatedAt)
 		if err != nil {
 			return nil, skipped, err
+		}
+		hasGasFeeBalance, err := decimalGreaterThanZero(binding.GasFeeBalance)
+		if err != nil {
+			return nil, skipped, err
+		}
+		if !hasGasFeeBalance {
+			reason := fmt.Sprintf("risk: gas fee balance must be positive before buy signal; balance=%s %s", binding.GasFeeBalance, params.DefaultAsset)
+			reconciliationBalance := binding.GasFeeBalance
+			gasFeeBalanceNegative, err := decimalLessThan(binding.GasFeeBalance, "0")
+			if err != nil {
+				return nil, skipped, err
+			}
+			if gasFeeBalanceNegative {
+				reconciliationBalance = "0"
+			}
+			if err := insertExecutionJobWithStatus(ctx, tx, job, "skipped", reason); err != nil {
+				return nil, skipped, err
+			}
+			if err := insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+				UserID:            binding.UserID,
+				ExchangeBindingID: binding.ExchangeBindingID,
+				MasterSignalID:    signalID,
+				EventType:         "buy_insufficient_gas_fee_balance",
+				Asset:             params.DefaultAsset,
+				RequiredAmount:    "0",
+				AvailableAmount:   reconciliationBalance,
+				Reason:            reason,
+			}); err != nil {
+				return nil, skipped, err
+			}
+			if err := insertNotification(ctx, tx, binding.UserID, "Buy Signal Skipped", reason); err != nil {
+				return nil, skipped, err
+			}
+			skipped++
+			continue
 		}
 		hasQuote, err := decimalGreaterThanZero(binding.QuoteValue)
 		if err != nil {

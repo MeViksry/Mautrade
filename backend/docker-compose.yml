@@ -7,6 +7,7 @@ services:
     environment:
       DATABASE_URL: postgres://mautrade:mautrade@postgres:5432/mautrade?sslmode=disable
       NATS_URL: nats://nats:4222
+      EXECUTION_INTERNAL_TOKEN: local-execution-internal-token
     ports:
       - "8080:8080"
     depends_on:
@@ -24,7 +25,11 @@ services:
     environment:
       NATS_URL: nats://nats:4222
       EXECUTOR_DURABLE: mautrade-rust-executor
+      MAUTRADE_INTERNAL_API_URL: http://api:8080
+      EXECUTION_INTERNAL_TOKEN: local-execution-internal-token
     depends_on:
+      api:
+        condition: service_started
       nats:
         condition: service_started
 
