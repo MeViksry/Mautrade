@@ -33,6 +33,25 @@ func TestNormalizeBindingStatusRejectsUnknownValue(t *testing.T) {
 	}
 }
 
+func TestNormalizeBindingStatusClosingOnlyAliases(t *testing.T) {
+	t.Parallel()
+
+	tests := []string{"closing_only", "closing-only", "sell_only", "sell-only"}
+	for _, status := range tests {
+		status := status
+		t.Run(status, func(t *testing.T) {
+			t.Parallel()
+			normalized, err := normalizeBindingStatus(status)
+			if err != nil {
+				t.Fatalf("expected valid status, got %v", err)
+			}
+			if normalized != "closing_only" {
+				t.Fatalf("expected closing_only, got %s", normalized)
+			}
+		})
+	}
+}
+
 func TestNormalizeExchangeAccountModeSupportsTestnet(t *testing.T) {
 	t.Parallel()
 

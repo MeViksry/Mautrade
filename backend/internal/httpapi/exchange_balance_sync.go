@@ -47,11 +47,13 @@ func (s *Server) syncDueAdminSignalExchangeBalances(ctx context.Context, params 
 		return
 	}
 	asset := s.defaultBalanceAsset()
+	includeClosingOnly := false
 	if params.Type == "sell" {
 		asset = baseAssetFromSignalSymbol(params.Symbol)
+		includeClosingOnly = true
 	}
 	staleBefore := time.Now().UTC().Add(-exchangeBalanceSyncStaleAfter)
-	targets, err := s.store.DueAllActiveExchangeBindingCredentials(ctx, asset, staleBefore)
+	targets, err := s.store.DueAllActiveExchangeBindingCredentials(ctx, asset, staleBefore, includeClosingOnly)
 	if err != nil {
 		s.logger.Warn("load due exchange balance bindings for admin signal", "asset", asset, "error", err)
 		return

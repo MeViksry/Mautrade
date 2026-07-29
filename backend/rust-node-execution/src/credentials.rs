@@ -1,4 +1,5 @@
 use crate::engine::ExecutionError;
+use crate::types::{ExecutionRequest, OrderSide};
 use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Duration;
@@ -61,7 +62,22 @@ impl InternalCredentialProvider {
         })
     }
 
-    pub async fn fetch(&self, binding_id: &str) -> Result<ExchangeCredentials, ExecutionError> {
+    pub async fn fetch_for_order(&self, req: &ExecutionRequest) -> Result<ExchangeCredentials, ExecutionError> {
+        let credentials = self.fetch(&req.exchange_binding_id).await?;
+        if credential_allows_side(&credentials.status, &req.side) {
+            return Ok(credentials);
+        }
+        if credentials.status.trim().eq_ignore_ascii_case("closing_only") {
+            return Err(ExecutionError::InvalidOrder(
+                "exchange binding is closing-only and cannot accept new buy orders".to_string(),
+            ));
+        }
+        Err(ExecutionError::InvalidOrder(
+            "exchange binding is not active".to_string(),
+        ))
+    }
+
+    async fn fetch(&self, binding_id: &str) -> Result<ExchangeCredentials, ExecutionError> {
         let binding_id = binding_id.trim();
         if binding_id.is_empty() {
             return Err(ExecutionError::InvalidOrder(
@@ -100,13 +116,15 @@ impl InternalCredentialProvider {
                 "exchange credential is missing api key or secret".to_string(),
             ));
         }
-        if !credentials.status.trim().eq_ignore_ascii_case("active") {
-            return Err(ExecutionError::InvalidOrder(
-                "exchange binding is not active".to_string(),
-            ));
-        }
         Ok(credentials)
     }
+}
+
+fn credential_allows_side(status: &str, side: &OrderSide) -> bool {
+    if status.trim().eq_ignore_ascii_case("active") {
+        return true;
+    }
+    status.trim().eq_ignore_ascii_case("closing_only") && matches!(side, OrderSide::Sell)
 }
 
 fn compact_error_body(body: &str) -> String {
@@ -115,5 +133,22 @@ fn compact_error_body(body: &str) -> String {
         compact.chars().take(180).collect::<String>() + "..."
     } else {
         compact
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_credentials_allow_buy_and_sell() {
+        assert!(credential_allows_side("active", &OrderSide::Buy));
+        assert!(credential_allows_side("active", &OrderSide::Sell));
+    }
+
+    #[test]
+    fn closing_only_credentials_allow_sell_only() {
+        assert!(!credential_allows_side("closing_only", &OrderSide::Buy));
+        assert!(credential_allows_side("closing_only", &OrderSide::Sell));
     }
 }

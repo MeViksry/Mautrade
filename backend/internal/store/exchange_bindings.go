@@ -210,7 +210,7 @@ SELECT id::text, exchange_name, account_mode, status, api_key_ciphertext, api_se
        api_passphrase_ciphertext, permission_scope, last_verified_at, created_at, updated_at
 FROM exchange_bindings
 WHERE id = $1::uuid
-  AND status = 'active'`, bindingID))
+  AND status IN ('active', 'closing_only')`, bindingID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ExchangeBindingCredentialCiphertext{}, ErrExchangeBindingNotFound
 	}
@@ -242,7 +242,15 @@ func (s *DashboardStore) UpdateExchangeBindingStatus(ctx context.Context, userID
 
 	binding, err := scanExchangeBindingCredential(tx.QueryRow(ctx, `
 UPDATE exchange_bindings
-SET status = $3,
+SET status = CASE
+      WHEN $3 = 'revoked' AND EXISTS (
+        SELECT 1
+        FROM layers l
+        WHERE l.exchange_binding_id = exchange_bindings.id
+          AND l.status IN ('open', 'partial')
+      ) THEN 'closing_only'
+      ELSE $3
+    END,
     revoked_at = CASE WHEN $3 = 'revoked' THEN $4 ELSE NULL END,
     updated_at = $4
 WHERE user_id = $1::uuid
@@ -287,11 +295,51 @@ func (s *DashboardStore) DeleteExchangeBinding(ctx context.Context, userID, exch
 
 	binding, err := scanExchangeBindingCredential(tx.QueryRow(ctx, `
 UPDATE exchange_bindings
-SET status = 'revoked',
-    api_key_ciphertext = ''::bytea,
-    api_secret_ciphertext = ''::bytea,
-    api_passphrase_ciphertext = NULL,
-    last_verified_at = NULL,
+SET status = CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM layers l
+        WHERE l.exchange_binding_id = exchange_bindings.id
+          AND l.status IN ('open', 'partial')
+      ) THEN 'closing_only'
+      ELSE 'revoked'
+    END,
+    api_key_ciphertext = CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM layers l
+        WHERE l.exchange_binding_id = exchange_bindings.id
+          AND l.status IN ('open', 'partial')
+      ) THEN api_key_ciphertext
+      ELSE ''::bytea
+    END,
+    api_secret_ciphertext = CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM layers l
+        WHERE l.exchange_binding_id = exchange_bindings.id
+          AND l.status IN ('open', 'partial')
+      ) THEN api_secret_ciphertext
+      ELSE ''::bytea
+    END,
+    api_passphrase_ciphertext = CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM layers l
+        WHERE l.exchange_binding_id = exchange_bindings.id
+          AND l.status IN ('open', 'partial')
+      ) THEN api_passphrase_ciphertext
+      ELSE NULL
+    END,
+    last_verified_at = CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM layers l
+        WHERE l.exchange_binding_id = exchange_bindings.id
+          AND l.status IN ('open', 'partial')
+      ) THEN last_verified_at
+      ELSE NULL
+    END,
     revoked_at = $3,
     updated_at = $3
 WHERE user_id = $1::uuid
@@ -358,7 +406,7 @@ ORDER BY updated_at ASC`, userID, asset, staleBefore)
 	return bindings, rows.Err()
 }
 
-func (s *DashboardStore) DueAllActiveExchangeBindingCredentials(ctx context.Context, asset string, staleBefore time.Time) ([]ExchangeBindingCredentialSyncTarget, error) {
+func (s *DashboardStore) DueAllActiveExchangeBindingCredentials(ctx context.Context, asset string, staleBefore time.Time, includeClosingOnly bool) ([]ExchangeBindingCredentialSyncTarget, error) {
 	if !s.Ready() {
 		return nil, fmt.Errorf("store: exchange binding requires postgres")
 	}
@@ -366,12 +414,16 @@ func (s *DashboardStore) DueAllActiveExchangeBindingCredentials(ctx context.Cont
 	if asset == "" {
 		asset = "USDT"
 	}
-	rows, err := s.db.Query(ctx, `
+	statusFilter := "b.status = 'active'"
+	if includeClosingOnly {
+		statusFilter = "b.status IN ('active', 'closing_only')"
+	}
+	rows, err := s.db.Query(ctx, fmt.Sprintf(`
 SELECT b.user_id::text, b.id::text, b.exchange_name, b.account_mode, b.status, b.api_key_ciphertext, b.api_secret_ciphertext,
        b.api_passphrase_ciphertext, b.permission_scope, b.last_verified_at, b.created_at, b.updated_at
 FROM exchange_bindings b
 JOIN users u ON u.id = b.user_id
-WHERE b.status = 'active'
+WHERE %s
   AND u.status = 'active'
   AND NOT EXISTS (
     SELECT 1
@@ -380,7 +432,7 @@ WHERE b.status = 'active'
       AND s.asset = $1
       AND s.captured_at >= $2
   )
-ORDER BY b.updated_at ASC`, asset, staleBefore)
+ORDER BY b.updated_at ASC`, statusFilter), asset, staleBefore)
 	if err != nil {
 		return nil, fmt.Errorf("store: due all exchange binding credentials: %w", err)
 	}
@@ -526,6 +578,8 @@ func normalizeBindingStatus(status string) (string, error) {
 		return "active", nil
 	case "invalid":
 		return "invalid", nil
+	case "closing_only", "closing-only", "sell_only", "sell-only":
+		return "closing_only", nil
 	case "revoked", "disconnected", "disconnect", "deleted", "delete":
 		return "revoked", nil
 	default:

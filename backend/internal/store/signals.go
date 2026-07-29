@@ -392,7 +392,7 @@ WHERE l.symbol = $1
   AND l.layer_number = $2
   AND l.status IN ('open', 'partial')
   AND u.status = 'active'
-  AND b.status = 'active'
+  AND b.status IN ('active', 'closing_only')
   AND ($5 = '' OR b.exchange_name = $5)
   AND ((l.remaining_quantity * $3::numeric) / 100) > 0
 ORDER BY b.exchange_name ASC, l.opened_at ASC`

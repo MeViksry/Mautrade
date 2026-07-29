@@ -32,7 +32,7 @@ impl TokocryptoExecutionClient {
 #[async_trait]
 impl ExchangeExecutionClient for TokocryptoExecutionClient {
     async fn place_order(&self, req: ExecutionRequest) -> Result<ExecutionReport, ExecutionError> {
-        let credentials = self.credentials.fetch(&req.exchange_binding_id).await?;
+        let credentials = self.credentials.fetch_for_order(&req).await?;
         if credentials.exchange != "tokocrypto" {
             return Err(ExecutionError::InvalidOrder(
                 "credential exchange does not match tokocrypto adapter".to_string(),

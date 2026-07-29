@@ -37,7 +37,7 @@ impl BinanceExecutionClient {
 #[async_trait]
 impl ExchangeExecutionClient for BinanceExecutionClient {
     async fn place_order(&self, req: ExecutionRequest) -> Result<ExecutionReport, ExecutionError> {
-        let credentials = self.credentials.fetch(&req.exchange_binding_id).await?;
+        let credentials = self.credentials.fetch_for_order(&req).await?;
         if credentials.exchange != "binance" {
             return Err(ExecutionError::InvalidOrder(
                 "credential exchange does not match binance adapter".to_string(),

@@ -32,7 +32,7 @@ impl OkxExecutionClient {
 #[async_trait]
 impl ExchangeExecutionClient for OkxExecutionClient {
     async fn place_order(&self, req: ExecutionRequest) -> Result<ExecutionReport, ExecutionError> {
-        let credentials = self.credentials.fetch(&req.exchange_binding_id).await?;
+        let credentials = self.credentials.fetch_for_order(&req).await?;
         if credentials.exchange != "okx" {
             return Err(ExecutionError::InvalidOrder(
                 "credential exchange does not match okx adapter".to_string(),

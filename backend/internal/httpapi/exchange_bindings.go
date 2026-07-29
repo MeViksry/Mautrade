@@ -283,6 +283,16 @@ func (s *Server) handleDeleteExchangeBinding(w http.ResponseWriter, r *http.Requ
 		writeExchangeBindingError(s, w, "delete exchange binding", err)
 		return
 	}
+	if binding.Status == "closing_only" {
+		response, err := s.exchangeBindingCredentialResponse(binding)
+		if err != nil {
+			s.logger.Error("prepare closing-only exchange credential response", "binding_id", binding.ID, "error", err)
+			writeError(w, http.StatusInternalServerError, "failed to read protected exchange credential")
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
+		return
+	}
 	writeJSON(w, http.StatusOK, exchangeBindingDeletedResponse(binding))
 }
 
