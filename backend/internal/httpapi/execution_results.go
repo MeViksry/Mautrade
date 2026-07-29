@@ -61,6 +61,14 @@ func (s *Server) StartExecutionResultConsumer(ctx context.Context) (func(), erro
 
 		summary, err := s.store.ApplyExecutionResult(ctx, result, calc)
 		if err != nil {
+			s.logger.Error(
+				"apply execution result from queue",
+				"error", err,
+				"request_id", result.RequestID,
+				"exchange", result.Exchange,
+				"side", result.Side,
+				"status", result.Status,
+			)
 			return err
 		}
 		s.logger.Info("execution result applied", "job_id", summary.JobID, "side", summary.Side, "status", summary.Status, "duplicate", summary.Duplicate)

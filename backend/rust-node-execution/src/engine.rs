@@ -129,10 +129,9 @@ pub fn stale_request_report(req: &ExecutionRequest, max_age: Duration) -> Option
 }
 
 fn chrono_like_utc_now() -> String {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| format!("{}.{:09}Z", duration.as_secs(), duration.subsec_nanos()))
-        .unwrap_or_else(|_| "0.000000000Z".to_string())
+    OffsetDateTime::now_utc()
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
 }
 
 #[cfg(test)]
@@ -197,5 +196,14 @@ mod tests {
         req.created_at = "2026-01-01T00:00:00Z".to_string();
 
         assert!(stale_request_report(&req, Duration::ZERO).is_none());
+    }
+
+    #[test]
+    fn failed_report_uses_rfc3339_executed_at() {
+        let req = request_with_account_mode(Some("real"));
+
+        let report = failed_report(&req, "test_error", "failed for test");
+
+        assert!(OffsetDateTime::parse(&report.executed_at, &Rfc3339).is_ok());
     }
 }

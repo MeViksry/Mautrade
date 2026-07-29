@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -226,9 +227,9 @@ func normalizeExecutionResult(result ExecutionResult) (ExecutionResult, parsedEx
 
 	executedAt := time.Now().UTC()
 	if result.ExecutedAt != "" {
-		parsedTime, err := time.Parse(time.RFC3339Nano, result.ExecutedAt)
+		parsedTime, err := parseExecutionExecutedAt(result.ExecutedAt)
 		if err != nil {
-			return ExecutionResult{}, parsedExecutionResult{}, fmt.Errorf("store: executed_at must be RFC3339: %w", err)
+			return ExecutionResult{}, parsedExecutionResult{}, fmt.Errorf("store: executed_at must be RFC3339 or Unix seconds: %w", err)
 		}
 		executedAt = parsedTime.UTC()
 	}
@@ -241,6 +242,37 @@ func normalizeExecutionResult(result ExecutionResult) (ExecutionResult, parsedEx
 		ExchangeFee:    exchangeFee,
 		ExecutedAt:     executedAt,
 	}, nil
+}
+
+func parseExecutionExecutedAt(value string) (time.Time, error) {
+	value = strings.TrimSpace(value)
+	if parsed, err := time.Parse(time.RFC3339Nano, value); err == nil {
+		return parsed.UTC(), nil
+	}
+
+	legacyValue := strings.TrimSuffix(value, "Z")
+	secondsPart, nanosPart, hasFraction := strings.Cut(legacyValue, ".")
+	seconds, err := strconv.ParseInt(secondsPart, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var nanos int64
+	if hasFraction {
+		if nanosPart == "" {
+			return time.Time{}, fmt.Errorf("empty fractional seconds")
+		}
+		if len(nanosPart) > 9 {
+			nanosPart = nanosPart[:9]
+		}
+		for len(nanosPart) < 9 {
+			nanosPart += "0"
+		}
+		nanos, err = strconv.ParseInt(nanosPart, 10, 64)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	return time.Unix(seconds, nanos).UTC(), nil
 }
 
 func decimalOrZero(value string) string {
