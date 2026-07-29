@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useDashboardData } from '~/composables/useDashboardData'
 import LayerRow from '~/components/LayerRow.vue'
 
@@ -39,16 +39,36 @@ interface Layer {
 const { getActiveLayers } = useDashboardData()
 const layers = ref<Layer[]>([])
 const loading = ref(true)
+let refreshTimer: ReturnType<typeof setInterval> | null = null
+let refreshInFlight = false
+let pageMounted = false
 
-onMounted(async () => {
-  loading.value = true
+const loadLayers = async (showLoading = false) => {
+  if (refreshInFlight) return
+  refreshInFlight = true
+  if (showLoading) loading.value = true
   try {
     layers.value = await getActiveLayers()
   } catch (error) {
     console.error('Error fetching layers:', error)
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
+    refreshInFlight = false
   }
+}
+
+onMounted(async () => {
+  pageMounted = true
+  await loadLayers(true)
+  if (!pageMounted) return
+  refreshTimer = setInterval(() => {
+    void loadLayers()
+  }, 15000)
+})
+
+onBeforeUnmount(() => {
+  pageMounted = false
+  if (refreshTimer) clearInterval(refreshTimer)
 })
 </script>
 

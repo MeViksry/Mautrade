@@ -98,6 +98,9 @@ const depositCoinOptions = computed(() => [
   { code: 'USDT', name: 'Tether USD', network: 'BEP-20', min: minimumDeposit.value, icon: '/UserDashboard/USDT_logo.svg' }
 ])
 let layersResizeObserver: ResizeObserver | null = null
+let activeLayersRefreshTimer: ReturnType<typeof setInterval> | null = null
+let activeLayersRefreshInFlight = false
+let dashboardPageMounted = false
 
 const numberValue = (value: string | number | null | undefined) => {
   const parsed = Number(value ?? 0)
@@ -133,7 +136,25 @@ const syncExchangeListHeight = () => {
   exchangeListHeight.value = Math.round(layersContainer.value.getBoundingClientRect().height)
 }
 
+const refreshActiveLayers = async () => {
+  if (activeLayersRefreshInFlight) return
+  activeLayersRefreshInFlight = true
+  try {
+    layers.value = await getActiveLayers()
+    if (activeLayerPage.value > totalActiveLayerPages.value) {
+      activeLayerPage.value = totalActiveLayerPages.value
+    }
+    await nextTick()
+    syncExchangeListHeight()
+  } catch (error) {
+    console.warn('Failed to refresh active layers:', error)
+  } finally {
+    activeLayersRefreshInFlight = false
+  }
+}
+
 onMounted(async () => {
+  dashboardPageMounted = true
   document.addEventListener('click', handleDepositCoinClickOutside)
 
   loading.value = true
@@ -161,6 +182,7 @@ onMounted(async () => {
     console.error('Error fetching dashboard data:', error)
   } finally {
     loading.value = false
+    if (!dashboardPageMounted) return
     await nextTick()
     syncExchangeListHeight()
 
@@ -170,11 +192,16 @@ onMounted(async () => {
     }
 
     window.addEventListener('resize', syncExchangeListHeight)
+    activeLayersRefreshTimer = setInterval(() => {
+      void refreshActiveLayers()
+    }, 15000)
   }
 })
 
 onBeforeUnmount(() => {
+  dashboardPageMounted = false
   layersResizeObserver?.disconnect()
+  if (activeLayersRefreshTimer) clearInterval(activeLayersRefreshTimer)
   document.removeEventListener('click', handleDepositCoinClickOutside)
   window.removeEventListener('resize', syncExchangeListHeight)
 })

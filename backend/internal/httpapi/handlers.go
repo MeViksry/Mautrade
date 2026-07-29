@@ -44,6 +44,7 @@ func (s *Server) handleLayers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
 	}
+	s.syncDueActiveLayerMarketPrices(r.Context(), user.ID)
 	layers, err := s.store.ActiveLayers(r.Context(), user.ID)
 	if err != nil {
 		s.logger.Error("read active layers", "error", err)

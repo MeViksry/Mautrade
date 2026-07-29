@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/MeViksry/qdecimal"
@@ -160,6 +161,107 @@ ORDER BY b.created_at ASC`
 	return bindings, rows.Err()
 }
 
+type MarketPriceSnapshot struct {
+	Symbol     string
+	PriceQuote string
+	CapturedAt time.Time
+	Source     string
+}
+
+func (s *DashboardStore) ActiveLayerPriceRefreshTargets(ctx context.Context, userID string, staleBefore time.Time) ([]string, error) {
+	const query = `
+WITH latest_prices AS (
+  SELECT DISTINCT ON (symbol)
+    symbol,
+    captured_at
+  FROM market_prices
+  ORDER BY symbol, captured_at DESC
+)
+SELECT DISTINCT l.symbol
+FROM layers l
+LEFT JOIN latest_prices mp ON mp.symbol = l.symbol
+WHERE l.user_id = $1::uuid
+  AND l.status IN ('open', 'partial')
+  AND (mp.captured_at IS NULL OR mp.captured_at < $2)
+ORDER BY l.symbol ASC`
+
+	rows, err := s.db.Query(ctx, query, userID, staleBefore)
+	if err != nil {
+		return nil, fmt.Errorf("store: active layer price targets: %w", err)
+	}
+	defer rows.Close()
+
+	var symbols []string
+	for rows.Next() {
+		var symbol string
+		if err := rows.Scan(&symbol); err != nil {
+			return nil, fmt.Errorf("store: scan active layer price target: %w", err)
+		}
+		symbol = strings.ToUpper(strings.TrimSpace(symbol))
+		if symbol != "" {
+			symbols = append(symbols, symbol)
+		}
+	}
+	if symbols == nil {
+		symbols = []string{}
+	}
+	return symbols, rows.Err()
+}
+
+func (s *DashboardStore) RecordMarketPrices(ctx context.Context, snapshots []MarketPriceSnapshot) error {
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	for _, snapshot := range snapshots {
+		symbol := strings.ToUpper(strings.TrimSpace(snapshot.Symbol))
+		if symbol == "" {
+			continue
+		}
+		price, err := qdecimal.Parse(snapshot.PriceQuote)
+		if err != nil {
+			return fmt.Errorf("store: parse market price for %s: %w", symbol, err)
+		}
+		if price.Cmp(qdecimal.Zero) <= 0 {
+			return fmt.Errorf("store: market price for %s must be positive", symbol)
+		}
+		source := strings.TrimSpace(snapshot.Source)
+		if source == "" {
+			source = "binance_public"
+		}
+		capturedAt := snapshot.CapturedAt.UTC()
+		if capturedAt.IsZero() {
+			capturedAt = time.Now().UTC()
+		}
+		id, err := newUUIDText()
+		if err != nil {
+			return err
+		}
+		batch.Queue(`
+INSERT INTO market_prices (id, symbol, price_quote, source, captured_at)
+VALUES ($1::uuid, $2, $3::numeric, $4, $5)`,
+			id,
+			symbol,
+			price.String(),
+			source,
+			capturedAt,
+		)
+	}
+	if batch.Len() == 0 {
+		return nil
+	}
+
+	results := s.db.SendBatch(ctx, batch)
+	defer results.Close()
+	for i := 0; i < batch.Len(); i++ {
+		if _, err := results.Exec(); err != nil {
+			return fmt.Errorf("store: record market price: %w", err)
+		}
+	}
+	return nil
+}
+
 type LayerView struct {
 	ID               string `json:"id"`
 	Pair             string `json:"pair"`
@@ -197,8 +299,8 @@ SELECT
   l.entry_value_quote::text,
   ((COALESCE(mp.price_quote, l.entry_price) - l.entry_price) * l.remaining_quantity)::text AS unrealized_pnl,
   CASE
-    WHEN l.entry_value_quote = 0 THEN '0'
-    ELSE ((((COALESCE(mp.price_quote, l.entry_price) - l.entry_price) * l.remaining_quantity) / l.entry_value_quote) * 100)::text
+    WHEN l.entry_price = 0 THEN '0'
+    ELSE (((COALESCE(mp.price_quote, l.entry_price) - l.entry_price) / l.entry_price) * 100)::text
   END AS unrealized_pnl_pct,
   l.status,
   l.opened_at::text

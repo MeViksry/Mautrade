@@ -14,6 +14,7 @@ import (
 	"github.com/MeViksry/Mautrade/backend/internal/mailer"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/bscwallet"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/exchangebalance"
+	"github.com/MeViksry/Mautrade/backend/internal/platform/marketprice"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/queue"
 	"github.com/MeViksry/Mautrade/backend/internal/platform/secrets"
 	"github.com/MeViksry/Mautrade/backend/internal/store"
@@ -28,6 +29,7 @@ type Server struct {
 	store               *store.DashboardStore
 	credentialEncryptor *secrets.Encryptor
 	exchangeBalance     *exchangebalance.Client
+	marketPrice         *marketprice.Client
 	gasFeeWithdrawer    *bscwallet.Withdrawer
 	mailer              *mailer.Mailer
 	logger              *slog.Logger
@@ -50,6 +52,7 @@ func NewServer(cfg config.Config, db *pgxpool.Pool, queueClient *queue.Client, m
 		store:               store.NewDashboardStore(db),
 		credentialEncryptor: credentialEncryptor,
 		exchangeBalance:     exchangebalance.NewClient(),
+		marketPrice:         marketprice.NewClient(),
 		gasFeeWithdrawer:    gasFeeWithdrawer,
 		mailer:              mailer,
 		logger:              logger,
