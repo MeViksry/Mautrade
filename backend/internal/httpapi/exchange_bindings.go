@@ -366,6 +366,18 @@ func (s *Server) syncExchangeBindingBalanceForBind(ctx context.Context, userID, 
 		if err == nil {
 			return resolvedAccountMode, nil
 		}
+
+		errStr := err.Error()
+		lowerErrStr := strings.ToLower(errStr)
+		if strings.Contains(errStr, "returned 401") ||
+			strings.Contains(errStr, "returned 403") ||
+			strings.Contains(lowerErrStr, "permission") ||
+			strings.Contains(lowerErrStr, "invalid api-key") ||
+			strings.Contains(lowerErrStr, "invalid api key") ||
+			strings.Contains(lowerErrStr, "unauthorized") {
+			return "", err
+		}
+
 		failures = append(failures, fmt.Sprintf("%s: %v", accountMode, err))
 	}
 	return "", fmt.Errorf("exchange balance auto-detect failed: %s", strings.Join(failures, "; "))
