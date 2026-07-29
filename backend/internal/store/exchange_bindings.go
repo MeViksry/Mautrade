@@ -44,6 +44,11 @@ type ExchangeBindingCredentialCiphertext struct {
 	UpdatedAt               time.Time  `json:"updatedAt"`
 }
 
+type ExchangeBindingCredentialSyncTarget struct {
+	UserID  string
+	Binding ExchangeBindingCredentialCiphertext
+}
+
 func (s *DashboardStore) UserExchangeBindings(ctx context.Context, userID, defaultCurrency string) ([]ExchangeBindingView, error) {
 	const query = `
 WITH latest_balances AS (
@@ -326,15 +331,12 @@ SELECT id::text, exchange_name, account_mode, status, api_key_ciphertext, api_se
 FROM exchange_bindings
 WHERE user_id = $1::uuid
   AND status = 'active'
-  AND (
-    last_verified_at IS NULL
-    OR last_verified_at < $3
-    OR NOT EXISTS (
-      SELECT 1
-      FROM exchange_balance_snapshots s
-      WHERE s.exchange_binding_id = exchange_bindings.id
-        AND s.asset = $2
-    )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM exchange_balance_snapshots s
+    WHERE s.exchange_binding_id = exchange_bindings.id
+      AND s.asset = $2
+      AND s.captured_at >= $3
   )
 ORDER BY updated_at ASC`, userID, asset, staleBefore)
 	if err != nil {
@@ -354,6 +356,61 @@ ORDER BY updated_at ASC`, userID, asset, staleBefore)
 		bindings = []ExchangeBindingCredentialCiphertext{}
 	}
 	return bindings, rows.Err()
+}
+
+func (s *DashboardStore) DueAllActiveExchangeBindingCredentials(ctx context.Context, asset string, staleBefore time.Time) ([]ExchangeBindingCredentialSyncTarget, error) {
+	if !s.Ready() {
+		return nil, fmt.Errorf("store: exchange binding requires postgres")
+	}
+	asset = strings.ToUpper(strings.TrimSpace(asset))
+	if asset == "" {
+		asset = "USDT"
+	}
+	rows, err := s.db.Query(ctx, `
+SELECT b.user_id::text, b.id::text, b.exchange_name, b.account_mode, b.status, b.api_key_ciphertext, b.api_secret_ciphertext,
+       b.api_passphrase_ciphertext, b.permission_scope, b.last_verified_at, b.created_at, b.updated_at
+FROM exchange_bindings b
+JOIN users u ON u.id = b.user_id
+WHERE b.status = 'active'
+  AND u.status = 'active'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM exchange_balance_snapshots s
+    WHERE s.exchange_binding_id = b.id
+      AND s.asset = $1
+      AND s.captured_at >= $2
+  )
+ORDER BY b.updated_at ASC`, asset, staleBefore)
+	if err != nil {
+		return nil, fmt.Errorf("store: due all exchange binding credentials: %w", err)
+	}
+	defer rows.Close()
+
+	var targets []ExchangeBindingCredentialSyncTarget
+	for rows.Next() {
+		var target ExchangeBindingCredentialSyncTarget
+		if err := rows.Scan(
+			&target.UserID,
+			&target.Binding.ID,
+			&target.Binding.ExchangeName,
+			&target.Binding.AccountMode,
+			&target.Binding.Status,
+			&target.Binding.APIKeyCiphertext,
+			&target.Binding.APISecretCiphertext,
+			&target.Binding.APIPassphraseCiphertext,
+			&target.Binding.PermissionScope,
+			&target.Binding.LastVerifiedAt,
+			&target.Binding.CreatedAt,
+			&target.Binding.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("store: scan due all exchange binding credential: %w", err)
+		}
+		targets = append(targets, target)
+	}
+	if targets == nil {
+		targets = []ExchangeBindingCredentialSyncTarget{}
+	}
+	return targets, rows.Err()
 }
 
 type ExchangeBalanceSnapshotParams struct {

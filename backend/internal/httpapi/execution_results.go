@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/MeViksry/Mautrade/backend/internal/store"
 )
@@ -77,9 +78,25 @@ func (s *Server) syncExchangeBalanceAfterExecutionResult(ctx context.Context, re
 		s.logger.Warn("load exchange credential after execution", "user_id", result.UserID, "exchange", result.Exchange, "error", err)
 		return
 	}
-	syncCtx, cancel := context.WithTimeout(ctx, exchangeBalanceSyncTimeout)
-	defer cancel()
-	if err := s.syncExchangeBindingBalance(syncCtx, result.UserID, binding); err != nil {
-		s.logger.Warn("sync exchange balance after execution", "user_id", result.UserID, "binding_id", binding.ID, "exchange", result.Exchange, "error", err)
+	for _, asset := range executionResultBalanceAssets(s.defaultBalanceAsset(), result.Symbol) {
+		syncCtx, cancel := context.WithTimeout(ctx, exchangeBalanceSyncTimeout)
+		err := s.syncExchangeBindingBalanceAsset(syncCtx, result.UserID, binding, asset)
+		cancel()
+		if err != nil {
+			s.logger.Warn("sync exchange balance after execution", "user_id", result.UserID, "binding_id", binding.ID, "exchange", result.Exchange, "asset", asset, "error", err)
+		}
 	}
+}
+
+func executionResultBalanceAssets(defaultAsset, symbol string) []string {
+	defaultAsset = strings.ToUpper(strings.TrimSpace(defaultAsset))
+	if defaultAsset == "" {
+		defaultAsset = "USDT"
+	}
+	assets := []string{defaultAsset}
+	baseAsset := baseAssetFromSignalSymbol(symbol)
+	if baseAsset != "" && !strings.EqualFold(baseAsset, defaultAsset) {
+		assets = append(assets, baseAsset)
+	}
+	return assets
 }

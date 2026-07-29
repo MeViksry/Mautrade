@@ -68,6 +68,8 @@ func (s *Server) handleCreateAdminSignal(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	s.syncDueAdminSignalExchangeBalances(r.Context(), params)
+
 	dispatch, err := s.store.CreateSignalDispatch(r.Context(), params)
 	if err != nil {
 		s.logger.Error("create signal dispatch", "error", err)

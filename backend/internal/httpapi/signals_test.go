@@ -69,3 +69,44 @@ func TestValidateCreateAdminSignalRequestIgnoresBuyLayerNumber(t *testing.T) {
 		t.Fatalf("buy LayerNumber = %v, want nil", *params.LayerNumber)
 	}
 }
+
+func TestExecutionResultBalanceAssetsIncludesQuoteAndBase(t *testing.T) {
+	t.Parallel()
+
+	assets := executionResultBalanceAssets("USDT", "BTC/USDT")
+	assertStringSlice(t, assets, []string{"USDT", "BTC"})
+}
+
+func TestExecutionResultBalanceAssetsAvoidsDuplicateDefaultAsset(t *testing.T) {
+	t.Parallel()
+
+	assets := executionResultBalanceAssets("USDT", "USDT/IDR")
+	assertStringSlice(t, assets, []string{"USDT"})
+}
+
+func TestBaseAssetFromSignalSymbolAcceptsExchangeSeparators(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"BTC/USDT": "BTC",
+		"eth-usdt": "ETH",
+		"sol_usdt": "SOL",
+	}
+	for symbol, expected := range cases {
+		if got := baseAssetFromSignalSymbol(symbol); got != expected {
+			t.Fatalf("baseAssetFromSignalSymbol(%q) = %q, want %q", symbol, got, expected)
+		}
+	}
+}
+
+func assertStringSlice(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+	}
+}
