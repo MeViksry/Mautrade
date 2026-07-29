@@ -200,9 +200,17 @@ pub fn now_rfc3339() -> String {
 }
 
 pub fn okx_timestamp() -> String {
-    OffsetDateTime::now_utc()
-        .format(&Rfc3339)
-        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
+    let now = OffsetDateTime::now_utc();
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+        now.year(),
+        u8::from(now.month()),
+        now.day(),
+        now.hour(),
+        now.minute(),
+        now.second(),
+        now.millisecond()
+    )
 }
 
 pub fn side_upper(side: &OrderSide) -> &'static str {
@@ -223,5 +231,25 @@ pub fn side_lower(side: &OrderSide) -> &'static str {
     match side {
         OrderSide::Buy => "buy",
         OrderSide::Sell => "sell",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn okx_timestamp_uses_millisecond_utc_z_format() {
+        let timestamp = okx_timestamp();
+
+        assert_eq!(timestamp.len(), 24);
+        assert_eq!(&timestamp[4..5], "-");
+        assert_eq!(&timestamp[7..8], "-");
+        assert_eq!(&timestamp[10..11], "T");
+        assert_eq!(&timestamp[13..14], ":");
+        assert_eq!(&timestamp[16..17], ":");
+        assert_eq!(&timestamp[19..20], ".");
+        assert!(timestamp.ends_with('Z'));
+        assert!(timestamp[20..23].chars().all(|ch| ch.is_ascii_digit()));
     }
 }

@@ -70,6 +70,7 @@ type eligibleBuyBinding struct {
 	AvailableQuote    string
 	QuoteValue        string
 	GasFeeBalance     string
+	BalanceFresh      bool
 }
 
 type eligibleSellLayer struct {
@@ -80,6 +81,7 @@ type eligibleSellLayer struct {
 	LayerID           string
 	Quantity          string
 	AvailableBase     string
+	BalanceFresh      bool
 }
 
 func (s *DashboardStore) CreateSignalDispatch(ctx context.Context, params CreateSignalParams) (SignalDispatch, error) {
@@ -243,7 +245,8 @@ WITH latest_balances AS (
   SELECT DISTINCT ON (exchange_binding_id, asset)
     exchange_binding_id,
     asset,
-    free_amount AS available_balance
+    free_amount AS available_balance,
+    captured_at
   FROM exchange_balance_snapshots
   WHERE asset = $2
   ORDER BY exchange_binding_id, asset, captured_at DESC
@@ -267,7 +270,8 @@ SELECT
   b.account_mode,
   COALESCE(lb.available_balance, 0)::text AS available_quote,
   ((COALESCE(lb.available_balance, 0) * $1::numeric) / 100)::text AS quote_value,
-  (COALESCE(gd.confirmed_deposits, 0) - COALESCE(gm.net_movement, 0))::text AS gas_fee_balance
+  (COALESCE(gd.confirmed_deposits, 0) - COALESCE(gm.net_movement, 0))::text AS gas_fee_balance,
+  COALESCE(lb.captured_at >= now() - interval '10 minutes', false) AS balance_fresh
 FROM exchange_bindings b
 JOIN users u ON u.id = b.user_id
 LEFT JOIN latest_balances lb ON lb.exchange_binding_id = b.id
@@ -286,7 +290,7 @@ ORDER BY b.created_at ASC`
 	var bindings []eligibleBuyBinding
 	for rows.Next() {
 		var binding eligibleBuyBinding
-		if err := rows.Scan(&binding.UserID, &binding.ExchangeBindingID, &binding.Exchange, &binding.AccountMode, &binding.AvailableQuote, &binding.QuoteValue, &binding.GasFeeBalance); err != nil {
+		if err := rows.Scan(&binding.UserID, &binding.ExchangeBindingID, &binding.Exchange, &binding.AccountMode, &binding.AvailableQuote, &binding.QuoteValue, &binding.GasFeeBalance, &binding.BalanceFresh); err != nil {
 			return nil, 0, fmt.Errorf("store: scan buy binding: %w", err)
 		}
 		bindings = append(bindings, binding)
@@ -327,6 +331,29 @@ ORDER BY b.created_at ASC`
 				Asset:             params.DefaultAsset,
 				RequiredAmount:    "0",
 				AvailableAmount:   reconciliationBalance,
+				Reason:            reason,
+			}); err != nil {
+				return nil, skipped, err
+			}
+			if err := insertNotification(ctx, tx, binding.UserID, "Buy Signal Skipped", reason); err != nil {
+				return nil, skipped, err
+			}
+			skipped++
+			continue
+		}
+		if !binding.BalanceFresh {
+			reason := fmt.Sprintf("risk: fresh %s balance snapshot is required before buy signal; sync exchange API and retry", params.DefaultAsset)
+			if err := insertExecutionJobWithStatus(ctx, tx, job, "skipped", reason); err != nil {
+				return nil, skipped, err
+			}
+			if err := insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+				UserID:            binding.UserID,
+				ExchangeBindingID: binding.ExchangeBindingID,
+				MasterSignalID:    signalID,
+				EventType:         "buy_stale_quote_balance",
+				Asset:             params.DefaultAsset,
+				RequiredAmount:    binding.QuoteValue,
+				AvailableAmount:   binding.AvailableQuote,
 				Reason:            reason,
 			}); err != nil {
 				return nil, skipped, err
@@ -383,7 +410,8 @@ WITH latest_balances AS (
   SELECT DISTINCT ON (exchange_binding_id, asset)
     exchange_binding_id,
     asset,
-    free_amount AS available_balance
+    free_amount AS available_balance,
+    captured_at
   FROM exchange_balance_snapshots
   WHERE asset = $4
   ORDER BY exchange_binding_id, asset, captured_at DESC
@@ -395,7 +423,8 @@ SELECT
   b.account_mode,
   l.id::text,
   ((l.remaining_quantity * $3::numeric) / 100)::text AS quantity,
-  COALESCE(lb.available_balance, 0)::text AS available_base
+  COALESCE(lb.available_balance, 0)::text AS available_base,
+  COALESCE(lb.captured_at >= now() - interval '10 minutes', false) AS balance_fresh
 FROM layers l
 JOIN users u ON u.id = l.user_id
 JOIN exchange_bindings b ON b.id = l.exchange_binding_id
@@ -418,7 +447,7 @@ ORDER BY b.exchange_name ASC, l.opened_at ASC`
 	var layers []eligibleSellLayer
 	for rows.Next() {
 		var layer eligibleSellLayer
-		if err := rows.Scan(&layer.UserID, &layer.ExchangeBindingID, &layer.Exchange, &layer.AccountMode, &layer.LayerID, &layer.Quantity, &layer.AvailableBase); err != nil {
+		if err := rows.Scan(&layer.UserID, &layer.ExchangeBindingID, &layer.Exchange, &layer.AccountMode, &layer.LayerID, &layer.Quantity, &layer.AvailableBase, &layer.BalanceFresh); err != nil {
 			return nil, 0, fmt.Errorf("store: scan sell layer: %w", err)
 		}
 		layers = append(layers, layer)
@@ -480,6 +509,30 @@ ORDER BY b.exchange_name ASC, l.opened_at ASC`
 				MasterSignalID:    signalID,
 				LayerID:           layer.LayerID,
 				EventType:         "sell_layer_execution_in_flight",
+				Asset:             baseAsset,
+				RequiredAmount:    layer.Quantity,
+				AvailableAmount:   layer.AvailableBase,
+				Reason:            reason,
+			}); err != nil {
+				return nil, skipped, err
+			}
+			if err := insertNotification(ctx, tx, layer.UserID, "Layer Sell Skipped", reason); err != nil {
+				return nil, skipped, err
+			}
+			skipped++
+			continue
+		}
+		if !layer.BalanceFresh {
+			reason := fmt.Sprintf("risk: fresh %s balance snapshot is required before layer sell; sync exchange API and retry", baseAsset)
+			if err := insertExecutionJobWithStatus(ctx, tx, job, "skipped", reason); err != nil {
+				return nil, skipped, err
+			}
+			if err := insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+				UserID:            layer.UserID,
+				ExchangeBindingID: layer.ExchangeBindingID,
+				MasterSignalID:    signalID,
+				LayerID:           layer.LayerID,
+				EventType:         "sell_stale_base_balance",
 				Asset:             baseAsset,
 				RequiredAmount:    layer.Quantity,
 				AvailableAmount:   layer.AvailableBase,

@@ -110,6 +110,13 @@ const formatStatAmount = (value: number) => {
   })
 }
 
+const realizedProfitTrend = computed(() => {
+  const totalBalance = stats.value?.totalBalance ?? 0
+  const realizedProfit = stats.value?.realizedProfit ?? 0
+  if (!Number.isFinite(totalBalance) || !Number.isFinite(realizedProfit) || totalBalance <= 0) return 0
+  return Number(((realizedProfit / totalBalance) * 100).toFixed(2))
+})
+
 const applyGasFeeAccountSummary = (account: GasFeeAccountSummary | null) => {
   if (!account) return
 
@@ -447,7 +454,7 @@ const submitDeposit = async () => {
           title="Realized Profit"
           :value="stats.realizedProfit.toLocaleString()"
           unit="USDT"
-          :trend="12.4"
+          :trend="realizedProfitTrend"
         />
         <StatCard
           title="Gas Fee Balance"
