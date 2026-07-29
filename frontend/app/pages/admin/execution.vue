@@ -321,6 +321,7 @@ let ws: WebSocket | null = null
 let tickersWs: WebSocket | null = null
 const baseAsset = computed(() => selectedCoin.value.split('/')[0] ?? 'BTC')
 const quoteAsset = computed(() => selectedCoin.value.split('/')[1] ?? 'USDT')
+const nextLayerLabel = computed(() => `Next ${baseAsset.value} Layer`)
 const selectedCoinMeta = computed<CoinOption>(() => {
   return coinOptions.value.find(coin => coin.symbol === selectedCoin.value) ?? coinOptions.value[0]!
 })
@@ -1026,7 +1027,7 @@ const cancelAllLayers = () => {
 
               <div class="ticket-summary">
                 <span>Layer</span>
-                <strong>Next Layer</strong>
+                <strong>{{ nextLayerLabel }}</strong>
               </div>
 
               <button

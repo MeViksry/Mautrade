@@ -484,6 +484,10 @@ INSERT INTO layers (
 }
 
 func legacyNextBindingLayerNumber(ctx context.Context, tx pgx.Tx, job executionJobForResult, symbol string) (int, error) {
+	symbol = normalizeSignalSymbol(symbol)
+	if symbol == "" {
+		return 0, fmt.Errorf("store: legacy layer symbol is required")
+	}
 	if err := acquireExecutionScopeLock(ctx, tx, "legacy-layer-number:"+job.UserID+":"+job.ExchangeBindingID+":"+symbol); err != nil {
 		return 0, err
 	}

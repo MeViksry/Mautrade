@@ -86,6 +86,10 @@ func (s *DashboardStore) CreateSignalDispatch(ctx context.Context, params Create
 	if !s.Ready() {
 		return SignalDispatch{}, fmt.Errorf("store: signal dispatch requires postgres")
 	}
+	params.Symbol = normalizeSignalSymbol(params.Symbol)
+	if params.Symbol == "" {
+		return SignalDispatch{}, fmt.Errorf("store: signal symbol is required")
+	}
 	if params.Type == "buy" {
 		params.LayerNumber = nil
 	}
@@ -201,6 +205,10 @@ WHERE id = $1::uuid`, signalIDText, params.CreatedAt.UTC()); err != nil {
 }
 
 func reserveNextBuyLayerNumber(ctx context.Context, tx pgx.Tx, symbol string) (int, error) {
+	symbol = normalizeSignalSymbol(symbol)
+	if symbol == "" {
+		return 0, fmt.Errorf("store: buy layer symbol is required")
+	}
 	if err := acquireExecutionScopeLock(ctx, tx, "buy-layer-number:"+symbol); err != nil {
 		return 0, err
 	}
@@ -223,6 +231,10 @@ FROM existing_numbers`, symbol).Scan(&layerNumber); err != nil {
 		return 0, fmt.Errorf("store: reserve buy layer number: %w", err)
 	}
 	return layerNumber, nil
+}
+
+func normalizeSignalSymbol(symbol string) string {
+	return strings.ToUpper(strings.TrimSpace(symbol))
 }
 
 func (s *DashboardStore) createBuyJobs(ctx context.Context, tx pgx.Tx, signalID string, params CreateSignalParams) ([]ExecutionJobRecord, int, error) {
