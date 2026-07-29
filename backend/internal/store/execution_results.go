@@ -422,10 +422,14 @@ func applyBuyExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFor
 			return ExecutionResultApplySummary{}, err
 		}
 
-		reason := fmt.Sprintf("Buy execution failed for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+		errMessage := ""
+		if result.ErrorMessage != nil {
+			errMessage = *result.ErrorMessage
+		}
+		reason := fmt.Sprintf("Buy execution failed for %s on %s: %s", result.Symbol, result.Exchange, errMessage)
 		title := "Buy Order Failed"
 		if result.Status == "skipped" {
-			reason = fmt.Sprintf("Buy execution skipped for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+			reason = fmt.Sprintf("Buy execution skipped for %s on %s: %s", result.Symbol, result.Exchange, errMessage)
 			title = "Buy Order Skipped"
 		}
 		if err := insertNotification(ctx, tx, job.UserID, title, reason); err != nil {
@@ -597,10 +601,14 @@ func applySellExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFo
 			return ExecutionResultApplySummary{}, err
 		}
 
-		reason := fmt.Sprintf("Sell execution failed for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+		errMessage := ""
+		if result.ErrorMessage != nil {
+			errMessage = *result.ErrorMessage
+		}
+		reason := fmt.Sprintf("Sell execution failed for %s on %s: %s", result.Symbol, result.Exchange, errMessage)
 		title := "Sell Order Failed"
 		if result.Status == "skipped" {
-			reason = fmt.Sprintf("Sell execution skipped for %s on %s: %s", result.Symbol, result.Exchange, result.ErrorMessage)
+			reason = fmt.Sprintf("Sell execution skipped for %s on %s: %s", result.Symbol, result.Exchange, errMessage)
 			title = "Sell Order Skipped"
 		}
 		if err := insertNotification(ctx, tx, job.UserID, title, reason); err != nil {
