@@ -182,19 +182,20 @@ onMounted(async () => {
     console.error('Error fetching dashboard data:', error)
   } finally {
     loading.value = false
-    if (!dashboardPageMounted) return
-    await nextTick()
-    syncExchangeListHeight()
+    if (dashboardPageMounted) {
+      await nextTick()
+      syncExchangeListHeight()
 
-    if (layersContainer.value && 'ResizeObserver' in window) {
-      layersResizeObserver = new ResizeObserver(syncExchangeListHeight)
-      layersResizeObserver.observe(layersContainer.value)
+      if (layersContainer.value && 'ResizeObserver' in window) {
+        layersResizeObserver = new ResizeObserver(syncExchangeListHeight)
+        layersResizeObserver.observe(layersContainer.value)
+      }
+
+      window.addEventListener('resize', syncExchangeListHeight)
+      activeLayersRefreshTimer = setInterval(() => {
+        void refreshActiveLayers()
+      }, 15000)
     }
-
-    window.addEventListener('resize', syncExchangeListHeight)
-    activeLayersRefreshTimer = setInterval(() => {
-      void refreshActiveLayers()
-    }, 15000)
   }
 })
 
