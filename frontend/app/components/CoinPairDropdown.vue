@@ -58,6 +58,21 @@ const coinColors: Record<string, string> = {
   NEAR: '#00c08b',
   SUI: '#4da2ff'
 }
+const coinIcons: Record<string, string> = {
+  BTC: 'simple-icons:bitcoin',
+  ETH: 'simple-icons:ethereum',
+  SOL: 'simple-icons:solana',
+  BNB: 'simple-icons:binance',
+  XRP: 'simple-icons:ripple',
+  DOGE: 'simple-icons:dogecoin',
+  ADA: 'simple-icons:cardano',
+  LINK: 'simple-icons:chainlink',
+  DOT: 'simple-icons:polkadot',
+  LTC: 'simple-icons:litecoin',
+  OP: 'simple-icons:optimism',
+  NEAR: 'simple-icons:near',
+  SUI: 'simple-icons:sui'
+}
 
 const categoryOptions: Array<{ id: CoinPairCategory, label: string }> = [
   { id: 'all', label: 'All' },
@@ -119,6 +134,10 @@ const getCoinColor = (asset = '') => {
   return coinColors[asset] ?? '#ff5a00'
 }
 
+const getCoinIconName = (asset = '') => {
+  return coinIcons[asset] ?? ''
+}
+
 const chooseCoin = (symbol: string) => {
   emit('update:modelValue', symbol)
   search.value = ''
@@ -166,7 +185,12 @@ onBeforeUnmount(() => {
         class="coin-pair-select__mark"
         :style="{ '--coin-color': selectedTokenColor }"
       >
-        <strong>{{ selectedBaseAsset.slice(0, 1) }}</strong>
+        <UIcon
+          v-if="getCoinIconName(selectedBaseAsset)"
+          :name="getCoinIconName(selectedBaseAsset)"
+          class="coin-pair-select__icon"
+        />
+        <strong v-else>{{ selectedBaseAsset.slice(0, 1) }}</strong>
       </span>
       <span class="coin-pair-select__main">
         <span>{{ label }}</span>
@@ -222,7 +246,16 @@ onBeforeUnmount(() => {
           :class="{ 'is-active': coin.symbol === modelValue }"
           @click="chooseCoin(coin.symbol)"
         >
-          <span :style="{ '--coin-color': getCoinColor(getBaseAsset(coin.symbol)) }" />
+          <span
+            class="coin-pair-select__quick-mark"
+            :style="{ '--coin-color': getCoinColor(getBaseAsset(coin.symbol)) }"
+          >
+            <UIcon
+              v-if="getCoinIconName(getBaseAsset(coin.symbol))"
+              :name="getCoinIconName(getBaseAsset(coin.symbol))"
+            />
+            <strong v-else>{{ getBaseAsset(coin.symbol).slice(0, 1) }}</strong>
+          </span>
           <strong>{{ getBaseAsset(coin.symbol) }}</strong>
           <small :class="{ 'is-negative': coin.change.startsWith('-') }">{{ coin.change }}</small>
         </button>
@@ -281,7 +314,12 @@ onBeforeUnmount(() => {
             class="coin-pair-select__option-mark"
             :style="{ '--coin-color': getCoinColor(getBaseAsset(coin.symbol)) }"
           >
-            <strong>{{ getBaseAsset(coin.symbol).slice(0, 1) }}</strong>
+            <UIcon
+              v-if="getCoinIconName(getBaseAsset(coin.symbol))"
+              :name="getCoinIconName(getBaseAsset(coin.symbol))"
+              class="coin-pair-select__icon"
+            />
+            <strong v-else>{{ getBaseAsset(coin.symbol).slice(0, 1) }}</strong>
           </span>
           <span class="coin-pair-select__option-main">
             <strong>{{ coin.symbol }}</strong>
@@ -361,6 +399,12 @@ onBeforeUnmount(() => {
   font-family: var(--mono);
   font-size: 0.72rem;
   font-weight: 900;
+}
+
+.coin-pair-select__icon {
+  width: 20px;
+  height: 20px;
+  color: currentColor;
 }
 
 .coin-pair-select__mark strong,
@@ -558,9 +602,24 @@ onBeforeUnmount(() => {
 }
 
 .coin-pair-select__quick button > span {
-  width: 8px;
-  height: 8px;
-  background: var(--coin-color, var(--accent));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid color-mix(in srgb, var(--coin-color, var(--accent)) 48%, var(--line));
+  background: color-mix(in srgb, var(--coin-color, var(--accent)) 14%, var(--bg-elevated));
+  color: color-mix(in srgb, var(--coin-color, var(--accent)) 82%, var(--text));
+}
+
+.coin-pair-select__quick button > span svg {
+  width: 12px;
+  height: 12px;
+}
+
+.coin-pair-select__quick button > span strong {
+  font-size: 0.52rem;
+  line-height: 1;
 }
 
 .coin-pair-select__quick strong,
