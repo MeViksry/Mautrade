@@ -32,6 +32,8 @@ type AdminPersonalWalletView struct {
 	CommissionBalance        string     `json:"commissionBalance"`
 	PendingWithdrawalBalance string     `json:"pendingWithdrawalBalance"`
 	WithdrawnBalance         string     `json:"withdrawnBalance"`
+	DailyInflow              string     `json:"dailyInflow"`
+	DailyOutflow             string     `json:"dailyOutflow"`
 	UpdatedBy                *string    `json:"updatedBy,omitempty"`
 	CreatedAt                time.Time  `json:"createdAt"`
 	UpdatedAt                *time.Time `json:"updatedAt,omitempty"`
@@ -79,7 +81,12 @@ func (s *DashboardStore) AdminPersonalWallets(ctx context.Context) ([]AdminPerso
 	}
 
 	rows, err := s.db.Query(ctx, `
-WITH commission AS (
+WITH day_window AS (
+  SELECT
+    ((now() AT TIME ZONE 'Asia/Jakarta')::date AT TIME ZONE 'Asia/Jakarta') AS starts_at,
+    (((now() AT TIME ZONE 'Asia/Jakarta')::date + 1) AT TIME ZONE 'Asia/Jakarta') AS ends_at
+),
+commission AS (
   SELECT wallet_code, COALESCE(SUM(amount), 0)::numeric(36,18) AS balance
   FROM admin_wallet_commission_ledger
   GROUP BY wallet_code
@@ -91,6 +98,21 @@ withdrawals AS (
     COALESCE(SUM(amount) FILTER (WHERE status = 'confirmed'), 0)::numeric(36,18) AS withdrawn_balance
   FROM admin_wallet_withdrawals
   GROUP BY wallet_code
+),
+today_commission AS (
+  SELECT wallet_code, COALESCE(SUM(amount), 0)::numeric(36,18) AS daily_inflow
+  FROM admin_wallet_commission_ledger, day_window
+  WHERE created_at >= day_window.starts_at
+    AND created_at < day_window.ends_at
+  GROUP BY wallet_code
+),
+today_withdrawals AS (
+  SELECT wallet_code, COALESCE(SUM(amount), 0)::numeric(36,18) AS daily_outflow
+  FROM admin_wallet_withdrawals, day_window
+  WHERE status IN ('pending_signing', 'broadcast', 'confirmed')
+    AND requested_at >= day_window.starts_at
+    AND requested_at < day_window.ends_at
+  GROUP BY wallet_code
 )
 SELECT
   w.code,
@@ -101,12 +123,16 @@ SELECT
   COALESCE(c.balance, 0)::text AS commission_balance,
   COALESCE(x.pending_balance, 0)::text AS pending_withdrawal_balance,
   COALESCE(x.withdrawn_balance, 0)::text AS withdrawn_balance,
+  COALESCE(tc.daily_inflow, 0)::text AS daily_inflow,
+  COALESCE(tw.daily_outflow, 0)::text AS daily_outflow,
   w.updated_by::text,
   w.created_at,
   w.updated_at
 FROM admin_personal_wallets w
 LEFT JOIN commission c ON c.wallet_code = w.code
 LEFT JOIN withdrawals x ON x.wallet_code = w.code
+LEFT JOIN today_commission tc ON tc.wallet_code = w.code
+LEFT JOIN today_withdrawals tw ON tw.wallet_code = w.code
 ORDER BY CASE w.code WHEN 'viksry' THEN 1 WHEN 'aryanto_hong' THEN 2 ELSE 99 END, w.code
 `)
 	if err != nil {
@@ -126,6 +152,8 @@ ORDER BY CASE w.code WHEN 'viksry' THEN 1 WHEN 'aryanto_hong' THEN 2 ELSE 99 END
 			&wallet.CommissionBalance,
 			&wallet.PendingWithdrawalBalance,
 			&wallet.WithdrawnBalance,
+			&wallet.DailyInflow,
+			&wallet.DailyOutflow,
 			&wallet.UpdatedBy,
 			&wallet.CreatedAt,
 			&wallet.UpdatedAt,
@@ -209,6 +237,21 @@ RETURNING
   COALESCE((SELECT SUM(amount)::text FROM admin_wallet_commission_ledger WHERE wallet_code = $1), '0'),
   COALESCE((SELECT SUM(amount)::text FROM admin_wallet_withdrawals WHERE wallet_code = $1 AND status IN ('pending_signing', 'broadcast')), '0'),
   COALESCE((SELECT SUM(amount)::text FROM admin_wallet_withdrawals WHERE wallet_code = $1 AND status = 'confirmed'), '0'),
+  COALESCE((
+    SELECT SUM(amount)::text
+    FROM admin_wallet_commission_ledger
+    WHERE wallet_code = $1
+      AND created_at >= ((now() AT TIME ZONE 'Asia/Jakarta')::date AT TIME ZONE 'Asia/Jakarta')
+      AND created_at < (((now() AT TIME ZONE 'Asia/Jakarta')::date + 1) AT TIME ZONE 'Asia/Jakarta')
+  ), '0'),
+  COALESCE((
+    SELECT SUM(amount)::text
+    FROM admin_wallet_withdrawals
+    WHERE wallet_code = $1
+      AND status IN ('pending_signing', 'broadcast', 'confirmed')
+      AND requested_at >= ((now() AT TIME ZONE 'Asia/Jakarta')::date AT TIME ZONE 'Asia/Jakarta')
+      AND requested_at < (((now() AT TIME ZONE 'Asia/Jakarta')::date + 1) AT TIME ZONE 'Asia/Jakarta')
+  ), '0'),
   updated_by::text,
   created_at,
   updated_at
@@ -221,6 +264,8 @@ RETURNING
 		&wallet.CommissionBalance,
 		&wallet.PendingWithdrawalBalance,
 		&wallet.WithdrawnBalance,
+		&wallet.DailyInflow,
+		&wallet.DailyOutflow,
 		&wallet.UpdatedBy,
 		&wallet.CreatedAt,
 		&wallet.UpdatedAt,

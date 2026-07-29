@@ -27,6 +27,8 @@ type AdminPersonalWallet = {
   commissionBalance?: string
   pendingWithdrawalBalance?: string
   withdrawnBalance?: string
+  dailyInflow?: string
+  dailyOutflow?: string
   updatedBy?: string
   createdAt?: string
   updatedAt?: string
@@ -71,9 +73,9 @@ const defaultPersonalWallets: PersonalWalletCard[] = [
 ]
 
 const walletStats = ref({
-  totalBalance: 0,
-  dailyInflow: 0,
-  dailyOutflow: 0,
+  totalBalance: '0',
+  dailyInflow: '0',
+  dailyOutflow: '0',
   activeWallets: 0
 })
 
@@ -180,12 +182,38 @@ const formatDecimalText = (value: string) => {
   return `${sign}${integer}.${(fraction || '').padEnd(2, '0')}`
 }
 
+const atomicUnitsToDecimalText = (value: bigint) => {
+  const sign = value < 0n ? '-' : ''
+  const absolute = value < 0n ? -value : value
+  const base = 10n ** 18n
+  const integer = absolute / base
+  const fraction = (absolute % base).toString().padStart(18, '0').replace(/0+$/, '')
+  return fraction ? `${sign}${integer.toString()}.${fraction}` : `${sign}${integer.toString()}`
+}
+
+const sumDecimalTexts = (values: Array<string | number | undefined>) => {
+  const total = values.reduce((sum, value) => {
+    const units = decimalToAtomicUnits(String(value ?? '0'))
+    return sum + (units || 0n)
+  }, 0n)
+  return atomicUnitsToDecimalText(total)
+}
+
+const formatCurrencyText = (value: string | number | undefined) => {
+  return `$${formatDecimalText(walletBalanceText(value))}`
+}
+
 const recomputeActiveWallets = () => {
   walletStats.value.activeWallets = (gasFeeWalletActive.value ? 1 : 0) + personalWallets.value.filter(wallet => wallet.walletAddress.trim() !== '').length
 }
 
+const recomputeDailyWalletStats = () => {
+  walletStats.value.dailyInflow = sumDecimalTexts(personalWallets.value.map(wallet => wallet.dailyInflow))
+  walletStats.value.dailyOutflow = sumDecimalTexts(personalWallets.value.map(wallet => wallet.dailyOutflow))
+}
+
 const fetchGasFeeWalletBalance = async (gasFeeAddress: string) => {
-  let balanceVal = 0
+  let balanceVal = '0'
 
   if (gasFeeAddress && gasFeeAddress.startsWith('0x')) {
     try {
@@ -214,10 +242,7 @@ const fetchGasFeeWalletBalance = async (gasFeeAddress: string) => {
       const res = await response.json()
       if (res.result && res.result !== '0x') {
         const balanceBig = BigInt(res.result)
-        const balanceStr = balanceBig.toString().padStart(19, '0')
-        const intPart = balanceStr.slice(0, -18) || '0'
-        const decPart = balanceStr.slice(-18)
-        balanceVal = parseFloat(`${intPart}.${decPart}`)
+        balanceVal = atomicUnitsToDecimalText(balanceBig)
       }
     } catch (err) {
       console.error('Failed to fetch USDT BEP20 balance:', err)
@@ -246,6 +271,8 @@ const fetchPersonalWallets = async () => {
         ...remoteWallet,
         walletAddress: remoteWallet?.walletAddress || '',
         shareRate: remoteWallet?.shareRate || wallet.shareRate,
+        dailyInflow: remoteWallet?.dailyInflow || '0',
+        dailyOutflow: remoteWallet?.dailyOutflow || '0',
         balance,
         balanceText
       }
@@ -254,6 +281,7 @@ const fetchPersonalWallets = async () => {
     console.error('Failed to fetch personal wallets:', err)
   } finally {
     recomputeActiveWallets()
+    recomputeDailyWalletStats()
   }
 }
 
@@ -290,6 +318,8 @@ const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
       ...wallet,
       walletAddress: wallet.walletAddress || '',
       shareRate: wallet.shareRate || item.shareRate,
+      dailyInflow: wallet.dailyInflow || '0',
+      dailyOutflow: wallet.dailyOutflow || '0',
       balance: parseWalletBalance(balanceText),
       balanceText
     }
@@ -406,8 +436,8 @@ onMounted(async () => {
   gasFeeWalletActive.value = Boolean(gasFeeAddress)
   walletStats.value = {
     totalBalance: balanceVal,
-    dailyInflow: 0,
-    dailyOutflow: 0,
+    dailyInflow: walletStats.value.dailyInflow,
+    dailyOutflow: walletStats.value.dailyOutflow,
     activeWallets: walletStats.value.activeWallets
   }
   recomputeActiveWallets()
@@ -451,15 +481,15 @@ onMounted(async () => {
       <div class="stats-grid">
         <StatCard
           title="Total Balance"
-          :value="`$${walletStats.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`"
+          :value="formatCurrencyText(walletStats.totalBalance)"
         />
         <StatCard
           title="Daily Inflow"
-          :value="`+$${walletStats.dailyInflow.toLocaleString()}`"
+          :value="`+${formatCurrencyText(walletStats.dailyInflow)}`"
         />
         <StatCard
           title="Daily Outflow"
-          :value="`-$${walletStats.dailyOutflow.toLocaleString()}`"
+          :value="`-${formatCurrencyText(walletStats.dailyOutflow)}`"
         />
         <StatCard
           title="Active Wallets"
