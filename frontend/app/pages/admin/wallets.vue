@@ -519,8 +519,10 @@ onMounted(async () => {
           :value="`-${formatCurrencyText(walletStats.dailyOutflow)}`"
         />
         <StatCard
+          class="bnb-gasfee-stat"
           title="BNB Gasfee Wallet"
-          :value="`${formatDecimalText(walletStats.bnbGasFeeBalance)} BNB`"
+          :value="formatDecimalText(walletStats.bnbGasFeeBalance)"
+          unit="BNB"
         />
       </div>
 
@@ -801,6 +803,17 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
+}
+
+.bnb-gasfee-stat :deep(.stat-card__value) {
+  font-size: clamp(1.45rem, 1.75vw, 1.85rem);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.bnb-gasfee-stat :deep(.stat-card__unit) {
+  font-size: 0.72rem;
+  margin-left: 0.35rem;
 }
 
 /* Skeleton Loading */
