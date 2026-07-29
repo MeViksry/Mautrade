@@ -271,8 +271,8 @@ const openWalletAddressModal = (wallet: PersonalWalletCard) => {
   walletAddressModalOpen.value = true
 }
 
-const closeWalletAddressModal = () => {
-  if (walletAddressSaving.value) return
+const closeWalletAddressModal = (force = false) => {
+  if (walletAddressSaving.value && !force) return
 
   walletAddressModalOpen.value = false
   selectedWallet.value = null
@@ -281,10 +281,11 @@ const closeWalletAddressModal = () => {
 }
 
 const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
+  let updatedWallet: PersonalWalletCard | null = null
   personalWallets.value = personalWallets.value.map((item) => {
     if (item.code !== wallet.code) return item
     const balanceText = walletBalanceText(wallet.availableBalance ?? wallet.balance ?? wallet.commissionBalance ?? item.balanceText)
-    return {
+    updatedWallet = {
       ...item,
       ...wallet,
       walletAddress: wallet.walletAddress || '',
@@ -292,7 +293,11 @@ const applyUpdatedPersonalWallet = (wallet: AdminPersonalWallet) => {
       balance: parseWalletBalance(balanceText),
       balanceText
     }
+    return updatedWallet
   })
+  if (selectedWallet.value?.code === wallet.code && updatedWallet) {
+    selectedWallet.value = updatedWallet
+  }
   recomputeActiveWallets()
 }
 
@@ -328,10 +333,10 @@ const submitWalletAddress = async (clearAddress = false) => {
       }
     })
     applyUpdatedPersonalWallet(wallet)
-    closeWalletAddressModal()
+    closeWalletAddressModal(true)
   } catch (err) {
     console.error('Failed to update personal wallet address:', err)
-    walletAddressError.value = 'Failed to save wallet address.'
+    walletAddressError.value = getRequestErrorMessage(err, 'Failed to save wallet address.')
   } finally {
     walletAddressSaving.value = false
   }
