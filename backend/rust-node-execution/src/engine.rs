@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use thiserror::Error;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 #[derive(Debug, Error)]
 pub enum ExecutionError {
@@ -106,6 +109,25 @@ pub fn failed_report(req: &ExecutionRequest, code: impl Into<String>, message: i
     }
 }
 
+pub fn stale_request_report(req: &ExecutionRequest, max_age: Duration) -> Option<ExecutionReport> {
+    if max_age.is_zero() {
+        return None;
+    }
+    let created_at = OffsetDateTime::parse(req.created_at.trim(), &Rfc3339).ok()?;
+    let age = OffsetDateTime::now_utc() - created_at;
+    if age.whole_seconds() < max_age.as_secs() as i64 {
+        return None;
+    }
+    Some(failed_report(
+        req,
+        "stale_execution_request",
+        format!(
+            "execution request is older than {} seconds; rejected to prevent delayed market order",
+            max_age.as_secs()
+        ),
+    ))
+}
+
 fn chrono_like_utc_now() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -156,5 +178,24 @@ mod tests {
         req.exchange_binding_id.clear();
 
         assert!(validate_request(&req).is_err());
+    }
+
+    #[test]
+    fn stale_request_report_rejects_old_market_orders() {
+        let mut req = request_with_account_mode(Some("real"));
+        req.created_at = "2026-01-01T00:00:00Z".to_string();
+
+        let report = stale_request_report(&req, Duration::from_secs(300)).expect("expected stale report");
+
+        assert_eq!(report.status, ExecutionStatus::Failed);
+        assert_eq!(report.error_code.as_deref(), Some("stale_execution_request"));
+    }
+
+    #[test]
+    fn stale_request_report_allows_disabled_guard() {
+        let mut req = request_with_account_mode(Some("real"));
+        req.created_at = "2026-01-01T00:00:00Z".to_string();
+
+        assert!(stale_request_report(&req, Duration::ZERO).is_none());
     }
 }

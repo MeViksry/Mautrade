@@ -128,11 +128,14 @@ services:
       context: ./backend/rust-node-execution
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       NATS_URL: nats://nats:4222
       EXECUTOR_DURABLE: mautrade-rust-executor
       MAUTRADE_INTERNAL_API_URL: http://api:8080
       EXECUTION_INTERNAL_TOKEN: ${EXECUTION_INTERNAL_TOKEN:-${EXCHANGE_CREDENTIAL_KEY}}
+      EXECUTION_MAX_REQUEST_AGE_SECONDS: ${EXECUTION_MAX_REQUEST_AGE_SECONDS:-300}
     networks:
       - internal
     depends_on:

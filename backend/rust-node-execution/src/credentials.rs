@@ -40,13 +40,13 @@ impl InternalCredentialProvider {
             ));
         }
 
-        let token = std::env::var("EXECUTION_INTERNAL_TOKEN")
-            .unwrap_or_default()
-            .trim()
-            .to_string();
+        let token = internal_token_from_values(
+            std::env::var("EXECUTION_INTERNAL_TOKEN").ok(),
+            std::env::var("EXCHANGE_CREDENTIAL_KEY").ok(),
+        );
         if token.is_empty() {
             return Err(ExecutionError::InvalidOrder(
-                "EXECUTION_INTERNAL_TOKEN is required".to_string(),
+                "EXECUTION_INTERNAL_TOKEN or EXCHANGE_CREDENTIAL_KEY is required".to_string(),
             ));
         }
 
@@ -120,6 +120,16 @@ impl InternalCredentialProvider {
     }
 }
 
+fn internal_token_from_values(execution_token: Option<String>, exchange_key: Option<String>) -> String {
+    execution_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .or_else(|| exchange_key.as_deref().map(str::trim).filter(|value| !value.is_empty()))
+        .unwrap_or_default()
+        .to_string()
+}
+
 fn credential_allows_side(status: &str, side: &OrderSide) -> bool {
     if status.trim().eq_ignore_ascii_case("active") {
         return true;
@@ -150,5 +160,22 @@ mod tests {
     fn closing_only_credentials_allow_sell_only() {
         assert!(!credential_allows_side("closing_only", &OrderSide::Buy));
         assert!(credential_allows_side("closing_only", &OrderSide::Sell));
+    }
+
+    #[test]
+    fn internal_token_prefers_execution_token() {
+        let token = internal_token_from_values(
+            Some(" execution-token ".to_string()),
+            Some("exchange-key".to_string()),
+        );
+
+        assert_eq!(token, "execution-token");
+    }
+
+    #[test]
+    fn internal_token_falls_back_to_exchange_credential_key() {
+        let token = internal_token_from_values(Some(" ".to_string()), Some(" exchange-key ".to_string()));
+
+        assert_eq!(token, "exchange-key");
     }
 }
