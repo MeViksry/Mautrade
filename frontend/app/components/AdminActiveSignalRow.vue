@@ -4,6 +4,9 @@ type ActiveLayer = {
   symbol: string
   type: string
   layerNumber: number
+  exchangeName: string
+  exchangeDisplayName: string
+  layerLabel: string
   allocationPct: number
   status: string
   createdAt: string
@@ -40,6 +43,12 @@ const formatDate = (dateString: string) => {
   const d = new Date(dateString)
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+const layerIdentity = (layer: ActiveLayer) => {
+  if (layer.layerLabel?.trim()) return layer.layerLabel
+  if (layer.exchangeDisplayName?.trim()) return `L${layer.layerNumber} ${layer.exchangeDisplayName}`
+  return `Layer ${layer.layerNumber}`
+}
 </script>
 
 <template>
@@ -49,7 +58,7 @@ const formatDate = (dateString: string) => {
         {{ layer.symbol }}
       </div>
       <div class="layer-row__meta">
-        <span>Layer {{ layer.layerNumber }}</span>
+        <span>{{ layerIdentity(layer) }}</span>
         <span class="layer-row__dot" />
         <span>{{ layer.activeUsers }} users</span>
         <span class="layer-row__dot" />

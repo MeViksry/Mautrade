@@ -22,6 +22,10 @@ useSeoMeta({
 interface Layer {
   id: string
   pair: string
+  layerNumber?: number
+  exchangeName?: string
+  exchangeDisplayName?: string
+  layerLabel?: string
   entryPrice: number
   currentPrice: number
   allocationPct: number

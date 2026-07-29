@@ -17,6 +17,7 @@ type CreateSignalParams struct {
 	Type           string
 	Symbol         string
 	LayerNumber    *int
+	ExchangeName   string
 	AllocationPct  string
 	SellPct        string
 	IdempotencyKey string
@@ -101,6 +102,7 @@ func (s *DashboardStore) CreateSignalDispatch(ctx context.Context, params Create
 		"type":            params.Type,
 		"symbol":          params.Symbol,
 		"layer_number":    params.LayerNumber,
+		"exchange_name":   params.ExchangeName,
 		"allocation_pct":  params.AllocationPct,
 		"sell_pct":        params.SellPct,
 		"default_asset":   params.DefaultAsset,
@@ -292,10 +294,11 @@ WHERE l.symbol = $1
   AND l.status IN ('open', 'partial')
   AND u.status = 'active'
   AND b.status = 'active'
+  AND ($5 = '' OR b.exchange_name = $5)
   AND ((l.remaining_quantity * $3::numeric) / 100) > 0
-ORDER BY l.opened_at ASC`
+ORDER BY b.exchange_name ASC, l.opened_at ASC`
 
-	rows, err := tx.Query(ctx, query, params.Symbol, *params.LayerNumber, params.SellPct, baseAsset)
+	rows, err := tx.Query(ctx, query, params.Symbol, *params.LayerNumber, params.SellPct, baseAsset, params.ExchangeName)
 	if err != nil {
 		return nil, 0, fmt.Errorf("store: query sell eligible layers: %w", err)
 	}

@@ -11,6 +11,9 @@ type AdminActiveSignalView struct {
 	Symbol              string    `json:"symbol"`
 	Type                string    `json:"type"`
 	LayerNumber         int       `json:"layerNumber"`
+	ExchangeName        string    `json:"exchangeName"`
+	ExchangeDisplayName string    `json:"exchangeDisplayName"`
+	LayerLabel          string    `json:"layerLabel"`
 	AllocationPct       float64   `json:"allocationPct"`
 	Status              string    `json:"status"`
 	CreatedAt           time.Time `json:"createdAt"`
@@ -39,6 +42,7 @@ func (s *DashboardStore) AdminListActiveSignals(ctx context.Context, limit, offs
 			l.symbol,
 			'buy' AS type,
 			l.layer_number,
+			b.exchange_name,
 			COALESCE(MAX(l.allocation_pct), 0)::float8 AS allocation_pct,
 			CASE
 				WHEN BOOL_OR(l.status = 'partial') THEN 'partial'
@@ -56,8 +60,8 @@ func (s *DashboardStore) AdminListActiveSignals(ctx context.Context, limit, offs
 		WHERE l.status IN ('open', 'partial')
 			AND u.status = 'active'
 			AND b.status = 'active'
-		GROUP BY l.symbol, l.layer_number
-		ORDER BY l.symbol ASC, l.layer_number ASC
+		GROUP BY l.symbol, l.layer_number, b.exchange_name
+		ORDER BY l.symbol ASC, l.layer_number ASC, b.exchange_name ASC
 		LIMIT $1 OFFSET $2
 	`
 	rows, err := s.db.Query(ctx, query, limit, offset)
@@ -70,11 +74,13 @@ func (s *DashboardStore) AdminListActiveSignals(ctx context.Context, limit, offs
 	for rows.Next() {
 		var sig AdminActiveSignalView
 		if err := rows.Scan(
-			&sig.ID, &sig.Symbol, &sig.Type, &sig.LayerNumber, &sig.AllocationPct, &sig.Status, &sig.CreatedAt,
+			&sig.ID, &sig.Symbol, &sig.Type, &sig.LayerNumber, &sig.ExchangeName, &sig.AllocationPct, &sig.Status, &sig.CreatedAt,
 			&sig.TotalLayers, &sig.ActiveUsers, &sig.TotalVolumeQuote, &sig.RemainingQuantity, &sig.RemainingValueQuote,
 		); err != nil {
 			return nil, fmt.Errorf("store: scan active signal: %w", err)
 		}
+		sig.ExchangeDisplayName = exchangeDisplayName(sig.ExchangeName)
+		sig.LayerLabel = fmt.Sprintf("L%d %s", sig.LayerNumber, sig.ExchangeDisplayName)
 		signals = append(signals, sig)
 	}
 	if err := rows.Err(); err != nil {

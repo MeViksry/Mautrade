@@ -3,6 +3,10 @@ defineProps<{
   layer: {
     id: string
     pair: string
+    layerNumber?: number
+    exchangeName?: string
+    exchangeDisplayName?: string
+    layerLabel?: string
     entryPrice: number
     currentPrice: number
     allocationPct: number
@@ -17,6 +21,12 @@ const formatDate = (dateString: string) => {
   const d = new Date(dateString)
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+const layerIdentity = (layer: { id: string, layerLabel?: string, layerNumber?: number, exchangeDisplayName?: string }) => {
+  if (layer.layerLabel?.trim()) return layer.layerLabel
+  if (layer.layerNumber && layer.exchangeDisplayName?.trim()) return `L${layer.layerNumber} ${layer.exchangeDisplayName}`
+  return layer.id
+}
 </script>
 
 <template>
@@ -26,7 +36,7 @@ const formatDate = (dateString: string) => {
         {{ layer.pair }}
       </div>
       <div class="layer-row__meta">
-        <span class="layer-row__id">{{ layer.id }}</span>
+        <span class="layer-row__id">{{ layerIdentity(layer) }}</span>
         <span class="layer-row__dot" />
         <span class="layer-row__time">{{ formatDate(layer.openedAt) }}</span>
       </div>

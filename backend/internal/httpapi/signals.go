@@ -13,15 +13,17 @@ import (
 )
 
 type createAdminSignalRequest struct {
-	AdminID        string `json:"admin_id"`
-	Type           string `json:"type"`
-	Symbol         string `json:"symbol"`
-	LayerNumber    *int   `json:"layer_number"`
-	AllocationPct  string `json:"allocation_pct"`
-	Percentage     string `json:"percentage"`
-	SellPct        string `json:"sell_pct"`
-	SellPercentage string `json:"sell_percentage"`
-	IdempotencyKey string `json:"idempotency_key"`
+	AdminID         string `json:"admin_id"`
+	Type            string `json:"type"`
+	Symbol          string `json:"symbol"`
+	LayerNumber     *int   `json:"layer_number"`
+	ExchangeName    string `json:"exchange_name"`
+	ExchangeNameAlt string `json:"exchangeName"`
+	AllocationPct   string `json:"allocation_pct"`
+	Percentage      string `json:"percentage"`
+	SellPct         string `json:"sell_pct"`
+	SellPercentage  string `json:"sell_percentage"`
+	IdempotencyKey  string `json:"idempotency_key"`
 }
 
 type createAdminSignalResponse struct {
@@ -137,18 +139,36 @@ func (s *Server) validateCreateAdminSignalRequest(r *http.Request, req createAdm
 		}
 		allocationPct = "0"
 	}
+	exchangeName, err := normalizeSignalExchangeName(firstNonEmpty(req.ExchangeName, req.ExchangeNameAlt))
+	if err != nil {
+		return store.CreateSignalParams{}, err
+	}
 
 	return store.CreateSignalParams{
 		AdminID:        adminID,
 		Type:           signalType,
 		Symbol:         symbol,
 		LayerNumber:    req.LayerNumber,
+		ExchangeName:   exchangeName,
 		AllocationPct:  allocationPct,
 		SellPct:        sellPct,
 		IdempotencyKey: idempotencyKey,
 		DefaultAsset:   s.config.DefaultCurrency,
 		CreatedAt:      time.Now().UTC(),
 	}, nil
+}
+
+func normalizeSignalExchangeName(exchangeName string) (string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(exchangeName))
+	if normalized == "" {
+		return "", nil
+	}
+	switch normalized {
+	case "binance", "okx", "bybit", "tokocrypto":
+		return normalized, nil
+	default:
+		return "", fmt.Errorf("exchange_name must be binance, okx, bybit, or tokocrypto")
+	}
 }
 
 func (s *Server) publishSignalJobs(r *http.Request, dispatch store.SignalDispatch) (int, []signalPublishFailure) {

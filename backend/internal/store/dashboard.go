@@ -163,6 +163,10 @@ ORDER BY b.created_at ASC`
 type LayerView struct {
 	ID               string `json:"id"`
 	Pair             string `json:"pair"`
+	LayerNumber      int    `json:"layerNumber"`
+	ExchangeName     string `json:"exchangeName"`
+	ExchangeDisplay  string `json:"exchangeDisplayName"`
+	LayerLabel       string `json:"layerLabel"`
 	EntryPrice       string `json:"entryPrice"`
 	CurrentPrice     string `json:"currentPrice"`
 	AllocationPct    string `json:"allocationPct"`
@@ -185,6 +189,8 @@ WITH latest_prices AS (
 SELECT
   l.id::text,
   l.symbol,
+  l.layer_number,
+  b.exchange_name,
   l.entry_price::text,
   COALESCE(mp.price_quote, l.entry_price)::text AS current_price,
   l.allocation_pct::text,
@@ -197,10 +203,11 @@ SELECT
   l.status,
   l.opened_at::text
 FROM layers l
+JOIN exchange_bindings b ON b.id = l.exchange_binding_id
 LEFT JOIN latest_prices mp ON mp.symbol = l.symbol
 WHERE l.user_id = $1::uuid
   AND l.status IN ('open', 'partial')
-ORDER BY l.opened_at DESC
+ORDER BY l.opened_at DESC, b.exchange_name ASC, l.layer_number ASC
 LIMIT 100`
 
 	rows, err := s.db.Query(ctx, query, userID)
@@ -215,6 +222,8 @@ LIMIT 100`
 		if err := rows.Scan(
 			&layer.ID,
 			&layer.Pair,
+			&layer.LayerNumber,
+			&layer.ExchangeName,
 			&layer.EntryPrice,
 			&layer.CurrentPrice,
 			&layer.AllocationPct,
@@ -226,6 +235,8 @@ LIMIT 100`
 		); err != nil {
 			return nil, fmt.Errorf("store: scan active layer: %w", err)
 		}
+		layer.ExchangeDisplay = exchangeDisplayName(layer.ExchangeName)
+		layer.LayerLabel = fmt.Sprintf("L%d %s", layer.LayerNumber, layer.ExchangeDisplay)
 		layers = append(layers, layer)
 	}
 	if layers == nil {

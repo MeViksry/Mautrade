@@ -501,6 +501,9 @@ interface ActiveLayerResponse {
   symbol: string
   type: string
   layerNumber: number
+  exchangeName: string
+  exchangeDisplayName: string
+  layerLabel: string
   allocationPct: number
   status: string
   createdAt: string
@@ -633,10 +636,15 @@ const isPercentInputValid = (value: string) => {
   return Number.isFinite(numberValue) && numberValue > 0 && numberValue <= 100
 }
 
-const createSignalIdempotencyKey = (side: 'buy' | 'sell', symbol = selectedCoin.value, layerNumber?: number) => {
+const createSignalIdempotencyKey = (side: 'buy' | 'sell', symbol = selectedCoin.value, layerNumber?: number, exchangeName = '') => {
   const randomPart = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
   const layerPart = layerNumber ? `:layer-${layerNumber}` : ''
-  return `admin-signal:${side}:${symbol}${layerPart}:${randomPart}`
+  const exchangePart = exchangeName ? `:${exchangeName}` : ''
+  return `admin-signal:${side}:${symbol}${layerPart}${exchangePart}:${randomPart}`
+}
+
+const layerSellKey = (layer: ActiveLayerResponse) => {
+  return `${layer.symbol}:${layer.layerNumber}:${layer.exchangeName || 'all'}`
 }
 
 const dispatchAdminSignal = async (body: Record<string, string | number>, idempotencyKey: string) => {
@@ -707,7 +715,8 @@ const handleSellLayer = async (layer: ActiveLayerResponse) => {
     return
   }
 
-  const idempotencyKey = createSignalIdempotencyKey('sell', layer.symbol, layerNumber)
+  const exchangeName = layer.exchangeName?.trim() || ''
+  const idempotencyKey = createSignalIdempotencyKey('sell', layer.symbol, layerNumber, exchangeName)
   const body: Record<string, string | number> = {
     type: 'sell',
     symbol: layer.symbol,
@@ -715,11 +724,14 @@ const handleSellLayer = async (layer: ActiveLayerResponse) => {
     sell_pct: '100',
     idempotency_key: idempotencyKey
   }
+  if (exchangeName) {
+    body.exchange_name = exchangeName
+  }
 
   try {
-    sellingLayerKey.value = `${layer.symbol}:${layerNumber}`
+    sellingLayerKey.value = layerSellKey(layer)
     const response = await dispatchAdminSignal(body, idempotencyKey)
-    signalMessage.value = `SELL ${layer.symbol} layer ${layerNumber} accepted. Published ${response.jobsPublished}/${response.jobsCreated} jobs, skipped ${response.jobsSkipped}. Queue ${response.queueState}.`
+    signalMessage.value = `SELL ${layer.symbol} ${layer.layerLabel || `L${layerNumber}`} accepted. Published ${response.jobsPublished}/${response.jobsCreated} jobs, skipped ${response.jobsSkipped}. Queue ${response.queueState}.`
     signalMessageTone.value = 'success'
     await loadExecutionData()
   } catch (error) {
@@ -1097,7 +1109,7 @@ const cancelAllLayers = () => {
           v-for="layer in activeLayers"
           :key="layer.id"
           :layer="layer"
-          :selling="sellingLayerKey === `${layer.symbol}:${layer.layerNumber}`"
+          :selling="sellingLayerKey === layerSellKey(layer)"
           @sell-layer="handleSellLayer"
         />
         <div

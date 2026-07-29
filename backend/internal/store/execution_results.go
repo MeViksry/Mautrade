@@ -402,7 +402,7 @@ func applyBuyExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFor
 		return ExecutionResultApplySummary{}, err
 	}
 
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, "layer-number:"+job.UserID+":"+result.Symbol); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, "layer-number:"+job.UserID+":"+job.ExchangeBindingID+":"+result.Symbol); err != nil {
 		return ExecutionResultApplySummary{}, fmt.Errorf("store: acquire layer-number lock: %w", err)
 	}
 
@@ -411,7 +411,8 @@ func applyBuyExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFor
 SELECT COALESCE(MAX(layer_number), 0) + 1
 FROM layers
 WHERE user_id = $1::uuid
-  AND symbol = $2`, job.UserID, result.Symbol).Scan(&layerNumber); err != nil {
+  AND symbol = $2
+  AND exchange_binding_id = $3::uuid`, job.UserID, result.Symbol, job.ExchangeBindingID).Scan(&layerNumber); err != nil {
 		return ExecutionResultApplySummary{}, fmt.Errorf("store: next layer number: %w", err)
 	}
 
