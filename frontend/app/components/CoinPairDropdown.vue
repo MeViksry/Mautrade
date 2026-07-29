@@ -73,6 +73,16 @@ const coinIcons: Record<string, string> = {
   NEAR: 'simple-icons:near',
   SUI: 'simple-icons:sui'
 }
+const customCoinLogoSvgs: Record<string, string> = {
+  PEPE: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#69c95a"/><path fill="#b8ef83" d="M14 31c0-12 8-21 20-21 11 0 19 8 19 20 0 14-10 23-22 23-10 0-17-8-17-22Z"/><circle cx="25" cy="27" r="8" fill="#fff"/><circle cx="41" cy="27" r="8" fill="#fff"/><circle cx="27" cy="29" r="3.5" fill="#101820"/><circle cx="43" cy="29" r="3.5" fill="#101820"/><path fill="none" stroke="#101820" stroke-linecap="round" stroke-width="4" d="M22 42c6 5 15 5 22 0"/><path fill="#2b7c38" opacity=".72" d="M15 24c6-11 15-15 28-10-14 1-24 5-28 10Z"/></svg>`,
+  AVAX: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#e84142"/><path fill="#fff" d="M30 17c1-2 4-2 5 0l17 30c1 2 0 4-3 4H15c-3 0-4-2-3-4l18-30Zm2 10L22 44h20L32 27Z"/><path fill="#e84142" d="M32 27 22 44h20L32 27Z"/><path fill="#fff" d="M44 35c1-2 3-2 4 0l7 12c1 2 0 4-2 4h-13c-2 0-3-2-2-4l6-12Z"/></svg>`,
+  SHIB: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#f05d23"/><path fill="#ffe6b7" d="M16 26 13 13l13 6c4-2 8-2 12 0l13-6-3 13c4 6 4 15-1 21-7 8-23 8-30 0-5-6-5-15-1-21Z"/><path fill="#8b2d15" d="m15 15 12 11-14 2 2-13Zm34 0-12 11 14 2-2-13Z"/><circle cx="25" cy="32" r="3.5" fill="#101820"/><circle cx="39" cy="32" r="3.5" fill="#101820"/><path fill="#101820" d="M32 37 27 34h10l-5 3Z"/><path fill="none" stroke="#101820" stroke-linecap="round" stroke-width="3" d="M24 42c5 5 11 5 16 0"/></svg>`,
+  TRX: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#ef0027"/><path fill="none" stroke="#fff" stroke-linejoin="round" stroke-width="4" d="M14 13 51 21 29 52 14 13Z"/><path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 13 30 29m21-8-21 8m-1 23 1-23"/></svg>`,
+  ARB: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#213147" d="M32 4 56 18v28L32 60 8 46V18L32 4Z"/><path fill="#28a0f0" d="M32 9 51 20v23L32 54 13 43V20L32 9Z"/><path fill="#fff" d="m29 46 5-1 11-25-5-3-11 29Zm-10-9 4 3 10-23-4-2-10 22Z"/><path fill="#213147" d="m38 47 4-2-12-26-4 2 12 26Z"/></svg>`
+}
+const customCoinLogoSources = Object.fromEntries(
+  Object.entries(customCoinLogoSvgs).map(([asset, svg]) => [asset, `data:image/svg+xml,${encodeURIComponent(svg)}`])
+) as Record<string, string>
 
 const categoryOptions: Array<{ id: CoinPairCategory, label: string }> = [
   { id: 'all', label: 'All' },
@@ -138,6 +148,10 @@ const getCoinIconName = (asset = '') => {
   return coinIcons[asset] ?? ''
 }
 
+const getCustomCoinLogoSrc = (asset = '') => {
+  return customCoinLogoSources[asset] ?? ''
+}
+
 const chooseCoin = (symbol: string) => {
   emit('update:modelValue', symbol)
   search.value = ''
@@ -190,6 +204,12 @@ onBeforeUnmount(() => {
           :name="getCoinIconName(selectedBaseAsset)"
           class="coin-pair-select__icon"
         />
+        <img
+          v-else-if="getCustomCoinLogoSrc(selectedBaseAsset)"
+          :src="getCustomCoinLogoSrc(selectedBaseAsset)"
+          :alt="`${selectedBaseAsset} logo`"
+          class="coin-pair-select__logo-image"
+        >
         <strong v-else>{{ selectedBaseAsset.slice(0, 1) }}</strong>
       </span>
       <span class="coin-pair-select__main">
@@ -254,6 +274,12 @@ onBeforeUnmount(() => {
               v-if="getCoinIconName(getBaseAsset(coin.symbol))"
               :name="getCoinIconName(getBaseAsset(coin.symbol))"
             />
+            <img
+              v-else-if="getCustomCoinLogoSrc(getBaseAsset(coin.symbol))"
+              :src="getCustomCoinLogoSrc(getBaseAsset(coin.symbol))"
+              :alt="`${getBaseAsset(coin.symbol)} logo`"
+              class="coin-pair-select__logo-image"
+            >
             <strong v-else>{{ getBaseAsset(coin.symbol).slice(0, 1) }}</strong>
           </span>
           <strong>{{ getBaseAsset(coin.symbol) }}</strong>
@@ -319,6 +345,12 @@ onBeforeUnmount(() => {
               :name="getCoinIconName(getBaseAsset(coin.symbol))"
               class="coin-pair-select__icon"
             />
+            <img
+              v-else-if="getCustomCoinLogoSrc(getBaseAsset(coin.symbol))"
+              :src="getCustomCoinLogoSrc(getBaseAsset(coin.symbol))"
+              :alt="`${getBaseAsset(coin.symbol)} logo`"
+              class="coin-pair-select__logo-image"
+            >
             <strong v-else>{{ getBaseAsset(coin.symbol).slice(0, 1) }}</strong>
           </span>
           <span class="coin-pair-select__option-main">
@@ -405,6 +437,13 @@ onBeforeUnmount(() => {
   width: 20px;
   height: 20px;
   color: currentColor;
+}
+
+.coin-pair-select__logo-image {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .coin-pair-select__mark strong,
@@ -615,6 +654,11 @@ onBeforeUnmount(() => {
 .coin-pair-select__quick button > span svg {
   width: 12px;
   height: 12px;
+}
+
+.coin-pair-select__quick .coin-pair-select__logo-image {
+  width: 14px;
+  height: 14px;
 }
 
 .coin-pair-select__quick button > span strong {
