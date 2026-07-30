@@ -53,9 +53,17 @@ impl ExchangeExecutionClient for BybitExecutionClient {
         let account_mode = account_mode(&req, &credentials.account_mode);
         let base_url = Self::base_url(&account_mode);
         let symbol = binance_symbol(&req.symbol);
-        let qty = match req.side {
+        let qty_val = match req.side {
             OrderSide::Buy => quote_value(&req)?.to_string(),
-            OrderSide::Sell => quantity(&req)?.to_string(),
+            OrderSide::Sell => {
+                let mut q = quantity(&req)?;
+                if let Ok(base_precision) = self.fetch_base_precision(&base_url, &symbol).await {
+                    if base_precision > rust_decimal::Decimal::ZERO {
+                        q = (q / base_precision).floor() * base_precision;
+                    }
+                }
+                q.normalize().to_string()
+            }
         };
         let market_unit = match req.side {
             OrderSide::Buy => "quoteCoin",
@@ -67,7 +75,7 @@ impl ExchangeExecutionClient for BybitExecutionClient {
             symbol: &symbol,
             side: side_title(&req.side),
             order_type: "Market",
-            qty: &qty,
+            qty: &qty_val,
             time_in_force: "IOC",
             order_link_id: &order_link_id,
             is_leverage: 0,
@@ -230,6 +238,25 @@ impl BybitExecutionClient {
         }
         Ok(fetched.result.list.into_iter().next())
     }
+
+    async fn fetch_base_precision(&self, base_url: &str, symbol: &str) -> Result<rust_decimal::Decimal, ExecutionError> {
+        let query = crate::adapters::common::form_body(&[
+            ("category", "spot".to_string()),
+            ("symbol", symbol.to_string()),
+        ]);
+        let response = self
+            .http
+            .get(format!("{base_url}/v5/market/instruments-info?{query}"))
+            .send()
+            .await
+            .map_err(|err| ExecutionError::Exchange(format!("bybit instruments-info request failed: {err}")))?;
+        let body = crate::adapters::common::response_text(response, "bybit instruments-info").await?;
+        let fetched: BybitInstrumentsInfoResponse = serde_json::from_str(&body)
+            .map_err(|err| ExecutionError::Exchange(format!("bybit instruments-info decode failed: {err}")))?;
+        
+        let instrument = fetched.result.list.into_iter().next().unwrap_or_default();
+        Ok(crate::adapters::common::decimal_from_str(&instrument.lot_size_filter.base_precision))
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -295,4 +322,31 @@ struct BybitOrder {
     cum_exec_fee: String,
     #[serde(default)]
     cum_fee_detail: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct BybitInstrumentsInfoResponse {
+    #[serde(default)]
+    result: BybitInstrumentsInfoResult,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct BybitInstrumentsInfoResult {
+    #[serde(default)]
+    list: Vec<BybitInstrumentInfo>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct BybitInstrumentInfo {
+    #[serde(default)]
+    lot_size_filter: BybitLotSizeFilter,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct BybitLotSizeFilter {
+    #[serde(default)]
+    base_precision: String,
 }
