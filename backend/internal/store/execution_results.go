@@ -641,9 +641,14 @@ func applySellExecutionResult(ctx context.Context, tx pgx.Tx, job executionJobFo
 	nextRemaining := remainingQuantity.Sub(parsed.FilledQuantity)
 	nextStatus := "partial"
 	var closedAt any
-	if nextRemaining.Sign() == 0 {
+
+	reqQuantity, errReq := qdecimal.Parse(job.Request.Quantity)
+	isFullSell := errReq == nil && reqQuantity.Cmp(remainingQuantity) == 0
+
+	if nextRemaining.Sign() == 0 || isFullSell {
 		nextStatus = "closed"
 		closedAt = parsed.ExecutedAt
+		nextRemaining = qdecimal.Zero // Clear dust completely
 	}
 
 	entryValue := entryPrice.Mul(parsed.FilledQuantity)
