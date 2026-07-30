@@ -2321,6 +2321,8 @@ const cancelAllLayers = () => {
     min-height: 420px;
   }
 
+}
+
 .layer-row {
   display: grid;
   grid-template-columns: 1.55fr 3fr 1.1fr;
@@ -2388,6 +2390,7 @@ const cancelAllLayers = () => {
   white-space: nowrap;
 }
 
+@media (max-width: 980px) {
   .chart-wrapper {
     min-height: 320px;
   }
