@@ -47,8 +47,18 @@ impl ExchangeExecutionClient for OkxExecutionClient {
         let account_mode = account_mode(&req, &credentials.account_mode);
         let inst_id = okx_symbol(&req.symbol);
         let size = match req.side {
-            OrderSide::Buy => quote_value(&req)?.to_string(),
-            OrderSide::Sell => quantity(&req)?.to_string(),
+            OrderSide::Buy => {
+                quote_value(&req)?.to_string()
+            }
+            OrderSide::Sell => {
+                let mut q = quantity(&req)?;
+                if let Ok(lot_size) = self.fetch_lot_size(&account_mode, &inst_id).await {
+                    if lot_size > rust_decimal::Decimal::ZERO {
+                        q = (q / lot_size).floor() * lot_size;
+                    }
+                }
+                q.normalize().to_string()
+            }
         };
         let target_currency = match req.side {
             OrderSide::Buy => "quote_ccy",
@@ -215,6 +225,29 @@ impl OkxExecutionClient {
         }
         Ok(fetched.data.into_iter().next())
     }
+
+    async fn fetch_lot_size(
+        &self,
+        account_mode: &str,
+        inst_id: &str,
+    ) -> Result<rust_decimal::Decimal, ExecutionError> {
+        let mut request = self
+            .http
+            .get(format!("{BASE_URL}/api/v5/public/instruments?instType=SPOT&instId={inst_id}"));
+        if account_mode == "demo" || account_mode == "testnet" {
+            request = request.header("x-simulated-trading", "1");
+        }
+        let response = request
+            .send()
+            .await
+            .map_err(|err| ExecutionError::Exchange(format!("okx instruments request failed: {err}")))?;
+        let body = response_text(response, "okx instruments").await?;
+        let fetched: OkxInstrumentsResponse = serde_json::from_str(&body)
+            .map_err(|err| ExecutionError::Exchange(format!("okx instruments decode failed: {err}")))?;
+        
+        let instrument = fetched.data.into_iter().next().unwrap_or_default();
+        Ok(crate::adapters::common::decimal_from_str(&instrument.lot_sz))
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -276,4 +309,17 @@ struct OkxOrder {
     avg_price: String,
     #[serde(default)]
     fee: String,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct OkxInstrumentsResponse {
+    #[serde(default)]
+    data: Vec<OkxInstrumentInfo>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct OkxInstrumentInfo {
+    #[serde(default)]
+    lot_sz: String,
 }

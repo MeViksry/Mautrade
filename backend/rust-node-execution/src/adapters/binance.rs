@@ -47,7 +47,7 @@ impl ExchangeExecutionClient for BinanceExecutionClient {
         let account_mode = account_mode(&req, &credentials.account_mode);
         let symbol = binance_symbol(&req.symbol);
         let mut pairs = vec![
-            ("symbol", symbol),
+            ("symbol", symbol.clone()),
             ("side", side_upper(&req.side).to_string()),
             ("type", "MARKET".to_string()),
             ("newClientOrderId", client_order_id(&req, 36)),
@@ -57,7 +57,16 @@ impl ExchangeExecutionClient for BinanceExecutionClient {
         ];
         match req.side {
             OrderSide::Buy => pairs.push(("quoteOrderQty", quote_value(&req)?.to_string())),
-            OrderSide::Sell => pairs.push(("quantity", quantity(&req)?.to_string())),
+            OrderSide::Sell => {
+                let mut q = quantity(&req)?;
+                if let Ok(step_size) = self.fetch_step_size(&Self::base_url(&account_mode), &symbol).await {
+                    if step_size > rust_decimal::Decimal::ZERO {
+                        q = (q / step_size).floor() * step_size;
+                    }
+                }
+                let qty_str = q.normalize().to_string();
+                pairs.push(("quantity", qty_str));
+            }
         }
 
         let unsigned_body = form_body(&pairs);
@@ -77,6 +86,29 @@ impl ExchangeExecutionClient for BinanceExecutionClient {
         let order: BinanceOrderResponse = serde_json::from_str(&body)
             .map_err(|err| ExecutionError::Exchange(format!("binance order response decode failed: {err}")))?;
         Ok(order.into_report(&req))
+    }
+}
+
+impl BinanceExecutionClient {
+    async fn fetch_step_size(&self, base_url: &str, symbol: &str) -> Result<rust_decimal::Decimal, ExecutionError> {
+        let response = self
+            .http
+            .get(format!("{base_url}/api/v3/exchangeInfo?symbol={symbol}"))
+            .send()
+            .await
+            .map_err(|err| ExecutionError::Exchange(format!("binance exchangeInfo request failed: {err}")))?;
+        let body = response_text(response, "binance exchangeInfo").await?;
+        let fetched: BinanceExchangeInfoResponse = serde_json::from_str(&body)
+            .map_err(|err| ExecutionError::Exchange(format!("binance exchangeInfo decode failed: {err}")))?;
+        
+        for symbol_info in fetched.symbols {
+            for filter in symbol_info.filters {
+                if filter.filter_type == "LOT_SIZE" {
+                    return Ok(crate::adapters::common::decimal_from_str(&filter.step_size));
+                }
+            }
+        }
+        Ok(rust_decimal::Decimal::ZERO)
     }
 }
 
@@ -125,4 +157,25 @@ fn json_value_to_string(value: &serde_json::Value) -> Option<String> {
         serde_json::Value::Number(value) => Some(value.to_string()),
         _ => None,
     }
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct BinanceExchangeInfoResponse {
+    #[serde(default)]
+    symbols: Vec<BinanceSymbolInfo>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct BinanceSymbolInfo {
+    #[serde(default)]
+    filters: Vec<BinanceFilter>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct BinanceFilter {
+    #[serde(default)]
+    filter_type: String,
+    #[serde(default)]
+    step_size: String,
 }

@@ -47,7 +47,7 @@ impl ExchangeExecutionClient for TokocryptoExecutionClient {
 
         let symbol = tokocrypto_symbol(&req.symbol);
         let mut pairs = vec![
-            ("symbol", symbol),
+            ("symbol", symbol.clone()),
             ("side", tokocrypto_side(&req.side).to_string()),
             ("type", "2".to_string()),
             ("timeInForce", "2".to_string()),
@@ -57,7 +57,16 @@ impl ExchangeExecutionClient for TokocryptoExecutionClient {
         ];
         match req.side {
             OrderSide::Buy => pairs.push(("quoteOrderQty", quote_value(&req)?.to_string())),
-            OrderSide::Sell => pairs.push(("quantity", quantity(&req)?.to_string())),
+            OrderSide::Sell => {
+                let mut q = quantity(&req)?;
+                if let Ok(step_size) = self.fetch_step_size(&symbol).await {
+                    if step_size > rust_decimal::Decimal::ZERO {
+                        q = (q / step_size).floor() * step_size;
+                    }
+                }
+                let qty_str = q.normalize().to_string();
+                pairs.push(("quantity", qty_str));
+            }
         }
         let unsigned_body = form_body(&pairs);
         let signature = hmac_sha256_hex(&credentials.api_secret, &unsigned_body)?;
@@ -176,6 +185,32 @@ impl TokocryptoExecutionClient {
         }
         Ok(fetched.data)
     }
+
+    async fn fetch_step_size(&self, symbol: &str) -> Result<rust_decimal::Decimal, ExecutionError> {
+        // Tokocrypto doesn't need to filter by symbol here, as their endpoint doesn't support the symbol query properly.
+        // We fetch all symbols (cached or fast enough) and search for the symbol.
+        let response = self
+            .http
+            .get(format!("{BASE_URL}/open/v1/common/symbols"))
+            .send()
+            .await
+            .map_err(|err| ExecutionError::Exchange(format!("tokocrypto common/symbols request failed: {err}")))?;
+        let body = response_text(response, "tokocrypto common/symbols").await?;
+        let fetched: TokocryptoExchangeInfoResponse = serde_json::from_str(&body)
+            .map_err(|err| ExecutionError::Exchange(format!("tokocrypto common/symbols decode failed: {err}")))?;
+        
+        // The API returns all symbols, we must find ours
+        for symbol_info in fetched.data.list {
+            if symbol_info.symbol == symbol {
+                for filter in symbol_info.filters {
+                    if filter.filter_type == "LOT_SIZE" {
+                        return Ok(crate::adapters::common::decimal_from_str(&filter.step_size));
+                    }
+                }
+            }
+        }
+        Ok(rust_decimal::Decimal::ZERO)
+    }
 }
 
 fn tokocrypto_side(side: &OrderSide) -> i32 {
@@ -248,3 +283,33 @@ impl TokocryptoOrder {
         }
     }
 }
+
+#[derive(Debug, Deserialize, Default)]
+struct TokocryptoExchangeInfoResponse {
+    #[serde(default)]
+    data: TokocryptoExchangeInfoData,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct TokocryptoExchangeInfoData {
+    #[serde(default)]
+    list: Vec<TokocryptoSymbolInfo>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct TokocryptoSymbolInfo {
+    #[serde(default)]
+    symbol: String,
+    #[serde(default)]
+    filters: Vec<TokocryptoFilter>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct TokocryptoFilter {
+    #[serde(default)]
+    filter_type: String,
+    #[serde(default)]
+    step_size: String,
+}
+
