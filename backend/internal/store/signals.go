@@ -396,7 +396,7 @@ func (s *DashboardStore) createSellJobs(ctx context.Context, tx pgx.Tx, signalID
 		return nil, 0, err
 	}
 
-	const query = `
+	const queryBase = `
 WITH latest_balances AS (
   SELECT DISTINCT ON (exchange_binding_id, asset)
     exchange_binding_id,
@@ -404,7 +404,7 @@ WITH latest_balances AS (
     free_amount AS available_balance,
     captured_at
   FROM exchange_balance_snapshots
-  WHERE asset = $4
+  WHERE asset = $3
   ORDER BY exchange_binding_id, asset, captured_at DESC
 )
 SELECT
@@ -413,7 +413,7 @@ SELECT
   b.exchange_name,
   b.account_mode,
   l.id::text,
-  ((l.remaining_quantity * $3::numeric) / 100)::text AS quantity,
+  ((l.remaining_quantity * $4::numeric) / 100)::text AS quantity,
   COALESCE(lb.available_balance, 0)::text AS available_base,
   COALESCE(lb.captured_at >= now() - interval '7 days', false) AS balance_fresh
 FROM layers l
@@ -425,11 +425,18 @@ WHERE l.symbol = $1
   AND l.status IN ('open', 'partial')
   AND u.status = 'active'
   AND b.status IN ('active', 'closing_only')
-  AND ($5 = '' OR b.exchange_name = $5)
-  AND ((l.remaining_quantity * $3::numeric) / 100) > 0
-ORDER BY b.exchange_name ASC, l.opened_at ASC`
+  AND ((l.remaining_quantity * $4::numeric) / 100) > 0`
 
-	rows, err := tx.Query(ctx, query, params.Symbol, *params.LayerNumber, params.SellPct, baseAsset, params.ExchangeName)
+	query := queryBase
+	args := []any{params.Symbol, *params.LayerNumber, baseAsset, params.SellPct}
+	
+	if params.ExchangeName != "" {
+		query += ` AND b.exchange_name = $5`
+		args = append(args, params.ExchangeName)
+	}
+	query += ` ORDER BY b.exchange_name ASC, l.opened_at ASC`
+
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("store: query sell eligible layers: %w", err)
 	}
