@@ -1044,33 +1044,6 @@ const cancelAllLayers = () => {
                 >
                 <span>% {{ quoteAsset }} Spot</span>
               </div>
-              <label
-                for="buy-exchange-select"
-                style="margin-top: 1rem;"
-              >Exchange</label>
-              <div class="ticket-input">
-                <select
-                  id="buy-exchange-select"
-                  v-model="selectedExchange"
-                  class="ticket-select"
-                >
-                  <option value="">
-                    All Exchanges
-                  </option>
-                  <option value="binance">
-                    Binance
-                  </option>
-                  <option value="bybit">
-                    Bybit
-                  </option>
-                  <option value="okx">
-                    OKX
-                  </option>
-                  <option value="tokocrypto">
-                    Tokocrypto
-                  </option>
-                </select>
-              </div>
 
               <div class="ticket-summary">
                 <span>Layer</span>
