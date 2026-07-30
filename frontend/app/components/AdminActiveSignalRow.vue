@@ -66,7 +66,9 @@ const layerIdentity = (layer: ActiveLayer) => {
         <span class="layer-row__dot" />
         <span>{{ layer.activeUsers }} users</span>
         <span class="layer-row__dot" />
-        <span>{{ formatDate(layer.createdAt) }}</span>
+        <ClientOnly>
+          <span>{{ formatDate(layer.createdAt) }}</span>
+        </ClientOnly>
       </div>
     </div>
 

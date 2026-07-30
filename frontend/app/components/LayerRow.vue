@@ -38,7 +38,9 @@ const layerIdentity = (layer: { id: string, layerLabel?: string, layerNumber?: n
       <div class="layer-row__meta">
         <span class="layer-row__id">{{ layerIdentity(layer) }}</span>
         <span class="layer-row__dot" />
-        <span class="layer-row__time">{{ formatDate(layer.openedAt) }}</span>
+        <ClientOnly>
+          <span class="layer-row__time">{{ formatDate(layer.openedAt) }}</span>
+        </ClientOnly>
       </div>
     </div>
 

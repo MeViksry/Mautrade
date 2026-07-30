@@ -35,7 +35,9 @@ const historyIdentity = (history: { id: string, layerLabel?: string, layerNumber
       <div class="history-row__meta">
         <span class="history-row__id">{{ historyIdentity(history) }}</span>
         <span class="history-row__dot" />
-        <span class="history-row__time">Closed: {{ formatDate(history.closedAt) }}</span>
+        <ClientOnly>
+          <span class="history-row__time">Closed: {{ formatDate(history.closedAt) }}</span>
+        </ClientOnly>
       </div>
     </div>
 

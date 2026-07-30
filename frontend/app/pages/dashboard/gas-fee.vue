@@ -454,7 +454,9 @@ const gasFeeMetricTrend = computed(() => {
                 <div class="gas-fee-row__meta">
                   <span>{{ entry.id }}</span>
                   <span class="gas-fee-row__dot" />
-                  <span>{{ formatDate(entry.occurredAt) }}</span>
+                  <ClientOnly>
+                    <span>{{ formatDate(entry.occurredAt) }}</span>
+                  </ClientOnly>
                 </div>
               </div>
 

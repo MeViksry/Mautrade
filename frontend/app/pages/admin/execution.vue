@@ -1210,7 +1210,9 @@ const cancelAllLayers = () => {
               {{ item.pair }}
             </div>
             <div class="layer-row__meta">
-              <span>{{ formatDate(item.date) }}</span>
+              <ClientOnly>
+                <span>{{ formatDate(item.date) }}</span>
+              </ClientOnly>
             </div>
           </div>
           <div class="layer-row__stats">
