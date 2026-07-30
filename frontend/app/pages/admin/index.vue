@@ -13,7 +13,7 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import StatCard from '~/components/StatCard.vue'
-import LayerRow from '~/components/LayerRow.vue'
+import AdminActiveSignalRow from '~/components/AdminActiveSignalRow.vue'
 
 ChartJS.register(
   CategoryScale,
@@ -55,32 +55,25 @@ const stats = ref({
   revenue365Day: 1540000
 })
 
-const activeLayers = ref([
-  {
-    id: 'layer-1',
-    pair: 'BTC/USDT',
-    entryPrice: 65400,
-    currentPrice: 66200,
-    allocationPct: 15,
-    allocatedUsdt: 1500,
-    unrealizedPnl: 18.3,
-    unrealizedPnlPct: 1.2,
-    openedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    status: 'ACTIVE'
-  },
-  {
-    id: 'layer-2',
-    pair: 'ETH/USDT',
-    entryPrice: 3400,
-    currentPrice: 3500,
-    allocationPct: 10,
-    allocatedUsdt: 1000,
-    unrealizedPnl: 29.4,
-    unrealizedPnlPct: 2.9,
-    openedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    status: 'ACTIVE'
-  }
-])
+interface ActiveLayerResponse {
+  id: string
+  symbol: string
+  type: string
+  layerNumber: number
+  exchangeName: string
+  exchangeDisplayName: string
+  layerLabel: string
+  allocationPct: number
+  status: string
+  createdAt: string
+  totalLayers: number
+  activeUsers: number
+  totalVolumeQuote: number
+  remainingQuantity: number
+  remainingValueQuote: number
+}
+
+const activeLayers = ref<ActiveLayerResponse[]>([])
 
 // Chart data
 const userGrowthData = ref({
@@ -206,6 +199,10 @@ onMounted(async () => {
         ]
       }
     }
+
+    activeLayers.value = await $fetch<ActiveLayerResponse[]>(`${apiBase}/admin/signals/active`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
   } catch (err) {
     console.error('Failed to load admin overview:', err)
   } finally {
@@ -311,14 +308,8 @@ onMounted(async () => {
           All Active Layers
         </h2>
         <div class="layers-container">
-          <div class="layers-header">
-            <span>PAIR / SIDE</span>
-            <span class="center">ENTRY / CURRENT</span>
-            <span class="center">ALLOCATION</span>
-            <span class="right">UNREALIZED PNL</span>
-          </div>
           <div class="layers-list">
-            <LayerRow
+            <AdminActiveSignalRow
               v-for="layer in activeLayers"
               :key="layer.id"
               :layer="layer"
@@ -407,26 +398,6 @@ onMounted(async () => {
   gap: 1rem;
 }
 
-.layers-header {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  padding: 0 1.5rem 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-mute);
-}
-
-.layers-header .center {
-  text-align: center;
-}
-
-.layers-header .right {
-  text-align: right;
-}
-
 .layers-list {
   display: flex;
   flex-direction: column;
@@ -511,9 +482,6 @@ onMounted(async () => {
 @media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: 1fr;
-  }
-  .layers-header {
-    display: none;
   }
 }
 </style>
