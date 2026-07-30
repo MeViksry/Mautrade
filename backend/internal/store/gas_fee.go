@@ -224,7 +224,7 @@ SELECT
   g.gas_fee_amount::text,
   (-g.gas_fee_amount)::text AS balance_impact,
   $2 AS asset,
-  CASE WHEN b.exchange_name = 'okx' THEN 'OKX' ELSE INITCAP(b.exchange_name) END || ' ' || l.symbol AS reference,
+  'L' || l.layer_number::text || ' ' || CASE WHEN b.exchange_name = 'okx' THEN 'OKX' ELSE INITCAP(b.exchange_name) END || ' ' || l.symbol AS reference,
   NULL::text AS tx_id,
   ''::text AS network,
   0::bigint AS chain_id,
