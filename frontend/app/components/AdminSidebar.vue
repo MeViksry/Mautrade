@@ -21,8 +21,6 @@ onMounted(() => {
   mediaQuery = window.matchMedia(compactSidebarQuery)
   syncSidebarMode(mediaQuery.matches)
   mediaQuery.addEventListener('change', handleSidebarModeChange)
-
-  // Enable transitions after a short delay to prevent initial load animation
   setTimeout(() => {
     isMounted.value = true
   }, 50)

@@ -19,11 +19,11 @@ func (s *Server) handleGetServerIP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	
+
 	if cachedServerIP == "" {
 		writeError(w, http.StatusInternalServerError, "Failed to get server IP")
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, map[string]string{"ip": cachedServerIP})
 }
