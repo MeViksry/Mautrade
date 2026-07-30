@@ -429,7 +429,7 @@ WHERE l.symbol = $1
 
 	query := queryBase
 	args := []any{params.Symbol, *params.LayerNumber, baseAsset, params.SellPct}
-	
+
 	if params.ExchangeName != "" {
 		query += ` AND b.exchange_name = $5`
 		args = append(args, params.ExchangeName)
