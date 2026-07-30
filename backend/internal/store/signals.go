@@ -485,6 +485,23 @@ ORDER BY b.exchange_name ASC, l.opened_at ASC`
 			skipped++
 			continue
 		}
+		expiredCount, expErr := expireStaleInFlightSellJobs(ctx, tx, layer.LayerID)
+		if expErr != nil {
+			return nil, skipped, expErr
+		}
+		if expiredCount > 0 {
+			_ = insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+				UserID:            layer.UserID,
+				ExchangeBindingID: layer.ExchangeBindingID,
+				MasterSignalID:    signalID,
+				LayerID:           layer.LayerID,
+				EventType:         "sell_stale_jobs_expired",
+				Asset:             baseAsset,
+				RequiredAmount:    layer.Quantity,
+				AvailableAmount:   layer.AvailableBase,
+				Reason:            fmt.Sprintf("auto-expired %d stale in-flight sell execution jobs", expiredCount),
+			})
+		}
 		inFlightJobID, inFlight, err := inFlightSellExecutionJob(ctx, tx, layer.LayerID)
 		if err != nil {
 			return nil, skipped, err
@@ -532,37 +549,18 @@ ORDER BY b.exchange_name ASC, l.opened_at ASC`
 			return nil, skipped, err
 		}
 		if insufficient {
-			reason := fmt.Sprintf("reconciliation: insufficient %s balance for layer sell; required=%s available=%s", baseAsset, layer.Quantity, layer.AvailableBase)
-			if err := insertExecutionJobWithStatus(ctx, tx, job, "skipped", reason); err != nil {
-				return nil, skipped, err
-			}
-			if _, err := tx.Exec(ctx, `
-UPDATE layers
-SET status = 'orphaned',
-    orphan_reason = $2,
-    updated_at = now()
-WHERE id = $1::uuid
-  AND status IN ('open', 'partial')`, layer.LayerID, reason); err != nil {
-				return nil, skipped, fmt.Errorf("store: mark layer orphaned after reconciliation failure: %w", err)
-			}
-			if err := insertReconciliationEvent(ctx, tx, reconciliationEventInput{
+			reason := fmt.Sprintf("warning: %s balance may be insufficient for layer sell; required=%s available=%s — proceeding anyway, exchange will reject if truly insufficient", baseAsset, layer.Quantity, layer.AvailableBase)
+			_ = insertReconciliationEvent(ctx, tx, reconciliationEventInput{
 				UserID:            layer.UserID,
 				ExchangeBindingID: layer.ExchangeBindingID,
 				MasterSignalID:    signalID,
 				LayerID:           layer.LayerID,
-				EventType:         "sell_insufficient_base_balance",
+				EventType:         "sell_balance_warning",
 				Asset:             baseAsset,
 				RequiredAmount:    layer.Quantity,
 				AvailableAmount:   layer.AvailableBase,
 				Reason:            reason,
-			}); err != nil {
-				return nil, skipped, err
-			}
-			if err := insertNotification(ctx, tx, layer.UserID, "Layer Reconciliation Failed", reason); err != nil {
-				return nil, skipped, err
-			}
-			skipped++
-			continue
+			})
 		}
 		if err := insertExecutionJob(ctx, tx, job); err != nil {
 			return nil, skipped, err
@@ -618,6 +616,25 @@ LIMIT 1`, layerID).Scan(&jobID)
 		return "", false, fmt.Errorf("store: check in-flight sell execution job: %w", err)
 	}
 	return jobID, true, nil
+}
+
+func expireStaleInFlightSellJobs(ctx context.Context, tx pgx.Tx, layerID string) (int64, error) {
+	tag, err := tx.Exec(ctx, `
+UPDATE execution_jobs
+SET status = 'failed',
+    last_error = 'auto-expired: sell execution job was stale and never completed',
+    updated_at = now()
+WHERE layer_id = $1::uuid
+  AND subject = 'execution.sell.request'
+  AND (
+    (status IN ('queued', 'published') AND created_at < now() - interval '5 minutes')
+    OR
+    (status = 'running' AND created_at < now() - interval '10 minutes')
+  )`, layerID)
+	if err != nil {
+		return 0, fmt.Errorf("store: expire stale in-flight sell jobs: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 func newExecutionJob(signalID, layerID, userID, bindingID, exchange, accountMode, symbol, side, quantity, quoteValue string, createdAt time.Time) (ExecutionJobRecord, error) {

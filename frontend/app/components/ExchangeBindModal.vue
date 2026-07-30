@@ -338,9 +338,6 @@ const submitBindExchange = () => {
                 <UIcon :name="copiedIp ? 'lucide:check' : 'lucide:copy'" />
               </button>
             </div>
-            <p class="bind-ip-box__help">
-              Tambahkan IP ini di pengaturan API Exchange Anda agar Mautrade bisa melakukan eksekusi.
-            </p>
           </div>
 
           <label class="bind-field">
