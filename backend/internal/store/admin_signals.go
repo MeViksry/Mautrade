@@ -35,6 +35,15 @@ type AdminOpenOrderView struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type AdminCompletedSignalView struct {
+	ID         string    `json:"id"`
+	Pair       string    `json:"pair"`
+	EntryPrice float64   `json:"entryPrice"`
+	ClosePrice float64   `json:"closePrice"`
+	PnL        float64   `json:"pnl"`
+	Date       time.Time `json:"date"`
+}
+
 func (s *DashboardStore) AdminListActiveSignals(ctx context.Context, limit, offset int) ([]AdminActiveSignalView, error) {
 	const query = `
 		SELECT
@@ -87,6 +96,46 @@ func (s *DashboardStore) AdminListActiveSignals(ctx context.Context, limit, offs
 	}
 	if signals == nil {
 		signals = []AdminActiveSignalView{}
+	}
+	return signals, nil
+}
+
+func (s *DashboardStore) AdminListCompletedSignals(ctx context.Context, limit, offset int) ([]AdminCompletedSignalView, error) {
+	const query = `
+		SELECT
+			le.id::text,
+			l.symbol,
+			l.entry_price::float8,
+			le.price::float8,
+			(((le.price - l.entry_price) / l.entry_price) * 100)::float8 AS pnl,
+			le.created_at
+		FROM layer_executions le
+		JOIN layers l ON l.id = le.layer_id
+		WHERE le.action = 'sell' AND le.status = 'success'
+		ORDER BY le.created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := s.db.Query(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("store: admin list completed signals: %w", err)
+	}
+	defer rows.Close()
+
+	var signals []AdminCompletedSignalView
+	for rows.Next() {
+		var sig AdminCompletedSignalView
+		if err := rows.Scan(
+			&sig.ID, &sig.Pair, &sig.EntryPrice, &sig.ClosePrice, &sig.PnL, &sig.Date,
+		); err != nil {
+			return nil, fmt.Errorf("store: scan completed signal: %w", err)
+		}
+		signals = append(signals, sig)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if signals == nil {
+		signals = []AdminCompletedSignalView{}
 	}
 	return signals, nil
 }

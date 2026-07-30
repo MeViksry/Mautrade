@@ -580,11 +580,25 @@ interface CompletedLayer {
   date: string
 }
 
+const activeTab = ref('active')
 const activeLayers = ref<ActiveLayerResponse[]>([])
-const completedLayers = ref<CompletedLayer[]>([
-  { id: 'layer-eth-c', pair: 'ETH/USDT', entryPrice: 3400, closePrice: 3550, pnl: 4.4, date: '2026-07-18' }
-])
+const completedLayers = ref<CompletedLayer[]>([])
 const loading = ref(true)
+
+const loadCompletedData = async () => {
+  try {
+    completedLayers.value = await $fetch<CompletedLayer[]>(`${apiBase}/admin/signals/completed`, {
+      headers: { Authorization: `Bearer ${tokenCookie.value}` }
+    })
+  } catch (err) {
+    console.error('Failed to load completed layers', err)
+  }
+}
+
+const formatDate = (dateString: string) => {
+  const d = new Date(dateString)
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
 
 const loadExecutionData = async () => {
   try {
@@ -598,6 +612,7 @@ const loadExecutionData = async () => {
 
 onMounted(() => {
   loadExecutionData()
+  loadCompletedData()
   setTimeout(() => {
     loading.value = false
   }, 1000)
@@ -1157,16 +1172,28 @@ const cancelAllLayers = () => {
 
     <section class="bottom-desk terminal-panel">
       <div class="bottom-tabs">
-        <button class="active">
+        <button
+          :class="{ active: activeTab === 'active' }"
+          @click="activeTab = 'active'"
+        >
           Active Layers({{ activeLayers.length }})
         </button>
-        <button>
+        <button
+          :class="{ active: activeTab === 'completed' }"
+          @click="activeTab = 'completed'"
+        >
           Completed History
         </button>
-        <button>
+        <button
+          :class="{ active: activeTab === 'risk' }"
+          @click="activeTab = 'risk'"
+        >
           Risk Queue
         </button>
-        <div class="bottom-actions">
+        <div
+          v-if="activeTab === 'active'"
+          class="bottom-actions"
+        >
           <button
             type="button"
             class="cancel-all"
@@ -1177,7 +1204,10 @@ const cancelAllLayers = () => {
         </div>
       </div>
 
-      <div class="layers-list">
+      <div
+        v-if="activeTab === 'active'"
+        class="layers-list"
+      >
         <AdminActiveSignalRow
           v-for="layer in activeLayers"
           :key="layer.id"
@@ -1193,13 +1223,59 @@ const cancelAllLayers = () => {
         </div>
       </div>
 
-      <div class="completed-strip">
-        <span
+      <div
+        v-if="activeTab === 'completed'"
+        class="layers-list"
+      >
+        <div
           v-for="item in completedLayers"
           :key="item.id"
+          class="layer-row"
         >
-          {{ item.pair }} closed at {{ item.closePrice }} <strong class="text-success">+{{ item.pnl }}%</strong>
-        </span>
+          <div class="layer-row__info">
+            <div class="layer-row__pair">
+              {{ item.pair }}
+            </div>
+            <div class="layer-row__meta">
+              <span>{{ formatDate(item.date) }}</span>
+            </div>
+          </div>
+          <div class="layer-row__stats">
+            <div class="layer-row__stat-group">
+              <div class="layer-row__label">
+                Entry Price
+              </div>
+              <div class="layer-row__val">
+                {{ item.entryPrice }}
+              </div>
+            </div>
+            <div class="layer-row__stat-group">
+              <div class="layer-row__label">
+                Close Price
+              </div>
+              <div class="layer-row__val">
+                {{ item.closePrice }}
+              </div>
+            </div>
+            <div class="layer-row__stat-group">
+              <div class="layer-row__label">
+                PnL
+              </div>
+              <div
+                class="layer-row__val"
+                :style="{ color: item.pnl >= 0 ? 'var(--text-success)' : 'var(--text-danger)' }"
+              >
+                {{ item.pnl > 0 ? '+' : '' }}{{ item.pnl.toFixed(2) }}%
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          v-if="completedLayers.length === 0"
+          class="empty-state"
+        >
+          No completed history.
+        </div>
       </div>
     </section>
   </div>

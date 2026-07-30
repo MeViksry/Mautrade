@@ -183,6 +183,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("PATCH /api/v1/admin/gas-fee/deposits/{deposit_id}/status", s.handleUpdateGasFeeDepositStatus)
 	s.mux.HandleFunc("POST /api/v1/admin/signals", s.handleCreateAdminSignal)
 	s.mux.HandleFunc("GET /api/v1/admin/signals/active", s.handleAdminListActiveSignals)
+	s.mux.HandleFunc("GET /api/v1/admin/signals/completed", s.handleAdminListCompletedSignals)
 	s.mux.HandleFunc("GET /api/v1/admin/signals/orders", s.handleAdminListOpenOrders)
 	s.mux.HandleFunc("POST /api/v1/admin/executions/{job_id}/retry", s.handleRetryAdminExecution)
 	s.mux.HandleFunc("GET /api/v1/admin/signals/{signal_id}/executions", s.handleAdminSignalExecutions)

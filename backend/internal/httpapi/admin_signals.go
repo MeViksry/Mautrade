@@ -27,6 +27,29 @@ func (s *Server) handleAdminListActiveSignals(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, signals)
 }
 
+func (s *Server) handleAdminListCompletedSignals(w http.ResponseWriter, r *http.Request) {
+	if !s.store.Ready() {
+		writeError(w, http.StatusServiceUnavailable, "postgres is required to read signals")
+		return
+	}
+	if _, ok := s.requireAdmin(w, r); !ok {
+		return
+	}
+
+	signals, err := s.store.AdminListCompletedSignals(
+		r.Context(),
+		positiveIntQuery(r, "limit", 50, 500),
+		nonNegativeIntQuery(r, "offset", 0),
+	)
+	if err != nil {
+		s.logger.Error("list completed signals", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to read completed signals")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, signals)
+}
+
 func (s *Server) handleAdminListOpenOrders(w http.ResponseWriter, r *http.Request) {
 	if !s.store.Ready() {
 		writeError(w, http.StatusServiceUnavailable, "postgres is required to read open orders")
