@@ -224,7 +224,7 @@ SELECT
   g.gas_fee_amount::text,
   (-g.gas_fee_amount)::text AS balance_impact,
   $2 AS asset,
-  l.symbol AS reference,
+  CASE WHEN b.exchange_name = 'okx' THEN 'OKX' ELSE INITCAP(b.exchange_name) END || ' ' || l.symbol AS reference,
   NULL::text AS tx_id,
   ''::text AS network,
   0::bigint AS chain_id,
@@ -240,6 +240,7 @@ SELECT
   g.calculated_at AS ordered_at
 FROM gas_fee_ledger g
 JOIN layers l ON l.id = g.layer_id
+JOIN exchange_bindings b ON b.id = l.exchange_binding_id
 WHERE g.user_id = $1::uuid
 ORDER BY ordered_at DESC
 LIMIT $3`
