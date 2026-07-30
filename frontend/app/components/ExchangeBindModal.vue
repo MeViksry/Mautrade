@@ -82,6 +82,7 @@ const resetBindState = () => {
   apiKey.value = ''
   apiSecret.value = ''
   submitAttempted.value = false
+  copiedIp.value = false
 
   Object.keys(extras).forEach((key) => {
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
@@ -106,8 +107,41 @@ const resetBindState = () => {
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     resetBindState()
+    fetchServerIp()
   }
 })
+
+const serverIp = ref<string>('')
+const fetchingIp = ref(false)
+const copiedIp = ref(false)
+
+const fetchServerIp = async () => {
+  if (serverIp.value || fetchingIp.value) return
+  fetchingIp.value = true
+  try {
+    const res = await $fetch<{ ip: string }>('/api/v1/system/ip')
+    if (res && res.ip) {
+      serverIp.value = res.ip
+    }
+  } catch (err) {
+    console.error('Failed to fetch server IP', err)
+  } finally {
+    fetchingIp.value = false
+  }
+}
+
+const copyIpAddress = async () => {
+  if (!serverIp.value) return
+  try {
+    await navigator.clipboard.writeText(serverIp.value)
+    copiedIp.value = true
+    setTimeout(() => {
+      copiedIp.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy IP', err)
+  }
+}
 
 const closeBindModal = () => {
   emit('update:modelValue', false)
@@ -284,6 +318,29 @@ const submitBindExchange = () => {
               :alt="`${selectedExchange.name} logo`"
             >
             <span>{{ selectedExchange.name }}</span>
+          </div>
+
+          <div
+            v-if="serverIp"
+            class="bind-ip-box"
+          >
+            <div class="bind-ip-box__header">
+              <span>IP Whitelist Server</span>
+            </div>
+            <div class="bind-ip-box__content">
+              <code class="bind-ip-box__ip">{{ serverIp }}</code>
+              <button
+                type="button"
+                class="bind-ip-box__copy-btn"
+                aria-label="Copy IP address"
+                @click="copyIpAddress"
+              >
+                <UIcon :name="copiedIp ? 'lucide:check' : 'lucide:copy'" />
+              </button>
+            </div>
+            <p class="bind-ip-box__help">
+              Tambahkan IP ini di pengaturan API Exchange Anda agar Mautrade bisa melakukan eksekusi.
+            </p>
           </div>
 
           <label class="bind-field">
@@ -563,6 +620,65 @@ const submitBindExchange = () => {
   object-fit: contain;
 }
 
+.bind-ip-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--charcoal);
+  border: 1px solid var(--accent);
+}
+
+.bind-ip-box__header {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.bind-ip-box__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line);
+}
+
+.bind-ip-box__ip {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.bind-ip-box__copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.bind-ip-box__copy-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.bind-ip-box__help {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
 .exchange-option__status {
   font-family: var(--mono);
   font-size: 9px;
@@ -706,6 +822,13 @@ const submitBindExchange = () => {
   background: #ff7324;
   border-color: #ff7324;
   transform: translateY(-1px);
+}
+
+.bind-submit span {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .bind-submit.is-blocked {
