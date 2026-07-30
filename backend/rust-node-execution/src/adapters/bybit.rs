@@ -264,6 +264,7 @@ struct BybitCreateOrderResponse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BybitCreateOrderResult {
+    #[serde(default)]
     order_id: String,
 }
 
