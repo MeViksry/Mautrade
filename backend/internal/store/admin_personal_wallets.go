@@ -84,8 +84,8 @@ func (s *DashboardStore) AdminPersonalWallets(ctx context.Context) ([]AdminPerso
 	rows, err := s.db.Query(ctx, `
 WITH day_window AS (
   SELECT
-    ((now() AT TIME ZONE 'Asia/Jakarta')::date AT TIME ZONE 'Asia/Jakarta') AS starts_at,
-    (((now() AT TIME ZONE 'Asia/Jakarta')::date + 1) AT TIME ZONE 'Asia/Jakarta') AS ends_at
+    (((now() AT TIME ZONE 'Asia/Jakarta')::date)::timestamp AT TIME ZONE 'Asia/Jakarta') AS starts_at,
+    ((((now() AT TIME ZONE 'Asia/Jakarta')::date + 1))::timestamp AT TIME ZONE 'Asia/Jakarta') AS ends_at
 ),
 commission AS (
   SELECT wallet_code, COALESCE(SUM(amount), 0)::numeric(36,18) AS balance
@@ -242,16 +242,16 @@ RETURNING
     SELECT SUM(amount)::text
     FROM admin_wallet_commission_ledger
     WHERE wallet_code = $1
-      AND created_at >= ((now() AT TIME ZONE 'Asia/Jakarta')::date AT TIME ZONE 'Asia/Jakarta')
-      AND created_at < (((now() AT TIME ZONE 'Asia/Jakarta')::date + 1) AT TIME ZONE 'Asia/Jakarta')
+      AND created_at >= (((now() AT TIME ZONE 'Asia/Jakarta')::date)::timestamp AT TIME ZONE 'Asia/Jakarta')
+      AND created_at < ((((now() AT TIME ZONE 'Asia/Jakarta')::date + 1))::timestamp AT TIME ZONE 'Asia/Jakarta')
   ), '0'),
   COALESCE((
     SELECT SUM(amount)::text
     FROM admin_wallet_withdrawals
     WHERE wallet_code = $1
       AND status IN ('pending_signing', 'broadcast', 'confirmed')
-      AND requested_at >= ((now() AT TIME ZONE 'Asia/Jakarta')::date AT TIME ZONE 'Asia/Jakarta')
-      AND requested_at < (((now() AT TIME ZONE 'Asia/Jakarta')::date + 1) AT TIME ZONE 'Asia/Jakarta')
+      AND requested_at >= (((now() AT TIME ZONE 'Asia/Jakarta')::date)::timestamp AT TIME ZONE 'Asia/Jakarta')
+      AND requested_at < ((((now() AT TIME ZONE 'Asia/Jakarta')::date + 1))::timestamp AT TIME ZONE 'Asia/Jakarta')
   ), '0'),
   updated_by::text,
   created_at,
